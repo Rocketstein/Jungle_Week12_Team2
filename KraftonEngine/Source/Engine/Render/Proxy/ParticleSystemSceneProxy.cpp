@@ -43,7 +43,8 @@ void FParticleSystemSceneProxy::UpdateMaterial()
 
 void FParticleSystemSceneProxy::UpdateVisibility()
 {
-
+	FPrimitiveSceneProxy::UpdateVisibility();
+	bCastShadow = false;
 }
 
 void FParticleSystemSceneProxy::UpdateMesh()

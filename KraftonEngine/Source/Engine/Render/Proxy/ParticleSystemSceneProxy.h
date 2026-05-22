@@ -14,7 +14,6 @@ public:
 	// Called by Component each frame after CPU sim. Proxy takes ownership.
 	void UpdateDynamicData(TArray<FDynamicEmitterDataBase*>&& NewData);
 
-	// Required overrides:
 	void UpdateTransform()   override;  // Local-space proxy: just CachedWorldPos + identity model
 	void UpdateMaterial()    override;  // Pull material from each emitter Source
 	void UpdateVisibility()  override;
