@@ -458,8 +458,6 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Engine\Debug\DrawDebugHelpers.cpp" />
     <ClCompile Include="Source\Engine\FloatCurve\FloatCurveAsset.cpp" />
     <ClCompile Include="Source\Engine\FloatCurve\FloatCurveManager.cpp" />
-    <ClCompile Include="Source\Engine\FX\FXSystemAsset.cpp" />
-    <ClCompile Include="Source\Engine\FX\FXSystemComponent.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\AActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\BoxActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\CameraModifier.cpp" />
@@ -778,8 +776,6 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\Debug\DrawDebugHelpers.h" />
     <ClInclude Include="Source\Engine\FloatCurve\FloatCurveAsset.h" />
     <ClInclude Include="Source\Engine\FloatCurve\FloatCurveManager.h" />
-    <ClInclude Include="Source\Engine\FX\FXSystemAsset.h" />
-    <ClInclude Include="Source\Engine\FX\FXSystemComponent.h" />
     <ClInclude Include="Source\Engine\GameFramework\AActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\BoxActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\CameraModifier.h" />
@@ -852,6 +848,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\Object\UUIDGenerator.h" />
     <ClInclude Include="Source\Engine\Physics\IPhysicsScene.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEmitter.h" />
+    <ClInclude Include="Source\Engine\Particle\ParticleHelper.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleLODLevel.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleModule.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleSystem.h" />

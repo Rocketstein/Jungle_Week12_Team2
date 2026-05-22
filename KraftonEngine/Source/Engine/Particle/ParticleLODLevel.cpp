@@ -1,21 +1,70 @@
 #include "Particle/ParticleLODLevel.h"
 
-#include <algorithm>
+#include "Particle/ParticleModule.h"
 
-void UParticleLODLevel::AddModule(UParticleModule* Module)
+void UParticleLODLevel::UpdateModuleLists()
 {
-	if (!Module)
+	SpawningModules.clear();
+	SpawnModules.clear();
+	UpdateModules.clear();
+
+	if (SpawnModule)
 	{
-		return;
+		SpawningModules.push_back(SpawnModule);
 	}
 
-	if (std::find(Modules.begin(), Modules.end(), Module) == Modules.end())
+	for (UParticleModule* Module : Modules)
 	{
-		Modules.push_back(Module);
+		if (!Module)
+		{
+			continue;
+		}
+
+		if (UParticleModuleSpawnBase* SpawnBase = Cast<UParticleModuleSpawnBase>(Module))
+		{
+			SpawningModules.push_back(SpawnBase);
+		}
+
+		if (Module->IsSpawnModule())
+		{
+			SpawnModules.push_back(Module);
+		}
+
+		if (Module->IsUpdateModule())
+		{
+			UpdateModules.push_back(Module);
+		}
 	}
 }
 
-void UParticleLODLevel::RemoveModule(UParticleModule* Module)
+int32 UParticleLODLevel::CalculateMaxActiveParticleCount()
 {
-	Modules.erase(std::remove(Modules.begin(), Modules.end(), Module), Modules.end());
+	PeakActiveParticles = 0;
+	return PeakActiveParticles;
+}
+
+int32 UParticleLODLevel::GetModuleIndex(UParticleModule* InModule)
+{
+	for (int32 Index = 0; Index < static_cast<int32>(Modules.size()); ++Index)
+	{
+		if (Modules[Index] == InModule)
+		{
+			return Index;
+		}
+	}
+	return -1;
+}
+
+UParticleModule* UParticleLODLevel::GetModuleAtIndex(int32 InIndex)
+{
+	if (InIndex < 0 || InIndex >= static_cast<int32>(Modules.size()))
+	{
+		return nullptr;
+	}
+	return Modules[InIndex];
+}
+
+void UParticleLODLevel::SetLevelIndex(int32 InLevelIndex)
+{
+	Level = InLevelIndex;
 }

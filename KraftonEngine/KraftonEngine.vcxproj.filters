@@ -106,9 +106,6 @@
     <Filter Include="Source\Engine\FloatCurve">
       <UniqueIdentifier>{de49fb56-b8a9-9a15-719d-7136fdb8ccd8}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Engine\FX">
-      <UniqueIdentifier>{55b90be1-807a-4c9f-9561-07b65b3e2d8a}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\Engine\GameFramework">
       <UniqueIdentifier>{743ddc11-5d76-490b-ec9f-e2fb16e32a8c}</UniqueIdentifier>
     </Filter>
@@ -865,12 +862,6 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\FloatCurve\FloatCurveManager.cpp">
       <Filter>Source\Engine\FloatCurve</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\FX\FXSystemAsset.cpp">
-      <Filter>Source\Engine\FX</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\FX\FXSystemComponent.cpp">
-      <Filter>Source\Engine\FX</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\GameFramework\AActor.cpp">
       <Filter>Source\Engine\GameFramework</Filter>
@@ -1813,12 +1804,6 @@
     <ClInclude Include="Source\Engine\FloatCurve\FloatCurveManager.h">
       <Filter>Source\Engine\FloatCurve</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\FX\FXSystemAsset.h">
-      <Filter>Source\Engine\FX</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\FX\FXSystemComponent.h">
-      <Filter>Source\Engine\FX</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\AActor.h">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClInclude>
@@ -2033,6 +2018,9 @@
       <Filter>Source\Engine\Physics</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleEmitter.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleHelper.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleLODLevel.h">
