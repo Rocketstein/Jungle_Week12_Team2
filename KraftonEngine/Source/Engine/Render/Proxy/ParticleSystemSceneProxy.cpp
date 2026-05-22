@@ -26,6 +26,8 @@ void FParticleSystemSceneProxy::UpdateTransform()
 {
 	FPrimitiveSceneProxy::UpdateTransform();
 	ComponentToWorld = GetOwner()->GetWorldMatrix();
+	PerObjectConstants = FPerObjectConstants::FromWorldMatrix(FMatrix::Identity);
+	MarkPerObjectCBDirty();
 }
 
 void FParticleSystemSceneProxy::UpdateMaterial()
