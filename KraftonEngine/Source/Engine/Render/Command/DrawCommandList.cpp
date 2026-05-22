@@ -291,11 +291,11 @@ void FDrawCommandList::SubmitCommand(const FDrawCommand& Cmd,
 	{
 		if (Cmd.Buffer.IndexCount > 0) 
 		{
-			Ctx->DrawIndexedInstanced(Cmd.Buffer.IndexCount, Cmd.Buffer.InstancedCount, Cmd.Buffer.FirstIndex, Cmd.Buffer.BaseVertex, Cmd.Buffer.InstanceStart);
+			Ctx->DrawIndexedInstanced(Cmd.Buffer.IndexCount, Cmd.Buffer.InstancedCount, 0, Cmd.Buffer.BaseVertex, Cmd.Buffer.InstanceStart);
 		}
 		else if (Cmd.Buffer.VertexCount > 0)
 		{
-			Ctx->DrawInstanced(Cmd.Buffer.VertexCount, Cmd.Buffer.InstancedCount, Cmd.Buffer.FirstIndex, Cmd.Buffer.InstanceStart);
+			Ctx->DrawInstanced(Cmd.Buffer.VertexCount, Cmd.Buffer.InstancedCount, 0, Cmd.Buffer.InstanceStart);
 		}
 	} 
 	else 
