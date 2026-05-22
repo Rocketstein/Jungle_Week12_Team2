@@ -78,8 +78,9 @@ void FParticleSystemSceneProxy::UpdatePerViewport(const FFrameContext& Frame)
 
 }
 
-bool FParticleSystemSceneProxy::PrepareDrawBuffer(ID3D11Device*, ID3D11DeviceContext*, FDrawCommandBuffer&) const
+bool FParticleSystemSceneProxy::PrepareDrawBuffer(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FDrawCommandBuffer& Out) const
 {
+	
 	return false;
 }
 
@@ -98,11 +99,8 @@ void FParticleSystemSceneProxy::PackSpriteEmitter(const FFrameContext& Frame, FD
 	if (Count <= 0) return;
 
 	// Sort
-	for (uint32 i = 0; i < Count; i++)
-	{
-		Emitter.SortSpriteParticles(Source.SortMode, Frame.CameraPosition, Frame.CameraForward, FMatrix::Identity, Source.DataContainer.ParticleIndices,
-									Count, Source.DataContainer.ParticleData, Source.ParticleStride);
-	}
+	Emitter.SortSpriteParticles(Source.SortMode, Frame.CameraPosition, Frame.CameraForward, FMatrix::Identity, Source.DataContainer.ParticleIndices,
+								Count, Source.DataContainer.ParticleData, Source.ParticleStride);
 
 	// Expand each particle into a 4-vert quad
 	const float SubUInv = (Source.SubImages_Horizontal > 0) ? 1.0f / Source.SubImages_Horizontal : 1.0f;
