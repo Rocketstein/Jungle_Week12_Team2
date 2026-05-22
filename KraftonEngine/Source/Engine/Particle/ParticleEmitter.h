@@ -49,15 +49,6 @@ public:
 
 	FName EmitterName;
 
-	uint8 bUseLegacySpawningBehavior : 1 = false;
-	uint8 bRequiresLoopNotification : 1 = false;
-	uint8 bAxisLockEnabled : 1 = false;
-	uint8 bMeshRotationActive : 1 = false;
-	uint8 ConvertedModules : 1 = false;
-	uint8 bIsSoloing : 1 = false;
-	uint8 bCookedOut : 1 = false;
-	uint8 bDisabledLODsKeepEmitterAlive : 1 = false;
-
 	TArray<UParticleLODLevel*> LODLevels;
 
 	int32 PeakActiveParticles = 0;

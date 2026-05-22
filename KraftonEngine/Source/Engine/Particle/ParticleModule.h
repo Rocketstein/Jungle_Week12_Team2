@@ -5,7 +5,7 @@
 #include "Particle/ParticleEmitter.h"
 #include "ParticleModule.generated.h"
 
-class FParticleEmitterInstance;
+struct FParticleEmitterInstance;
 class UMaterialInterface;
 class UParticleModuleTypeDataBase;
 class UStaticMesh;
@@ -117,11 +117,9 @@ public:
 	float EmitterDuration = 1.0f;
 	TArray<FParticleBurst> BurstList;
 	float EmitterDelay = 0.0f;
-	float EmitterDelayLow = 0.0f;
 	EParticleBurstMethod ParticleBurstMethod = EPBM_Instant;
 	int32 EmitterLoops = 0;
 	int32 MaxDrawCount = 0;
-	float EmitterDurationLow = 0.0f;
 };
 
 UCLASS()
@@ -278,10 +276,6 @@ public:
 	GENERATED_BODY(UParticleModuleTypeDataMesh)
 
 	UStaticMesh* Mesh = nullptr;
-	float LODSizeScale = 1.0f;
-	uint8 bUseStaticMeshLODs : 1 = false;
-	uint8 CastShadows : 1 = false;
-	uint8 bOverrideMaterial : 1 = false;
 
 	bool IsAMeshEmitter() const override { return true; }
 };

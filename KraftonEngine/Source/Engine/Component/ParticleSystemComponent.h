@@ -5,7 +5,7 @@
 #include "ParticleSystemComponent.generated.h"
 
 class UFXSystemAsset;
-class FParticleEmitterInstance;
+struct FParticleEmitterInstance;
 
 UCLASS(HiddenInComponentList)
 class UFXSystemComponent : public UPrimitiveComponent
