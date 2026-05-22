@@ -19,6 +19,10 @@ struct FDrawCommandBuffer
 	uint32        VBStride = 0;
 	ID3D11Buffer* IB       = nullptr;
 
+	ID3D11Buffer* InstanceVB		= nullptr;
+	uint32		  InstanceVBStride	= 0;
+	ID3D11Buffer* InstanceIB		= nullptr;
+
 	// Instancing
 	uint32 InstancedCount = 0;			 // Nonzero value should imply instancing
 	uint32 InstanceStart  = 0;			 // Usually zero. 
