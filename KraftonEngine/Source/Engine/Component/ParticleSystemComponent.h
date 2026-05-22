@@ -24,6 +24,7 @@ public:
 
 	UFXSystemAsset* GetFXSystemAsset() const override;
 	FPrimitiveSceneProxy* CreateSceneProxy() override;
+	FParticleSystemSceneProxy* GetSceneProxy() const { return static_cast<FParticleSystemSceneProxy*>(SceneProxy); }
 
 	UParticleSystem* Template = nullptr;
 	TArray<FParticleEmitterInstance*> EmitterInstances;
