@@ -32,8 +32,11 @@ function Resolve-DebuggingTool {
 
     $sdkCandidates = @(
         "${env:ProgramFiles(x86)}\Windows Kits\10\Debuggers\x64\$ToolName",
+        "${env:ProgramFiles(x86)}\Windows Kits\10\Debuggers\x64\srcsrv\$ToolName",
         "${env:ProgramFiles(x86)}\Windows Kits\10\Debuggers\x86\$ToolName",
-        "${env:ProgramFiles}\Windows Kits\10\Debuggers\x64\$ToolName"
+        "${env:ProgramFiles(x86)}\Windows Kits\10\Debuggers\x86\srcsrv\$ToolName",
+        "${env:ProgramFiles}\Windows Kits\10\Debuggers\x64\$ToolName",
+        "${env:ProgramFiles}\Windows Kits\10\Debuggers\x64\srcsrv\$ToolName"
     )
 
     foreach ($candidate in $sdkCandidates) {
@@ -51,8 +54,12 @@ function Convert-ToGitPath {
         [string]$Root
     )
 
-    $fullPath = [System.IO.Path]::GetFullPath($Path)
-    $fullRoot = [System.IO.Path]::GetFullPath($Root)
+    try {
+        $fullPath = [System.IO.Path]::GetFullPath($Path)
+        $fullRoot = [System.IO.Path]::GetFullPath($Root)
+    } catch {
+        return $null
+    }
 
     if (-not $fullRoot.EndsWith([System.IO.Path]::DirectorySeparatorChar)) {
         $fullRoot += [System.IO.Path]::DirectorySeparatorChar
@@ -72,7 +79,8 @@ function Write-SourceServerStream {
         [string[]]$SourceFiles,
         [string]$Root,
         [string]$GitRepo,
-        [string]$GitCommit
+        [string]$GitCommit,
+        [System.Collections.Generic.HashSet[string]]$ValidGitPaths
     )
 
     $lines = New-Object System.Collections.Generic.List[string]
@@ -85,13 +93,17 @@ function Write-SourceServerStream {
     $lines.Add("GIT_EXE=git.exe")
     $lines.Add("GIT_REPO=$GitRepo")
     $lines.Add("SRCSRVTRG=%targ%\%fnfile%(%var2%)")
-    $lines.Add('SRCSRVCMD=cmd /c "%GIT_EXE%" --git-dir="%GIT_REPO%" show %var3%:%var2% > "%SRCSRVTRG%"')
+    $lines.Add('SRCSRVCMD=cmd /c if not exist "%targ%" mkdir "%targ%" 2>nul & "%GIT_EXE%" --git-dir="%GIT_REPO%" show %var3%:%var2% > %SRCSRVTRG%')
     $lines.Add("SRCSRV: source files ---------------------------------------")
 
     $mappedCount = 0
     foreach ($sourceFile in $SourceFiles) {
         $relativePath = Convert-ToGitPath -Path $sourceFile -Root $Root
         if (-not $relativePath) {
+            continue
+        }
+
+        if (-not $ValidGitPaths.Contains($relativePath)) {
             continue
         }
 
@@ -151,16 +163,33 @@ Write-Host "SourceRepo: $SourceRepo"
 Write-Host "Commit    : $Commit"
 Write-Host "PDB Count : $($pdbFiles.Count)"
 
+$gitFiles = & git "--git-dir=$SourceRepo" ls-tree -r --name-only $Commit
+if ($LASTEXITCODE -ne 0 -or -not $gitFiles) {
+    throw "Failed to list files from source repo '$SourceRepo' at commit '$Commit'."
+}
+
+$validGitPaths = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+foreach ($gitFile in $gitFiles) {
+    [void]$validGitPaths.Add($gitFile.Trim())
+}
+
 foreach ($pdbFile in $pdbFiles) {
     Write-Host "Processing: $pdbFile"
 
-    $sourceFiles = @(& $srctool $pdbFile | Where-Object { $_ -match "^[A-Za-z]:\\|^\\\\" } | Sort-Object -Unique)
-    if ($LASTEXITCODE -ne 0) {
-        throw "srctool.exe failed for '$pdbFile' with exit code $LASTEXITCODE."
+    $srctoolOutput = @(& $srctool -r $pdbFile 2>&1)
+    $sourceFiles = @($srctoolOutput | Where-Object {
+        $_ -is [string] -and
+        $_ -notmatch ":\s+\d+\s+source files are indexed$" -and
+        ($_ -match "^[A-Za-z]:\\|^\\\\")
+    } | Sort-Object -Unique)
+
+    if (-not $sourceFiles) {
+        $details = ($srctoolOutput | Select-Object -First 10) -join "`n"
+        throw "srctool.exe found no source files for '$pdbFile'. Detail:`n$details"
     }
 
     $streamPath = Join-Path ([System.IO.Path]::GetTempPath()) ("srcsrv_{0}.txt" -f ([System.Guid]::NewGuid().ToString("N")))
-    $mappedCount = Write-SourceServerStream -StreamPath $streamPath -PdbFile $pdbFile -SourceFiles $sourceFiles -Root $resolvedRepoRoot -GitRepo $SourceRepo -GitCommit $Commit
+    $mappedCount = Write-SourceServerStream -StreamPath $streamPath -PdbFile $pdbFile -SourceFiles $sourceFiles -Root $resolvedRepoRoot -GitRepo $SourceRepo -GitCommit $Commit -ValidGitPaths $validGitPaths
 
     & $pdbstr -w "-p:$pdbFile" "-i:$streamPath" -s:srcsrv
     if ($LASTEXITCODE -ne 0) {
