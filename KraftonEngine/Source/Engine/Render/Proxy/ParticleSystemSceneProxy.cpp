@@ -1,4 +1,6 @@
 ﻿#include "ParticleSystemSceneProxy.h"
+#include "Component/SubUVComponent.h"
+#include "Render/Types/FrameContext.h"
 
 FParticleSystemSceneProxy::~FParticleSystemSceneProxy()
 {
@@ -91,7 +93,20 @@ void FParticleSystemSceneProxy::PackSpriteEmitter(const FFrameContext& Frame, FD
 	TArray<FParticleSpriteVertex>& OutVerts,
 	TArray<uint32>& OutIndices, uint32& IndexCursor)
 {
+	const FDynamicSpriteEmitterReplayDataBase& Source = Emitter.Source;
+	const int32 Count = Source.ActiveParticleCount;
+	if (Count <= 0) return;
 
+	// Sort
+	for (uint32 i = 0; i < Count; i++)
+	{
+		Emitter.SortSpriteParticles(Source.SortMode, Frame.CameraPosition, Frame.CameraForward, FMatrix::Identity, Source.DataContainer.ParticleIndices,
+									Count, Source.DataContainer.ParticleData, Source.ParticleStride);
+	}
+
+	// Expand each particle into a 4-vert quad
+	const float SubUInv = (Source.SubImages_Horizontal > 0) ? 1.0f / Source.SubImages_Horizontal : 1.0f;
+	const float SubVInv = (Source.SubImages_Vertical > 0) ? 1.0f / Source.SubImages_Vertical : 1.0f;
 }
 
 void FParticleSystemSceneProxy::PackMeshEmitter(const FFrameContext& Frame, FDynamicMeshEmitterData& Emitter)
