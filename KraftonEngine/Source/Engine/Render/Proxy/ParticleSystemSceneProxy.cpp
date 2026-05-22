@@ -88,7 +88,7 @@ bool FParticleSystemSceneProxy::PrepareDrawBuffer(ID3D11Device*, ID3D11DeviceCon
 	return (SpriteVB.GetBuffer() != nullptr);
 }
 
-bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext,
+bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device*, ID3D11DeviceContext*,
 	const FPrimitiveDrawOptions&, FDrawCommand& Cmd) const
 {
 	// Identify which emitter this command belongs to by FirstIndex (unique per section).
