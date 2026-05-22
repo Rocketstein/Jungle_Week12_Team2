@@ -93,7 +93,7 @@ function Write-SourceServerStream {
     $lines.Add("GIT_EXE=git.exe")
     $lines.Add("GIT_REPO=$GitRepo")
     $lines.Add("SRCSRVTRG=%targ%\%var4%")
-    $lines.Add('SRCSRVCMD=cmd /c "%GIT_EXE%" --git-dir="%GIT_REPO%" show %var3%:%var2% > %SRCSRVTRG%')
+    $lines.Add('SRCSRVCMD=cmd /c if not exist "%targ%" mkdir "%targ%" 2>nul & "%GIT_EXE%" --git-dir="%GIT_REPO%" show %var3%:%var2% > %SRCSRVTRG% 2> "%targ%\srcsrv_%var4%.err"')
     $lines.Add("SRCSRV: source files ---------------------------------------")
 
     $mappedCount = 0
