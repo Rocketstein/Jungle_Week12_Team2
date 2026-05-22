@@ -51,7 +51,7 @@ struct FDynamicEmitterDataBase
 
 struct FDynamicSpriteEmitterDataBase : public FDynamicEmitterDataBase
 {
-	void SortSpriteParticles(int32 SortMode, const FVector& CameraOrigin,
+	void SortSpriteParticles(int32 SortMode, const FVector& CameraOrigin, const FVector& CameraForward,
 		const FMatrix& LocalToWorld,
 		uint16* InOutIndices, int32 Count,
 		const uint8* ParticleData, int32 Stride);

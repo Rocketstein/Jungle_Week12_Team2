@@ -23,7 +23,7 @@ void FParticleDataContainer::Free()
 	ParticleIndicesNumShorts = 0;
 }
 
-void FDynamicSpriteEmitterDataBase::SortSpriteParticles(int32 SortMode, const FVector& CameraOrigin,
+void FDynamicSpriteEmitterDataBase::SortSpriteParticles(int32 SortMode, const FVector& CameraOrigin, const FVector& CameraForward,
 	const FMatrix& LocalToWorld,
 	uint16* InOutIndices, int32 Count,
 	const uint8* ParticleData, int32 Stride)
@@ -35,13 +35,16 @@ void FDynamicSpriteEmitterDataBase::SortSpriteParticles(int32 SortMode, const FV
 
 	struct FParticleSortKey
 	{
-		float DistanceSquared = 0.0f;
+		float Depth = 0.0f;          // signed distance along the camera forward axis
 		uint16 ParticleIndex = 0;
 	};
 
 	TArray<FParticleSortKey> SortKeys;
 	SortKeys.reserve(Count);
 
+	// Project each particle onto the camera forward axis. This gives true view-space
+	// depth (a plane test), so two particles on the same depth plane sort equally
+	// regardless of lateral offset.
 	for (int32 i = 0; i < Count; ++i)
 	{
 		const uint16 ParticleIndex = InOutIndices[i];
@@ -51,21 +54,20 @@ void FDynamicSpriteEmitterDataBase::SortSpriteParticles(int32 SortMode, const FV
 		const FVector& LocalLocation = *reinterpret_cast<const FVector*>(ParticleBytes);
 		const FVector WorldLocation = LocalToWorld.TransformPositionWithW(LocalLocation);
 
-		SortKeys.push_back({
-			FVector::DistSquared(WorldLocation, CameraOrigin),
-			ParticleIndex
-		});
+		const float Depth = (WorldLocation - CameraOrigin).Dot(CameraForward);
+
+		SortKeys.push_back({ Depth, ParticleIndex });
 	}
 
+	// Back-to-front: farthest depth first so alpha blending composites correctly.
 	std::stable_sort(SortKeys.begin(), SortKeys.end(),
 		[](const FParticleSortKey& A, const FParticleSortKey& B)
 		{
-			return A.DistanceSquared > B.DistanceSquared;
+			return A.Depth > B.Depth;
 		});
 
 	for (int32 i = 0; i < Count; ++i)
 	{
 		InOutIndices[i] = SortKeys[i].ParticleIndex;
 	}
-
 }
