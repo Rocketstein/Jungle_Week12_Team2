@@ -460,7 +460,7 @@ def generate_vcxproj(files: dict[str, list[str]]):
                                Name="GenerateCode",
                                BeforeTargets="ClCompile")
     ET.SubElement(gen_target, "Exec",
-                  Command=f'python "$(ProjectDir){CODEGEN_SCRIPT}"')
+                  Command=f'"$(ProjectDir)..\\Scripts\\python\\python.exe" "$(ProjectDir){CODEGEN_SCRIPT}"')
     gen_ig = ET.SubElement(gen_target, "ItemGroup")
     ET.SubElement(gen_ig, "ClCompile", Include=CODEGEN_GENCPP_GLOB)
 

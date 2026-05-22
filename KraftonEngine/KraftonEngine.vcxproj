@@ -1755,7 +1755,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="GenerateCode" BeforeTargets="ClCompile">
-    <Exec Command="python &quot;$(ProjectDir)..\Scripts\GenerateCode.py&quot;" />
+    <Exec Command="&quot;$(ProjectDir)..\Scripts\python\python.exe&quot; &quot;$(ProjectDir)..\Scripts\GenerateCode.py&quot;" />
     <ItemGroup>
       <ClCompile Include="Intermediate\Generated\Source\*.gen.cpp" />
     </ItemGroup>
