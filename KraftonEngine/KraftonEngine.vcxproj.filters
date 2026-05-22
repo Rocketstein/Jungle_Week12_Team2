@@ -133,11 +133,11 @@
     <Filter Include="Source\Engine\Object">
       <UniqueIdentifier>{f6219ff0-0046-2f35-71f3-ad6383da3d2c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Particle">
+      <UniqueIdentifier>{1613146e-ae48-8d4a-1d6a-1540318e1782}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Physics">
       <UniqueIdentifier>{c1985821-1144-9a46-639a-f7de31f4a1fa}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Engine\Particle">
-      <UniqueIdentifier>{e9c176e6-b0df-418a-8837-07c83fe03a41}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Engine\Platform">
       <UniqueIdentifier>{813e0a37-91de-2afc-805f-1a0f801727b9}</UniqueIdentifier>
@@ -159,6 +159,9 @@
     </Filter>
     <Filter Include="Source\Engine\Render\Geometry">
       <UniqueIdentifier>{4cb8c3a0-4c6e-b656-ca38-0d8476815faa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\Render\Particle">
+      <UniqueIdentifier>{692158fc-032f-1376-fd95-fc7efddd9f96}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Engine\Render\Pipeline">
       <UniqueIdentifier>{5ac9b005-2a76-d0b0-3f77-2b89ae10bb53}</UniqueIdentifier>
@@ -1037,12 +1040,6 @@
     <ClCompile Include="Source\Engine\Object\UUIDGenerator.cpp">
       <Filter>Source\Engine\Object</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Physics\NativePhysicsScene.cpp">
-      <Filter>Source\Engine\Physics</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Physics\PhysXPhysicsScene.cpp">
-      <Filter>Source\Engine\Physics</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleEmitter.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
@@ -1057,6 +1054,12 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleSystem.cpp">
       <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Physics\NativePhysicsScene.cpp">
+      <Filter>Source\Engine\Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Physics\PhysXPhysicsScene.cpp">
+      <Filter>Source\Engine\Physics</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Platform\CrashDump.cpp">
       <Filter>Source\Engine\Platform</Filter>
@@ -1112,6 +1115,9 @@
     <ClCompile Include="Source\Engine\Render\Geometry\LineGeometry.cpp">
       <Filter>Source\Engine\Render\Geometry</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Particle\ParticleDynamicData.cpp">
+      <Filter>Source\Engine\Render\Particle</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Render\Pipeline\DefaultRenderPipeline.cpp">
       <Filter>Source\Engine\Render\Pipeline</Filter>
     </ClCompile>
@@ -1134,6 +1140,9 @@
       <Filter>Source\Engine\Render\Proxy</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Proxy\GizmoSceneProxy.cpp">
+      <Filter>Source\Engine\Render\Proxy</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Proxy\ParticleSystemSceneProxy.cpp">
       <Filter>Source\Engine\Render\Proxy</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Proxy\PrimitiveSceneProxy.cpp">
@@ -1335,11 +1344,6 @@
       <Filter>ThirdParty\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="HighPerformanceGpuHint.cpp" />
-    <ClCompile Include="Source\Engine\Profiling\SkinningStats.cpp" />
-    <ClCompile Include="Source\Engine\Core\Property\FField.cpp" />
-    <ClCompile Include="Source\Engine\Core\Property\FFieldClass.cpp" />
-    <ClCompile Include="Source\Engine\Core\Property\FFieldVariant.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -2038,9 +2042,6 @@
     <ClInclude Include="Source\Engine\Object\UUIDGenerator.h">
       <Filter>Source\Engine\Object</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Physics\IPhysicsScene.h">
-      <Filter>Source\Engine\Physics</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleEmitter.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
@@ -2058,6 +2059,9 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleSystem.h">
       <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Physics\IPhysicsScene.h">
+      <Filter>Source\Engine\Physics</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Physics\NativePhysicsScene.h">
       <Filter>Source\Engine\Physics</Filter>
@@ -2128,6 +2132,9 @@
     <ClInclude Include="Source\Engine\Render\Geometry\LineGeometry.h">
       <Filter>Source\Engine\Render\Geometry</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Particle\ParticleDynamicData.h">
+      <Filter>Source\Engine\Render\Particle</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Render\Pipeline\DefaultRenderPipeline.h">
       <Filter>Source\Engine\Render\Pipeline</Filter>
     </ClInclude>
@@ -2156,6 +2163,9 @@
       <Filter>Source\Engine\Render\Proxy</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Proxy\GizmoSceneProxy.h">
+      <Filter>Source\Engine\Render\Proxy</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Proxy\ParticleSystemSceneProxy.h">
       <Filter>Source\Engine\Render\Proxy</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Proxy\PrimitiveSceneProxy.h">
@@ -4051,15 +4061,8 @@
     <ClInclude Include="ThirdParty\sol2\include\sol\utility\to_string.hpp">
       <Filter>ThirdParty\sol2\include\sol\utility</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Profiling\SkinningStats.h" />
-    <ClInclude Include="Source\Engine\Core\Property\FField.h" />
-    <ClInclude Include="Source\Engine\Core\Property\FFieldClass.h" />
-    <ClInclude Include="Source\Engine\Core\Property\FFieldVariant.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="KraftonEngine.rc" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
   </ItemGroup>
 </Project>

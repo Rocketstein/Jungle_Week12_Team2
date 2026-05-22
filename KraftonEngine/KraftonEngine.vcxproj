@@ -41,13 +41,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v145</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v145</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -60,28 +60,28 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v145</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Game|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v145</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Game|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v145</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Demo|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v145</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -510,13 +510,13 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Engine\Object\UField.cpp" />
     <ClCompile Include="Source\Engine\Object\UStruct.cpp" />
     <ClCompile Include="Source\Engine\Object\UUIDGenerator.cpp" />
-    <ClCompile Include="Source\Engine\Physics\NativePhysicsScene.cpp" />
-    <ClCompile Include="Source\Engine\Physics\PhysXPhysicsScene.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleEmitter.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleLODLevel.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleModule.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleSpriteEmitter.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleSystem.cpp" />
+    <ClCompile Include="Source\Engine\Physics\NativePhysicsScene.cpp" />
+    <ClCompile Include="Source\Engine\Physics\PhysXPhysicsScene.cpp" />
     <ClCompile Include="Source\Engine\Platform\CrashDump.cpp" />
     <ClCompile Include="Source\Engine\Platform\DirectoryWatcher.cpp" />
     <ClCompile Include="Source\Engine\Platform\Paths.cpp" />
@@ -846,13 +846,13 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\Object\UField.h" />
     <ClInclude Include="Source\Engine\Object\UStruct.h" />
     <ClInclude Include="Source\Engine\Object\UUIDGenerator.h" />
-    <ClInclude Include="Source\Engine\Physics\IPhysicsScene.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEmitter.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleHelper.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleLODLevel.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleModule.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleSpriteEmitter.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleSystem.h" />
+    <ClInclude Include="Source\Engine\Physics\IPhysicsScene.h" />
     <ClInclude Include="Source\Engine\Physics\NativePhysicsScene.h" />
     <ClInclude Include="Source\Engine\Physics\PhysXPhysicsScene.h" />
     <ClInclude Include="Source\Engine\Platform\ConsoleHelper.h" />
