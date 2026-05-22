@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Render/Types/RenderTypes.h"
 #include "Render/Types/RenderStateTypes.h"
@@ -18,6 +18,10 @@ struct FDrawCommandBuffer
 	ID3D11Buffer* VB       = nullptr;
 	uint32        VBStride = 0;
 	ID3D11Buffer* IB       = nullptr;
+
+	// Instancing
+	uint32 InstancedCount = 0;			 // Nonzero value should imply instancing
+	uint32 InstanceStart  = 0;			 // Usually zero. 
 
 	uint32 FirstIndex  = 0;              // 인덱스 시작 오프셋
 	uint32 IndexCount  = 0;              // DrawIndexed 인덱스 수
