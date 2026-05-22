@@ -7,6 +7,7 @@
 #include "Core/Log.h"
 #include "Core/Notification.h"
 #include <algorithm>
+#include <cstring>
 #include <iostream>
 #pragma comment(lib, "dxguid.lib")
 #pragma comment(lib, "d3dcompiler.lib")
@@ -229,6 +230,8 @@ void FShader::Bind(ID3D11DeviceContext* InDeviceContext) const
 
 namespace
 {
+	constexpr const char* InstanceSemanticPrefix = "INSTANCE_";
+
 	DXGI_FORMAT MaskToFormat(D3D_REGISTER_COMPONENT_TYPE ComponentType, BYTE Mask)
 	{
 		// Mask 비트 수 세기 (사용되는 컴포넌트 개수)
@@ -270,6 +273,15 @@ namespace
 		}
 		return DXGI_FORMAT_UNKNOWN;
 	}
+
+	bool IsInstanceSemantic(const char* SemanticName)
+	{
+		if (!SemanticName)
+			return false;
+
+		// Particle mesh instancing uses INSTANCE_* semantics for the slot-1 instance stream.
+		return std::strncmp(SemanticName, InstanceSemanticPrefix, std::strlen(InstanceSemanticPrefix)) == 0;
+	}
 }
 
 void FShader::CreateInputLayoutFromReflection(ID3D11Device* InDevice, ID3DBlob* VSBlob)
@@ -297,10 +309,20 @@ void FShader::CreateInputLayoutFromReflection(ID3D11Device* InDevice, ID3DBlob* 
 		Elem.SemanticName = ParamDesc.SemanticName;
 		Elem.SemanticIndex = ParamDesc.SemanticIndex;
 		Elem.Format = MaskToFormat(ParamDesc.ComponentType, ParamDesc.Mask);
-		Elem.InputSlot = 0;
 		Elem.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
-		Elem.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-		Elem.InstanceDataStepRate = 0;
+
+		if (IsInstanceSemantic(ParamDesc.SemanticName))
+		{
+			Elem.InputSlot = 1;
+			Elem.InputSlotClass = D3D11_INPUT_PER_INSTANCE_DATA;
+			Elem.InstanceDataStepRate = 1;
+		}
+		else
+		{
+			Elem.InputSlot = 0;
+			Elem.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+			Elem.InstanceDataStepRate = 0;
+		}
 
 		Elements.push_back(Elem);
 	}
