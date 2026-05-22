@@ -25,7 +25,7 @@ public:
 	bool PrepareDrawCommandBindings(ID3D11Device*, ID3D11DeviceContext*,
 		const FPrimitiveDrawOptions&, FDrawCommand&) const override;
 
-	const char* GetVertexShaderEntryName() const override { return "VS_ParticleSprite"; }
+	//const char* GetVertexShaderEntryName() const override { return "VS_ParticleSprite"; }
 
 private:
 	// Per-emitter draw range inside the shared dynamic VB/IB
