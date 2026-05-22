@@ -1,4 +1,5 @@
 ﻿#include "ParticleDynamicData.h"
+#include "Particle/ParticleHelper.h"
 
 #include <algorithm>
 
@@ -51,7 +52,7 @@ void FDynamicSpriteEmitterDataBase::SortSpriteParticles(int32 SortMode, const FV
 		const uint8* ParticleBytes = ParticleData + static_cast<size_t>(ParticleIndex) * Stride;
 
 		// FBaseParticle starts with Location; payload bytes follow the fixed header.
-		const FVector& LocalLocation = *reinterpret_cast<const FVector*>(ParticleBytes);
+		const FVector& LocalLocation = *reinterpret_cast<const FVector*>(ParticleBytes + offsetof(FBaseParticle, Location));
 		const FVector WorldLocation = LocalToWorld.TransformPositionWithW(LocalLocation);
 
 		const float Depth = (WorldLocation - CameraOrigin).Dot(CameraForward);
