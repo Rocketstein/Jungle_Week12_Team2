@@ -106,6 +106,9 @@
     <Filter Include="Source\Engine\FloatCurve">
       <UniqueIdentifier>{de49fb56-b8a9-9a15-719d-7136fdb8ccd8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\FX">
+      <UniqueIdentifier>{55b90be1-807a-4c9f-9561-07b65b3e2d8a}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\GameFramework">
       <UniqueIdentifier>{743ddc11-5d76-490b-ec9f-e2fb16e32a8c}</UniqueIdentifier>
     </Filter>
@@ -135,6 +138,9 @@
     </Filter>
     <Filter Include="Source\Engine\Physics">
       <UniqueIdentifier>{c1985821-1144-9a46-639a-f7de31f4a1fa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Engine\Particle">
+      <UniqueIdentifier>{e9c176e6-b0df-418a-8837-07c83fe03a41}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Engine\Platform">
       <UniqueIdentifier>{813e0a37-91de-2afc-805f-1a0f801727b9}</UniqueIdentifier>
@@ -743,6 +749,9 @@
     <ClCompile Include="Source\Engine\Component\MeshComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Component\ParticleSystemComponent.cpp">
+      <Filter>Source\Engine\Component</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Component\PrimitiveComponent.cpp">
       <Filter>Source\Engine\Component</Filter>
     </ClCompile>
@@ -856,6 +865,12 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\FloatCurve\FloatCurveManager.cpp">
       <Filter>Source\Engine\FloatCurve</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\FX\FXSystemAsset.cpp">
+      <Filter>Source\Engine\FX</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\FX\FXSystemComponent.cpp">
+      <Filter>Source\Engine\FX</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\GameFramework\AActor.cpp">
       <Filter>Source\Engine\GameFramework</Filter>
@@ -1027,6 +1042,18 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Physics\PhysXPhysicsScene.cpp">
       <Filter>Source\Engine\Physics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleEmitter.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleLODLevel.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleModule.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleSystem.cpp">
+      <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Platform\CrashDump.cpp">
       <Filter>Source\Engine\Platform</Filter>
@@ -1302,6 +1329,11 @@
       <Filter>ThirdParty\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="HighPerformanceGpuHint.cpp" />
+    <ClCompile Include="Source\Engine\Profiling\SkinningStats.cpp" />
+    <ClCompile Include="Source\Engine\Core\Property\FField.cpp" />
+    <ClCompile Include="Source\Engine\Core\Property\FFieldClass.cpp" />
+    <ClCompile Include="Source\Engine\Core\Property\FFieldVariant.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -1619,6 +1651,9 @@
     <ClInclude Include="Source\Engine\Component\MeshComponent.h">
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Component\ParticleSystemComponent.h">
+      <Filter>Source\Engine\Component</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Component\PrimitiveComponent.h">
       <Filter>Source\Engine\Component</Filter>
     </ClInclude>
@@ -1777,6 +1812,12 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\FloatCurve\FloatCurveManager.h">
       <Filter>Source\Engine\FloatCurve</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\FX\FXSystemAsset.h">
+      <Filter>Source\Engine\FX</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\FX\FXSystemComponent.h">
+      <Filter>Source\Engine\FX</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\AActor.h">
       <Filter>Source\Engine\GameFramework</Filter>
@@ -1990,6 +2031,18 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Physics\IPhysicsScene.h">
       <Filter>Source\Engine\Physics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleEmitter.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleLODLevel.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleModule.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleSystem.h">
+      <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Physics\NativePhysicsScene.h">
       <Filter>Source\Engine\Physics</Filter>
@@ -3980,8 +4033,15 @@
     <ClInclude Include="ThirdParty\sol2\include\sol\utility\to_string.hpp">
       <Filter>ThirdParty\sol2\include\sol\utility</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Profiling\SkinningStats.h" />
+    <ClInclude Include="Source\Engine\Core\Property\FField.h" />
+    <ClInclude Include="Source\Engine\Core\Property\FFieldClass.h" />
+    <ClInclude Include="Source\Engine\Core\Property\FFieldVariant.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="KraftonEngine.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>
