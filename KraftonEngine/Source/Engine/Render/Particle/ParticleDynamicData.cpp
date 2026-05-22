@@ -20,3 +20,20 @@ void FParticleDataContainer::Free()
 	ParticleDataNumBytes = 0;
 	ParticleIndicesNumShorts = 0;
 }
+
+void FDynamicSpriteEmitterDataBase::SortSpriteParticles(int32 SortMode, const FVector& CameraOrigin,
+	const FMatrix& LocalToWorld,
+	uint16* InOutIndices, int32 Count,
+	const uint8* ParticleData, int32 Stride)
+{
+	if (SortMode == 0 || Count == 1)
+	{
+		// No sorting needed
+		for (int32 i = 0; i < Count; ++i)
+			InOutIndices[i] = static_cast<uint16>(i);
+		return;
+	}
+
+	// Calculate distance from camera for each particle
+
+}
