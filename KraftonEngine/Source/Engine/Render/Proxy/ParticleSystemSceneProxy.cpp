@@ -35,7 +35,8 @@ void FParticleSystemSceneProxy::UpdateMaterial()
 	EmitterDraws.resize(DynamicData.size());
 	for (uint32 i = 0; i < DynamicData.size(); i++)
 	{
-		const FDynamicSpriteEmitterReplayDataBase& Source = static_cast<FDynamicSpriteEmitterReplayDataBase>(DynamicData[i]->GetSource());
+		const FDynamicSpriteEmitterReplayDataBase& Source =
+			static_cast<const FDynamicSpriteEmitterReplayDataBase&>(DynamicData[i]->GetSource());
 		EmitterDraws[i].Material = Source.MaterialInterface;
 		EmitterDraws[i].Type	 = Source.eEmitterType;
 	}
@@ -79,18 +80,125 @@ void FParticleSystemSceneProxy::UpdateMesh()
 	}
 }
 
+// UpdatePerViewport: per-frame CPU work
+// Runs in RenderCollector::Collect, gated by EPrimitiveProxyFlags::PerViewportUpdate.
+// Actual GPU upload is deferred to PrepareDrawBuffer, signalled via bGpuBuffersDirty.
 void FParticleSystemSceneProxy::UpdatePerViewport(const FFrameContext& Frame)
 {
-	
+	if (DynamicData.empty())
+	{
+		bVisible = false;
+		PackedVertices.clear();
+		PackedIndices.clear();
+		return;
+	}
+
+	// Reset scratch arrays
+	PackedVertices.clear();
+	PackedIndices.clear();
+
+	// CPU pack: sort + quad expansion into the scratch arrays.
+	PackSprites(Frame);
+
+	// Visibility = at least one particle ended up in the scratch.
+	bVisible = !PackedVertices.empty();
+	if (!bVisible) return;
+
+	// Signal PrepareDrawBuffer that the `ynamic GPU buffers must be re-uploaded.
+	bGpuBuffersDirty = true;
 }
 
-bool FParticleSystemSceneProxy::PrepareDrawBuffer(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FDrawCommandBuffer& Out) const
+// PrepareDrawBuffer: GPU upload + bind hand-off
+// Called once per proxy by DrawCommandBuilder.
+// Lazy-uploads the scratch arrays when bGpuBuffersDirty is set.
+bool FParticleSystemSceneProxy::PrepareDrawBuffer(
+	ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FDrawCommandBuffer& Out) const
 {
-	Out.VB = SpriteVB.GetBuffer();
-	Out.IB = SpriteIB.GetBuffer();
-	Out.VBStride = sizeof(FParticleSpriteVertex);
-	
-	return (SpriteVB.GetBuffer() != nullptr);
+	if (PackedVertices.empty() || PackedIndices.empty())
+	{
+		return false;
+	}
+
+	if (bGpuBuffersDirty)
+	{
+		const uint32 VertCount  = static_cast<uint32>(PackedVertices.size());
+		const uint32 IndexCount = static_cast<uint32>(PackedIndices.size());
+
+		if (SpriteVB.GetMaxCount() == 0)
+		{
+			SpriteVB.Create(InDevice, VertCount, sizeof(FParticleSpriteVertex));
+		}
+		if (SpriteIB.GetMaxCount() == 0)
+		{
+			SpriteIB.Create(InDevice, IndexCount);
+		}
+
+		// Grow if needed (doubles capacity inside).
+		SpriteVB.EnsureCapacity(InDevice, VertCount);
+		SpriteIB.EnsureCapacity(InDevice, IndexCount);
+
+		// NOTE: FDynamicVertexBuffer::Update takes ELEMENT count, not byte count.
+		SpriteVB.Update(InDeviceContext, PackedVertices.data(),  VertCount);
+		SpriteIB.Update(InDeviceContext, PackedIndices.data(), IndexCount);
+
+		bGpuBuffersDirty = false;
+	}
+
+	Out.VB         = SpriteVB.GetBuffer();
+	Out.VBStride   = sizeof(FParticleSpriteVertex);
+	Out.IB         = SpriteIB.GetBuffer();
+	Out.BaseVertex = 0;
+	// FirstIndex/IndexCount are written per-section by DrawCommandBuilder.
+
+	return Out.VB != nullptr && Out.IB != nullptr;
+}
+
+// PackSprites: Dispatches each emitter to the right per-emitter packer.
+// Sprite emitters write into the proxy's shared scratch arrays.
+// Also refreshes per-section (FirstIndex, IndexCount) so SectionDraws stays
+// consistent when emitters' active counts change frame-to-frame.
+void FParticleSystemSceneProxy::PackSprites(const FFrameContext& Frame)
+{
+	uint32 IndexCursor = 0;
+	for (size_t i = 0; i < DynamicData.size(); ++i)
+	{
+		if (i >= EmitterDraws.size()) break;   // defensive — UpdateMaterial sizes this
+		FEmitterDraw& Draw = EmitterDraws[i];
+
+		switch (Draw.Type)
+		{
+		case EDynamicEmitterType::Sprite:
+		{
+			const uint32 IndexBefore = IndexCursor;
+			PackSpriteEmitter(Frame,
+				static_cast<FDynamicSpriteEmitterData&>(*DynamicData[i]),
+				PackedVertices, PackedIndices, IndexCursor);
+
+			// Refresh section range so DrawCommandBuilder sees the right slice
+			// even if ActiveParticleCount shrank since UpdateMesh.
+			Draw.FirstIndex = IndexBefore;
+			Draw.IndexCount = IndexCursor - IndexBefore;
+			break;
+		}
+		case EDynamicEmitterType::Mesh:
+		{
+			PackMeshEmitter(Frame,
+				static_cast<FDynamicMeshEmitterData&>(*DynamicData[i]));
+			// Mesh section range stays as UpdateMesh set it (static-mesh IB range
+			// is fixed; InstanceCount is the per-frame variable).
+			break;
+		}
+		default:
+			break;
+		}
+
+		// Mirror the refreshed range into SectionDraws so the builder picks it up.
+		if (i < SectionDraws.size())
+		{
+			SectionDraws[i].FirstIndex = Draw.FirstIndex;
+			SectionDraws[i].IndexCount = Draw.IndexCount;
+		}
+	}
 }
 
 bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device*, ID3D11DeviceContext*,
