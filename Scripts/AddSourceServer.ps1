@@ -92,8 +92,8 @@ function Write-SourceServerStream {
     $lines.Add("SRCSRV: variables ------------------------------------------")
     $lines.Add("GIT_EXE=git.exe")
     $lines.Add("GIT_REPO=$GitRepo")
-    $lines.Add("SRCSRVTRG=%targ%\%fnfile%(%var2%)")
-    $lines.Add('SRCSRVCMD=cmd /c if not exist "%targ%" mkdir "%targ%" 2>nul & "%GIT_EXE%" --git-dir="%GIT_REPO%" show %var3%:%var2% > %SRCSRVTRG%')
+    $lines.Add("SRCSRVTRG=%targ%\%var4%")
+    $lines.Add('SRCSRVCMD=cmd /c "%GIT_EXE%" --git-dir="%GIT_REPO%" show %var3%:%var2% > %SRCSRVTRG%')
     $lines.Add("SRCSRV: source files ---------------------------------------")
 
     $mappedCount = 0
@@ -107,7 +107,8 @@ function Write-SourceServerStream {
             continue
         }
 
-        $lines.Add("$sourceFile*$relativePath*$GitCommit")
+        $targetFileName = [System.IO.Path]::GetFileName($sourceFile)
+        $lines.Add("$sourceFile*$relativePath*$GitCommit*$targetFileName")
         $mappedCount++
     }
 
