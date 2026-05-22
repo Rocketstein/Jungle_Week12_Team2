@@ -15,6 +15,9 @@ class UParticleModuleTypeDataBase;
 class UParticleSystemComponent;
 class UStaticMesh;
 
+/*-----------------------------------------------------------------------------
+	Particle Dynamic Data
+-----------------------------------------------------------------------------*/
 enum EDynamicEmitterType
 {
 	DET_Unknown = 0,
