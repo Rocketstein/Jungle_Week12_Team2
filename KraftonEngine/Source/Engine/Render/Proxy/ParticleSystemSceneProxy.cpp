@@ -38,6 +38,7 @@ void FParticleSystemSceneProxy::UpdateDynamicData(TArray<FDynamicEmitterDataBase
 		delete Old;
 	}
 	DynamicData = std::move(NewData);
+	EmitterDraws.resize(DynamicData.size());
 }
 
 void FParticleSystemSceneProxy::UpdateTransform()
