@@ -5,7 +5,13 @@ param(
     [string]$StorePath = "\\172.21.11.100\Symbols",
     [string]$ProductName = "NipsEngine",
     [string]$BuildName = "",
-    [string]$SymStorePath = ""
+    [string]$SymStorePath = "",
+    [switch]$EnableSourceServer,
+    [string]$SourceRepo = "\\172.21.11.100\SourceRepos\Week12.git",
+    [string]$RepoRoot = (Join-Path $PSScriptRoot ".."),
+    [string]$Commit = "",
+    [string]$SrcToolPath = "",
+    [string]$PdbStrPath = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -48,8 +54,14 @@ if (-not $BuildDir) {
 $resolvedBuildDir = (Resolve-Path -LiteralPath $BuildDir).Path
 $resolvedStorePath = $StorePath
 
-if (-not (Test-Path -LiteralPath $resolvedStorePath)) {
-    throw "Symbol store path not found: '$resolvedStorePath'. Check network share and permissions."
+try {
+    $storePathExists = Test-Path -LiteralPath $resolvedStorePath
+} catch {
+    throw "Cannot access symbol store '$resolvedStorePath'. Check network share credentials and write permission. Detail: $($_.Exception.Message)"
+}
+
+if (-not $storePathExists) {
+    throw "Symbol store path not found: '$resolvedStorePath'. Check network share path and permissions."
 }
 
 $pdbFiles = Get-ChildItem -LiteralPath $resolvedBuildDir -Recurse -Filter "*.pdb" -File
@@ -64,6 +76,40 @@ if (-not $BuildName) {
 
 $symstore = Resolve-SymStore -ExplicitPath $SymStorePath
 $pdbPattern = Join-Path $resolvedBuildDir "*.pdb"
+
+if ($EnableSourceServer) {
+    $addSourceServer = Join-Path $PSScriptRoot "AddSourceServer.ps1"
+    if (-not (Test-Path -LiteralPath $addSourceServer)) {
+        throw "AddSourceServer.ps1 not found at '$addSourceServer'."
+    }
+
+    $sourceArgs = @(
+        "-ExecutionPolicy", "Bypass",
+        "-File", $addSourceServer,
+        "-BuildDir", $resolvedBuildDir,
+        "-RepoRoot", $RepoRoot,
+        "-SourceRepo", $SourceRepo
+    )
+
+    if ($Commit) {
+        $sourceArgs += @("-Commit", $Commit)
+    }
+
+    if ($SrcToolPath) {
+        $sourceArgs += @("-SrcToolPath", $SrcToolPath)
+    }
+
+    if ($PdbStrPath) {
+        $sourceArgs += @("-PdbStrPath", $PdbStrPath)
+    }
+
+    Write-Host "Embedding source server data before symbol registration..."
+    & powershell @sourceArgs
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "AddSourceServer.ps1 failed with exit code $LASTEXITCODE."
+    }
+}
 
 Write-Host "SymStore : $symstore"
 Write-Host "BuildDir : $resolvedBuildDir"
