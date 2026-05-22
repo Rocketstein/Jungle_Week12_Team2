@@ -55,6 +55,24 @@ struct FVertexPNCTBW
 	float BoneWeights[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 };
 
+struct FParticleSpriteVertex
+{
+    FVector  Position;
+	FVector  Size;
+	FVector2 UV;
+	FVector  Color;
+	float	 Rotation;
+	float	 SubImageIndex;
+	FVector  Velocity;
+};
+
+struct FMeshParticleInstanceVertex
+{
+	FMatrix  Transform;
+	FColor	 Color;
+	FVector4 DynamicParam;
+};
+
 template<typename VertexType>
 struct TMeshData
 {
