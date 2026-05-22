@@ -1,6 +1,7 @@
 ﻿#include "ParticleSystemSceneProxy.h"
 #include "Particle/ParticleHelper.h"
 #include "Render/Types/FrameContext.h"
+#include "Render/Command/DrawCommand.h"
 
 FParticleSystemSceneProxy::~FParticleSystemSceneProxy()
 {
@@ -80,11 +81,14 @@ void FParticleSystemSceneProxy::UpdatePerViewport(const FFrameContext& Frame)
 
 bool FParticleSystemSceneProxy::PrepareDrawBuffer(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FDrawCommandBuffer& Out) const
 {
+	Out.VB = SpriteVB.GetBuffer();
+	Out.IB = SpriteIB.GetBuffer();
+	Out.VBStride = sizeof(FParticleSpriteVertex);
 	
-	return false;
+	return (SpriteVB.GetBuffer() != nullptr);
 }
 
-bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device*, ID3D11DeviceContext*,
+bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevice, ID3D11DeviceContext*,
 	const FPrimitiveDrawOptions&, FDrawCommand&) const
 {
 	return false;
