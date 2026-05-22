@@ -52,5 +52,8 @@ private:
 	// Sprite path — shared across all sprite emitters this proxy owns
 	FDynamicVertexBuffer SpriteVB;
 	FDynamicIndexBuffer  SpriteIB;
-	FConstantBuffer      ParticleParamCB;   // b2: per-emitter (alignment mode, sub-uv dims)
+
+	// In Cascade particles, the Emitter Instance(specifically FParticleEmitterInstance and its associated FParticleSystemSceneProxy)
+	// owns and manages the uniform buffers(constant buffers), not the individual particles.
+	//FConstantBuffer      ParticleParamCB;   // b2: per-emitter (alignment mode, sub-uv dims)
 };
