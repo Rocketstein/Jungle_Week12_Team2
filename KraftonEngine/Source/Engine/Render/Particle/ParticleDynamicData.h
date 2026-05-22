@@ -93,5 +93,6 @@ struct FDynamicSpriteEmitterData : public FDynamicSpriteEmitterDataBase
 struct FDynamicMeshEmitterData : public FDynamicSpriteEmitterData
 {
 	FDynamicMeshEmitterReplayData MeshSource;
+	const FDynamicEmitterReplayDataBase& GetSource() const override { return MeshSource; }
 	int32 GetDynamicVertexStride() const override { return sizeof(FMeshParticleInstanceVertex); }
 };
