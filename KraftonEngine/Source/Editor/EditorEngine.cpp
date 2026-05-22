@@ -1,5 +1,4 @@
 ﻿#include "Editor/EditorEngine.h"
-
 #include "Profiling/StartupProfiler.h"
 #include "Core/Notification.h"
 #include "Engine/Runtime/WindowsWindow.h"
@@ -35,18 +34,18 @@
 
 namespace
 {
-FString BuildScenePathFromStem(const FString& InStem)
-{
-	std::filesystem::path ScenePath = std::filesystem::path(FSceneSaveManager::GetSceneDirectory())
-		/ (FPaths::ToWide(InStem) + FSceneSaveManager::SceneExtension);
-	return FPaths::ToUtf8(ScenePath.wstring());
-}
+	FString BuildScenePathFromStem(const FString& InStem)
+	{
+		std::filesystem::path ScenePath = std::filesystem::path(FSceneSaveManager::GetSceneDirectory())
+			/ (FPaths::ToWide(InStem) + FSceneSaveManager::SceneExtension);
+		return FPaths::ToUtf8(ScenePath.wstring());
+	}
 
-FString GetFileStem(const FString& InPath)
-{
-	const std::filesystem::path Path(FPaths::ToWide(InPath));
-	return FPaths::ToUtf8(Path.stem().wstring());
-}
+	FString GetFileStem(const FString& InPath)
+	{
+		const std::filesystem::path Path(FPaths::ToWide(InPath));
+		return FPaths::ToUtf8(Path.stem().wstring());
+	}
 }
 
 void UEditorEngine::Init(FWindowsWindow* InWindow)
@@ -346,7 +345,7 @@ void UEditorEngine::StartPlayInEditorSession(const FRequestPlaySessionParams& Pa
 		PIEViewportClient->BeginGameSession(InitialViewport);
 	}
 	EnterPIEPossessedMode();
-	
+
 	//이 코드와 대응되는 게 아래 EndPlayMap()에 있음.
 	//MainPanel.HideEditorWindowsForPIE(); //PIE 중에는 에디터 패널을 숨김.
 	//ViewportLayout.DisableWorldAxisForPIE(); //PIE 중에는 월드 축 렌더링을 비활성화.
@@ -401,12 +400,12 @@ void UEditorEngine::EndPlayMap()
 				FViewportCameraTransform& VT = ActiveVC->GetViewTransform();
 				VT.ViewLocation = SavedPOV.Location;
 				VT.ViewRotation = SavedPOV.Rotation;
-				VT.FOV          = SavedPOV.FOV;
-				VT.AspectRatio  = SavedPOV.AspectRatio;
-				VT.NearClip     = SavedPOV.NearClip;
-				VT.FarClip      = SavedPOV.FarClip;
-				VT.OrthoZoom    = SavedPOV.OrthoWidth;
-				VT.bIsOrtho     = SavedPOV.bIsOrtho;
+				VT.FOV = SavedPOV.FOV;
+				VT.AspectRatio = SavedPOV.AspectRatio;
+				VT.NearClip = SavedPOV.NearClip;
+				VT.FarClip = SavedPOV.FarClip;
+				VT.OrthoZoom = SavedPOV.OrthoWidth;
+				VT.bIsOrtho = SavedPOV.bIsOrtho;
 				ActiveVC->NotifyViewTransformChanged();
 			}
 
@@ -419,7 +418,7 @@ void UEditorEngine::EndPlayMap()
 	SelectionManager.ClearSelection();
 	//SelectionManager.SetGizmoEnabled(true); //PIE가 끝나면 gizmo 활성화
 	SelectionManager.SetWorld(GetWorld());
-	
+
 	//이 코드와 대응되는 게 위의 StartPlayInEditorSession()에 있음.
 	//MainPanel.RestoreEditorWindowsAfterPIE();
 	//ViewportLayout.RestoreWorldAxisAfterPIE();
@@ -633,9 +632,9 @@ void UEditorEngine::RestoreViewportCamera(const FPerspectiveCameraData& CamData)
 			FViewportCameraTransform& VT = VC->GetViewTransform();
 			VT.ViewLocation = CamData.Location;
 			VT.ViewRotation = FRotator(CamData.Rotation.Y, CamData.Rotation.Z, CamData.Rotation.X);
-			VT.FOV          = CamData.FOV;
-			VT.NearClip     = CamData.NearClip;
-			VT.FarClip      = CamData.FarClip;
+			VT.FOV = CamData.FOV;
+			VT.NearClip = CamData.NearClip;
+			VT.FarClip = CamData.FarClip;
 			VC->NotifyViewTransformChanged();
 			break;
 		}
@@ -690,7 +689,7 @@ bool UEditorEngine::SaveSceneAsWithDialog()
 		.bPathMustExist = true,
 		.bPromptOverwrite = true,
 		.bReturnRelativeToProjectRoot = false,
-	});
+		});
 	if (SelectedPath.empty())
 	{
 		return false;
@@ -740,7 +739,7 @@ bool UEditorEngine::LoadSceneWithDialog()
 		.bPathMustExist = true,
 		.bPromptOverwrite = false,
 		.bReturnRelativeToProjectRoot = false,
-	});
+		});
 	if (SelectedPath.empty())
 	{
 		return false;
