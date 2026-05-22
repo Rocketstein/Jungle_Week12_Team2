@@ -1,7 +1,8 @@
 ﻿#pragma once
 
-#include "Math/Vector.h"
+#include "Math/Matrix.h"
 #include "Render/Types/RenderTypes.h"
+#include "Core/EngineTypes.h"
 #include <cassert>
 
 struct FVertex
@@ -69,7 +70,7 @@ struct FParticleSpriteVertex
 struct FMeshParticleInstanceVertex
 {
 	FMatrix  Transform;
-	FColor	 Color;
+	FVector4 Color;
 	FVector4 DynamicParam;
 };
 
