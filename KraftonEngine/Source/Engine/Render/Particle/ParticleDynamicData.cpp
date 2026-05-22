@@ -29,7 +29,7 @@ void FDynamicSpriteEmitterDataBase::SortSpriteParticles(int32 SortMode, const FV
 	uint16* InOutIndices, int32 Count,
 	const uint8* ParticleData, int32 Stride)
 {
-	if (SortMode == 0 || Count <= 1 || !InOutIndices || !ParticleData || Stride < sizeof(FVector))
+	if (SortMode == 0 || Count <= 1 || !InOutIndices || !ParticleData || Stride >= sizeof(FBaseParticle))
 	{
 		return;
 	}
