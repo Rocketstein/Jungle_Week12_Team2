@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="packages\NVIDIA.PhysX.4.1.229882250\build\native\NVIDIA.PhysX.props" Condition="Exists('packages\NVIDIA.PhysX.4.1.229882250\build\native\NVIDIA.PhysX.props')" />
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -321,8 +320,6 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="HighPerformanceGpuHint.cpp" />
-    <ClCompile Include="Source\Engine\Profiling\SkinningStats.cpp" />
     <ClCompile Include="Source\Editor\EditorEngine.cpp" />
     <ClCompile Include="Source\Editor\EditorRenderPipeline.cpp" />
     <ClCompile Include="Source\Editor\Import\EditorFbxImportService.cpp" />
@@ -373,8 +370,8 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Editor\Viewport\MeshEditorViewportClient.cpp" />
     <ClCompile Include="Source\Editor\Viewport\StaticMeshEditorViewportClient.cpp" />
     <ClCompile Include="Source\Editor\Viewport\ViewportCameraTransform.cpp" />
-    <ClCompile Include="Source\Engine\Animation\AnimGraphInstance.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimDataModel.cpp" />
+    <ClCompile Include="Source\Engine\Animation\AnimGraphInstance.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimInstance.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimInstanceAsset.cpp" />
     <ClCompile Include="Source\Engine\Animation\AnimInstanceAssetManager.cpp" />
@@ -444,10 +441,10 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Engine\Core\Log.cpp" />
     <ClCompile Include="Source\Engine\Core\Notification.cpp" />
     <ClCompile Include="Source\Engine\Core\ProjectSettings.cpp" />
+    <ClCompile Include="Source\Engine\Core\TickFunction.cpp" />
     <ClCompile Include="Source\Engine\Core\Property\FField.cpp" />
     <ClCompile Include="Source\Engine\Core\Property\FFieldClass.cpp" />
     <ClCompile Include="Source\Engine\Core\Property\FFieldVariant.cpp" />
-    <ClCompile Include="Source\Engine\Core\TickFunction.cpp" />
     <ClCompile Include="Source\Engine\Core\Property\PropertyTypes.cpp" />
     <ClCompile Include="Source\Engine\Core\Property\FObjectPropertyBase\FSoftObjectProperty.cpp" />
     <ClCompile Include="Source\Engine\Core\UObject\FSoftObjectPath.cpp" />
@@ -526,6 +523,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Engine\Profiling\GPUProfiler.cpp" />
     <ClCompile Include="Source\Engine\Profiling\MemoryStats.cpp" />
     <ClCompile Include="Source\Engine\Profiling\ShadowStats.cpp" />
+    <ClCompile Include="Source\Engine\Profiling\SkinningStats.cpp" />
     <ClCompile Include="Source\Engine\Profiling\StartupProfiler.cpp" />
     <ClCompile Include="Source\Engine\Profiling\Stats.cpp" />
     <ClCompile Include="Source\Engine\Profiling\Timer.cpp" />
@@ -614,7 +612,6 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\Engine\Profiling\SkinningStats.h" />
     <ClInclude Include="Source\Editor\EditorEngine.h" />
     <ClInclude Include="Source\Editor\EditorRenderPipeline.h" />
     <ClInclude Include="Source\Editor\Import\EditorFbxImportService.h" />
@@ -675,8 +672,8 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Editor\Viewport\MeshEditorViewportClient.h" />
     <ClInclude Include="Source\Editor\Viewport\StaticMeshEditorViewportClient.h" />
     <ClInclude Include="Source\Editor\Viewport\ViewportCameraTransform.h" />
-    <ClInclude Include="Source\Engine\Animation\AnimGraphInstance.h" />
     <ClInclude Include="Source\Engine\Animation\AnimDataModel.h" />
+    <ClInclude Include="Source\Engine\Animation\AnimGraphInstance.h" />
     <ClInclude Include="Source\Engine\Animation\AnimInstance.h" />
     <ClInclude Include="Source\Engine\Animation\AnimInstanceAsset.h" />
     <ClInclude Include="Source\Engine\Animation\AnimInstanceAssetManager.h" />
@@ -753,15 +750,15 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\Core\Log.h" />
     <ClInclude Include="Source\Engine\Core\Notification.h" />
     <ClInclude Include="Source\Engine\Core\ProjectSettings.h" />
-    <ClInclude Include="Source\Engine\Core\Property\FField.h" />
-    <ClInclude Include="Source\Engine\Core\Property\FFieldClass.h" />
-    <ClInclude Include="Source\Engine\Core\Property\FFieldVariant.h" />
     <ClInclude Include="Source\Engine\Core\RayTypes.h" />
     <ClInclude Include="Source\Engine\Core\ResourceTypes.h" />
     <ClInclude Include="Source\Engine\Core\Singleton.h" />
     <ClInclude Include="Source\Engine\Core\TickFunction.h" />
     <ClInclude Include="Source\Engine\Core\Property\FArrayProperty.h" />
     <ClInclude Include="Source\Engine\Core\Property\FEnumProperty.h" />
+    <ClInclude Include="Source\Engine\Core\Property\FField.h" />
+    <ClInclude Include="Source\Engine\Core\Property\FFieldClass.h" />
+    <ClInclude Include="Source\Engine\Core\Property\FFieldVariant.h" />
     <ClInclude Include="Source\Engine\Core\Property\FStructProperty.h" />
     <ClInclude Include="Source\Engine\Core\Property\PropertyTypes.h" />
     <ClInclude Include="Source\Engine\Core\Property\FObjectPropertyBase\FClassProperty.h" />
@@ -864,6 +861,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\Profiling\MemoryStats.h" />
     <ClInclude Include="Source\Engine\Profiling\PlatformTime.h" />
     <ClInclude Include="Source\Engine\Profiling\ShadowStats.h" />
+    <ClInclude Include="Source\Engine\Profiling\SkinningStats.h" />
     <ClInclude Include="Source\Engine\Profiling\StartupProfiler.h" />
     <ClInclude Include="Source\Engine\Profiling\Stats.h" />
     <ClInclude Include="Source\Engine\Profiling\Timer.h" />
@@ -1763,9 +1761,6 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
   <ItemGroup>
     <ResourceCompile Include="KraftonEngine.rc" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="GenerateCode" BeforeTargets="ClCompile">
     <Exec Command="python &quot;$(ProjectDir)..\Scripts\GenerateCode.py&quot;" />
@@ -1774,15 +1769,14 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     </ItemGroup>
   </Target>
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="packages\directxtk_desktop_win10.2026.5.8.1\build\native\directxtk_desktop_win10.targets" Condition="Exists('packages\directxtk_desktop_win10.2026.5.8.1\build\native\directxtk_desktop_win10.targets')" />
-    <Import Project="packages\NVIDIA.PhysX.4.1.229882250\build\native\NVIDIA.PhysX.targets" Condition="Exists('packages\NVIDIA.PhysX.4.1.229882250\build\native\NVIDIA.PhysX.targets')" />
+    <Import Project="packages\directxtk_desktop_win10.2025.10.28.2\build\native\directxtk_desktop_win10.targets" Condition="Exists('packages\directxtk_desktop_win10.2025.10.28.2\build\native\directxtk_desktop_win10.targets')" />
+    <Import Project="packages\NVIDIA.PhysX.4.1.2\build\native\NVIDIA.PhysX.targets" Condition="Exists('packages\NVIDIA.PhysX.4.1.2\build\native\NVIDIA.PhysX.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('packages\directxtk_desktop_win10.2026.5.8.1\build\native\directxtk_desktop_win10.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\directxtk_desktop_win10.2026.5.8.1\build\native\directxtk_desktop_win10.targets'))" />
-    <Error Condition="!Exists('packages\NVIDIA.PhysX.4.1.229882250\build\native\NVIDIA.PhysX.props')" Text="$([System.String]::Format('$(ErrorText)', 'packages\NVIDIA.PhysX.4.1.229882250\build\native\NVIDIA.PhysX.props'))" />
-    <Error Condition="!Exists('packages\NVIDIA.PhysX.4.1.229882250\build\native\NVIDIA.PhysX.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\NVIDIA.PhysX.4.1.229882250\build\native\NVIDIA.PhysX.targets'))" />
+    <Error Condition="!Exists('packages\directxtk_desktop_win10.2025.10.28.2\build\native\directxtk_desktop_win10.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\directxtk_desktop_win10.2025.10.28.2\build\native\directxtk_desktop_win10.targets'))" />
+    <Error Condition="!Exists('packages\NVIDIA.PhysX.4.1.2\build\native\NVIDIA.PhysX.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\NVIDIA.PhysX.4.1.2\build\native\NVIDIA.PhysX.targets'))" />
   </Target>
 </Project>

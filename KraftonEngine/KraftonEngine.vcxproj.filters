@@ -833,6 +833,15 @@
     <ClCompile Include="Source\Engine\Core\TickFunction.cpp">
       <Filter>Source\Engine\Core</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Core\Property\FField.cpp">
+      <Filter>Source\Engine\Core\Property</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Core\Property\FFieldClass.cpp">
+      <Filter>Source\Engine\Core\Property</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Core\Property\FFieldVariant.cpp">
+      <Filter>Source\Engine\Core\Property</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Core\Property\PropertyTypes.cpp">
       <Filter>Source\Engine\Core\Property</Filter>
     </ClCompile>
@@ -1065,6 +1074,9 @@
       <Filter>Source\Engine\Profiling</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Profiling\ShadowStats.cpp">
+      <Filter>Source\Engine\Profiling</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Profiling\SkinningStats.cpp">
       <Filter>Source\Engine\Profiling</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Profiling\StartupProfiler.cpp">
@@ -1762,6 +1774,15 @@
     <ClInclude Include="Source\Engine\Core\Property\FEnumProperty.h">
       <Filter>Source\Engine\Core\Property</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Core\Property\FField.h">
+      <Filter>Source\Engine\Core\Property</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Core\Property\FFieldClass.h">
+      <Filter>Source\Engine\Core\Property</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Core\Property\FFieldVariant.h">
+      <Filter>Source\Engine\Core\Property</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Core\Property\FStructProperty.h">
       <Filter>Source\Engine\Core\Property</Filter>
     </ClInclude>
@@ -2066,6 +2087,9 @@
       <Filter>Source\Engine\Profiling</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Profiling\ShadowStats.h">
+      <Filter>Source\Engine\Profiling</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Profiling\SkinningStats.h">
       <Filter>Source\Engine\Profiling</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Profiling\StartupProfiler.h">
