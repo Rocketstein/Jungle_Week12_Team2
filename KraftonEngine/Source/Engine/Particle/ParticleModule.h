@@ -49,11 +49,11 @@ class UParticleModule : public UObject
 public:
 	GENERATED_BODY(UParticleModule)
 
-	uint8 bSpawnModule : 1;
-	uint8 bUpdateModule : 1;
-	uint8 bFinalUpdateModule : 1;
-	uint8 bEnabled : 1;
-	uint8 bEditable : 1;
+	uint8 bSpawnModule : 1 = false;
+	uint8 bUpdateModule : 1 = false;
+	uint8 bFinalUpdateModule : 1 = false;
+	uint8 bEnabled : 1 = false;
+	uint8 bEditable : 1 = false;
 	uint8 LODValidity = 0xff;
 
 	struct FContext
@@ -110,9 +110,9 @@ public:
 	UMaterialInterface* Material = nullptr;
 	FVector EmitterOrigin = FVector::ZeroVector;
 	EParticleScreenAlignment ScreenAlignment = PSA_Square;
-	uint8 bUseLocalSpace : 1;
-	uint8 bKillOnDeactivate : 1;
-	uint8 bKillOnCompleted : 1;
+	uint8 bUseLocalSpace : 1 = false;
+	uint8 bKillOnDeactivate : 1 = false;
+	uint8 bKillOnCompleted : 1 = false;
 	EParticleSortMode SortMode = PSORTMODE_None;
 	float EmitterDuration = 1.0f;
 	TArray<FParticleBurst> BurstList;
@@ -130,8 +130,8 @@ class UParticleModuleSpawnBase : public UParticleModule
 public:
 	GENERATED_BODY(UParticleModuleSpawnBase)
 
-	uint32 bProcessSpawnRate : 1;
-	uint32 bProcessBurstList : 1;
+	uint32 bProcessSpawnRate : 1 = false;
+	uint32 bProcessBurstList : 1 = false;
 
 	EModuleType GetModuleType() const override { return EPMT_Spawn; }
 	bool IsSpawnModule() const override { return true; }
@@ -213,8 +213,8 @@ class UParticleModuleVelocityBase : public UParticleModule
 public:
 	GENERATED_BODY(UParticleModuleVelocityBase)
 
-	uint32 bInWorldSpace : 1;
-	uint32 bApplyOwnerScale : 1;
+	uint32 bInWorldSpace : 1 = false;
+	uint32 bApplyOwnerScale : 1 = false;
 };
 
 UCLASS()
@@ -279,9 +279,9 @@ public:
 
 	UStaticMesh* Mesh = nullptr;
 	float LODSizeScale = 1.0f;
-	uint8 bUseStaticMeshLODs : 1;
-	uint8 CastShadows : 1;
-	uint8 bOverrideMaterial : 1;
+	uint8 bUseStaticMeshLODs : 1 = false;
+	uint8 CastShadows : 1 = false;
+	uint8 bOverrideMaterial : 1 = false;
 
 	bool IsAMeshEmitter() const override { return true; }
 };
