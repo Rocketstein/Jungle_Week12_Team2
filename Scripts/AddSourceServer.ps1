@@ -4,6 +4,11 @@ param(
     [string]$RepoRoot = (Join-Path $PSScriptRoot ".."),
     [string]$SourceRepo = "\\172.21.11.100\SourceRepos\Week12.git",
     [string]$Commit = "",
+    [ValidateSet("Snapshot", "GitCommand")]
+    [string]$SourceMode = "Snapshot",
+    [string]$SourceSnapshotLocalRoot = "C:\SourceRepos\Snapshots",
+    [string]$SourceSnapshotShareRoot = "\\172.21.11.100\SourceRepos\Snapshots",
+    [string]$GitExePath = "git.exe",
     [string]$SrcToolPath = "",
     [string]$PdbStrPath = "",
     [switch]$KeepStreamFiles
@@ -80,6 +85,10 @@ function Write-SourceServerStream {
         [string]$Root,
         [string]$GitRepo,
         [string]$GitCommit,
+        [string]$Mode,
+        [string]$SnapshotLocalRoot,
+        [string]$SnapshotShareRoot,
+        [string]$GitExe,
         [System.Collections.Generic.HashSet[string]]$ValidGitPaths
     )
 
@@ -90,10 +99,16 @@ function Write-SourceServerStream {
     $lines.Add("VERCTRL=Git")
     $lines.Add("DATETIME=$(Get-Date -Format o)")
     $lines.Add("SRCSRV: variables ------------------------------------------")
-    $lines.Add("GIT_EXE=git.exe")
-    $lines.Add("GIT_REPO=$GitRepo")
-    $lines.Add("SRCSRVTRG=%targ%\%var4%")
-    $lines.Add('SRCSRVCMD=cmd /c if not exist "%targ%" mkdir "%targ%" 2>nul & "%GIT_EXE%" --git-dir="%GIT_REPO%" show %var3%:%var2% > %SRCSRVTRG% 2> "%targ%\srcsrv_%var4%.err"')
+    if ($Mode -eq "Snapshot") {
+        $lines.Add("SOURCE_ROOT=$SnapshotShareRoot")
+        $lines.Add("SRCSRVTRG=%SOURCE_ROOT%\%var3%\%var2%")
+        $lines.Add("SRCSRVCMD=")
+    } else {
+        $lines.Add("GIT_EXE=$GitExe")
+        $lines.Add("GIT_REPO=$GitRepo")
+        $lines.Add("SRCSRVTRG=%targ%\%var4%")
+        $lines.Add('SRCSRVCMD=cmd /c if not exist "%targ%" mkdir "%targ%" 2>nul & "%GIT_EXE%" --git-dir="%GIT_REPO%" show %var3%:%var2% > %SRCSRVTRG%')
+    }
     $lines.Add("SRCSRV: source files ---------------------------------------")
 
     $mappedCount = 0
@@ -107,8 +122,21 @@ function Write-SourceServerStream {
             continue
         }
 
-        $targetFileName = [System.IO.Path]::GetFileName($sourceFile)
-        $lines.Add("$sourceFile*$relativePath*$GitCommit*$targetFileName")
+        if ($Mode -eq "Snapshot") {
+            $targetRelativePath = $relativePath.Replace("/", "\")
+            $snapshotFile = Join-Path (Join-Path $SnapshotLocalRoot $GitCommit) $targetRelativePath
+            $snapshotDir = Split-Path -Parent $snapshotFile
+            if (-not (Test-Path -LiteralPath $snapshotDir)) {
+                New-Item -ItemType Directory -Path $snapshotDir -Force | Out-Null
+            }
+
+            Copy-Item -LiteralPath $sourceFile -Destination $snapshotFile -Force
+            $lines.Add("$sourceFile*$targetRelativePath*$GitCommit")
+        } else {
+            $targetFileName = [System.IO.Path]::GetFileName($sourceFile)
+            $lines.Add("$sourceFile*$relativePath*$GitCommit*$targetFileName")
+        }
+
         $mappedCount++
     }
 
@@ -162,7 +190,23 @@ Write-Host "PdbStr    : $pdbstr"
 Write-Host "RepoRoot  : $resolvedRepoRoot"
 Write-Host "SourceRepo: $SourceRepo"
 Write-Host "Commit    : $Commit"
+Write-Host "SourceMode: $SourceMode"
+if ($SourceMode -eq "Snapshot") {
+    Write-Host "SnapshotLocal: $SourceSnapshotLocalRoot"
+    Write-Host "SnapshotShare: $SourceSnapshotShareRoot"
+}
+Write-Host "GitExe    : $GitExePath"
 Write-Host "PDB Count : $($pdbFiles.Count)"
+
+if ($SourceMode -eq "Snapshot") {
+    if (-not (Test-Path -LiteralPath $SourceSnapshotLocalRoot)) {
+        New-Item -ItemType Directory -Path $SourceSnapshotLocalRoot -Force | Out-Null
+    }
+
+    if (-not (Test-Path -LiteralPath $SourceSnapshotShareRoot)) {
+        throw "Source snapshot share not found: '$SourceSnapshotShareRoot'. Share '$SourceSnapshotLocalRoot' so debugger clients can read it."
+    }
+}
 
 $gitFiles = & git "--git-dir=$SourceRepo" ls-tree -r --name-only $Commit
 if ($LASTEXITCODE -ne 0 -or -not $gitFiles) {
@@ -190,7 +234,7 @@ foreach ($pdbFile in $pdbFiles) {
     }
 
     $streamPath = Join-Path ([System.IO.Path]::GetTempPath()) ("srcsrv_{0}.txt" -f ([System.Guid]::NewGuid().ToString("N")))
-    $mappedCount = Write-SourceServerStream -StreamPath $streamPath -PdbFile $pdbFile -SourceFiles $sourceFiles -Root $resolvedRepoRoot -GitRepo $SourceRepo -GitCommit $Commit -ValidGitPaths $validGitPaths
+    $mappedCount = Write-SourceServerStream -StreamPath $streamPath -PdbFile $pdbFile -SourceFiles $sourceFiles -Root $resolvedRepoRoot -GitRepo $SourceRepo -GitCommit $Commit -Mode $SourceMode -SnapshotLocalRoot $SourceSnapshotLocalRoot -SnapshotShareRoot $SourceSnapshotShareRoot -GitExe $GitExePath -ValidGitPaths $validGitPaths
 
     & $pdbstr -w "-p:$pdbFile" "-i:$streamPath" -s:srcsrv
     if ($LASTEXITCODE -ne 0) {

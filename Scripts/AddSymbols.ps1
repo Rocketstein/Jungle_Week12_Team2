@@ -10,6 +10,11 @@ param(
     [string]$SourceRepo = "\\172.21.11.100\SourceRepos\Week12.git",
     [string]$RepoRoot = (Join-Path $PSScriptRoot ".."),
     [string]$Commit = "",
+    [ValidateSet("Snapshot", "GitCommand")]
+    [string]$SourceMode = "Snapshot",
+    [string]$SourceSnapshotLocalRoot = "C:\SourceRepos\Snapshots",
+    [string]$SourceSnapshotShareRoot = "\\172.21.11.100\SourceRepos\Snapshots",
+    [string]$GitExePath = "git.exe",
     [string]$SrcToolPath = "",
     [string]$PdbStrPath = ""
 )
@@ -88,7 +93,11 @@ if ($EnableSourceServer) {
         "-File", $addSourceServer,
         "-BuildDir", $resolvedBuildDir,
         "-RepoRoot", $RepoRoot,
-        "-SourceRepo", $SourceRepo
+        "-SourceRepo", $SourceRepo,
+        "-SourceMode", $SourceMode,
+        "-SourceSnapshotLocalRoot", $SourceSnapshotLocalRoot,
+        "-SourceSnapshotShareRoot", $SourceSnapshotShareRoot,
+        "-GitExePath", $GitExePath
     )
 
     if ($Commit) {
