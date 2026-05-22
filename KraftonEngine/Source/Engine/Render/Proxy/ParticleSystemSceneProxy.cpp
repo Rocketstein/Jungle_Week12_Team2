@@ -104,7 +104,7 @@ void FParticleSystemSceneProxy::UpdatePerViewport(const FFrameContext& Frame)
 	bVisible = !PackedVertices.empty();
 	if (!bVisible) return;
 
-	// Signal PrepareDrawBuffer that the `ynamic GPU buffers must be re-uploaded.
+	// Signal PrepareDrawBuffer that the dynamic GPU buffers must be re-uploaded.
 	bGpuBuffersDirty = true;
 }
 
