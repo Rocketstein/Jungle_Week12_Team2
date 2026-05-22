@@ -23,6 +23,7 @@ public:
 	GENERATED_BODY(UParticleSystemComponent)
 
 	UFXSystemAsset* GetFXSystemAsset() const override;
+	FPrimitiveSceneProxy* CreateSceneProxy() override;
 
 	UParticleSystem* Template = nullptr;
 	TArray<FParticleEmitterInstance*> EmitterInstances;
