@@ -61,7 +61,7 @@ struct FParticleSpriteVertex
     FVector  Position;
 	FVector  Size;
 	FVector2 UV;
-	FVector  Color;
+	FVector4 Color;
 	float	 Rotation;
 	float	 SubImageIndex;
 	FVector  Velocity;

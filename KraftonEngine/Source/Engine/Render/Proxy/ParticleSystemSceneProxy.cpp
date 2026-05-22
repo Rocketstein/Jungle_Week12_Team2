@@ -1,5 +1,5 @@
 ﻿#include "ParticleSystemSceneProxy.h"
-#include "Component/SubUVComponent.h"
+#include "Particle/ParticleHelper.h"
 #include "Render/Types/FrameContext.h"
 
 FParticleSystemSceneProxy::~FParticleSystemSceneProxy()
@@ -107,6 +107,37 @@ void FParticleSystemSceneProxy::PackSpriteEmitter(const FFrameContext& Frame, FD
 	// Expand each particle into a 4-vert quad
 	const float SubUInv = (Source.SubImages_Horizontal > 0) ? 1.0f / Source.SubImages_Horizontal : 1.0f;
 	const float SubVInv = (Source.SubImages_Vertical > 0) ? 1.0f / Source.SubImages_Vertical : 1.0f;
+
+	for (int32 i = 0; i < Count; ++i)
+	{
+		const uint16 Idx = Source.DataContainer.ParticleIndices[i];
+		const uint8* Bytes = Source.DataContainer.ParticleData + Idx * Source.ParticleStride;
+		const FBaseParticle& P = *reinterpret_cast<const FBaseParticle*>(Bytes);
+
+		// optional payload reads
+		float SubImageIndex = 0.0f;
+		if (Source.SubUVDataOffset >= 0)
+			SubImageIndex = *reinterpret_cast<const float*>(Bytes + Source.SubUVDataOffset);
+
+		const uint32 V0 = static_cast<uint32>(OutVerts.size());
+		for (int corner = 0; corner < 4; ++corner)
+		{
+			FParticleSpriteVertex V;
+			V.Position = P.Location;
+			V.Size = FVector(P.Size.X, P.Size.Y, /*subImageLerp*/ 0.0f);
+			V.UV = FVector2{ float(corner & 1), float((corner >> 1) & 1) };  // 0,0..1,1
+			V.Color = FVector4(P.Color.R, P.Color.G, P.Color.B, P.Color.A);
+			V.Rotation = P.Rotation;
+			V.SubImageIndex = SubImageIndex;
+			V.Velocity = P.Velocity;
+			OutVerts.push_back(V);
+		}
+
+		// CCW quad
+		OutIndices.push_back(V0 + 0); OutIndices.push_back(V0 + 1); OutIndices.push_back(V0 + 2);
+		OutIndices.push_back(V0 + 2); OutIndices.push_back(V0 + 1); OutIndices.push_back(V0 + 3);
+		IndexCursor += 6;
+	}
 }
 
 void FParticleSystemSceneProxy::PackMeshEmitter(const FFrameContext& Frame, FDynamicMeshEmitterData& Emitter)
