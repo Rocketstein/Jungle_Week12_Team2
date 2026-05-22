@@ -4,6 +4,24 @@
 #include "Render/Command/DrawCommand.h"
 #include "Component/ParticleSystemComponent.h"
 
+FParticleSystemSceneProxy::FParticleSystemSceneProxy(UParticleSystemComponent* InComponent)
+	: FPrimitiveSceneProxy(InComponent)
+{
+	// Per-frame CPU pack (sort + quad expansion) needs the FrameContext for
+	// camera-dependent sort order - required for RenderCollector to invoke
+	// UpdatePerViewport on this proxy each frame.
+	ProxyFlags |= EPrimitiveProxyFlags::PerViewportUpdate;
+
+	// Bounds for particle systems are owned by UParticleSystem (fixed bounds,
+	// artist-set) and FParticleEmitterInstance (dynamic per-frame bounds), then
+	// published via the component's GetWorldBoundingBox(). Until that's wired up
+	// on the CPU side, opt out of frustum + occlusion culling so the proxy never
+	// silently disappears because the component's default zero-extent AABB sits
+	// off-screen relative to the particle cloud.
+	ProxyFlags |= EPrimitiveProxyFlags::NeverCull;
+	ProxyFlags &= ~EPrimitiveProxyFlags::ShowAABB;
+}
+
 FParticleSystemSceneProxy::~FParticleSystemSceneProxy()
 {
 	for (FDynamicEmitterDataBase* P : DynamicData)

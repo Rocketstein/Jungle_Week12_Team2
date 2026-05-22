@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Component/PrimitiveComponent.h"
+#include "Render/Proxy/ParticleSystemSceneProxy.h"
 #include "ParticleSystemComponent.generated.h"
 
 class UParticleSystem;
