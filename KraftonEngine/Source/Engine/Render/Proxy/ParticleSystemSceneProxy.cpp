@@ -41,7 +41,34 @@ void FParticleSystemSceneProxy::UpdateVisibility()
 
 void FParticleSystemSceneProxy::UpdateMesh()
 {
+	SectionDraws.clear();
+	uint32 IndexCursor = 0;
 
+	for (size_t i = 0; i < DynamicData.size(); ++i)
+	{
+		FEmitterDraw& Draw = EmitterDraws[i];
+		const auto& Source = static_cast<const FDynamicSpriteEmitterReplayDataBase&>(
+			DynamicData[i]->GetSource());
+		const uint32 ParticleCount = static_cast<uint32>(Source.ActiveParticleCount);
+
+		if (Draw.Type == EDynamicEmitterType::Sprite)
+		{
+			// 6 indices per particle into the proxy's shared SpriteIB = Quad
+			const uint32 IdxCount = ParticleCount * 6;
+			Draw.FirstIndex = IndexCursor;
+			Draw.IndexCount = IdxCount;
+			IndexCursor += IdxCount;
+		}
+		else if (Draw.Type == EDynamicEmitterType::Mesh)
+		{
+			// Mesh path: section's index range is the static mesh's own IB.
+			// FirstIndex/IndexCount come from MeshGeom, and InstanceCount = ParticleCount.
+			Draw.FirstIndex = 0;
+			Draw.IndexCount = Draw.MeshGeom ? Draw.MeshGeom->GetIndexBuffer().GetIndexCount() : 0;
+			Draw.InstanceCount = ParticleCount;
+		}
+		SectionDraws.push_back({ Draw.Material, Draw.FirstIndex, Draw.IndexCount });
+	}
 }
 
 void FParticleSystemSceneProxy::UpdatePerViewport(const FFrameContext& Frame)

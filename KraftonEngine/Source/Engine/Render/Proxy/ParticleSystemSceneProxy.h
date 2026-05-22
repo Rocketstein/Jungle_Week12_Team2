@@ -37,8 +37,8 @@ private:
 		uint32 IndexCount;
 		// mesh path: per-emitter instance buffer + base static-mesh VB/IB
 		FDynamicVertexBuffer InstanceVB;
-		FMeshBuffer* MeshGeom = nullptr;   // borrowed from UStaticMesh
-		uint32               InstanceCount = 0;
+		FMeshBuffer*		 MeshGeom		= nullptr;   // borrowed from UStaticMesh
+		uint32               InstanceCount  = 0;
 	};
 
 	void PackSpriteEmitter(const FFrameContext& Frame, FDynamicSpriteEmitterData& Emitter,
