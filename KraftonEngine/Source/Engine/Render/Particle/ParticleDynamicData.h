@@ -5,6 +5,7 @@
 #include "Render/Types/VertexTypes.h"
 
 class UMaterial;
+struct FDynamicEmitterReplayDataBase;
 
 enum class EDynamicEmitterType : uint8
 {
@@ -28,6 +29,17 @@ struct FParticleDataContainer
 };
 
 
+struct FDynamicEmitterReplayDataBase
+{
+	EDynamicEmitterType eEmitterType = EDynamicEmitterType::None;
+	int32 ActiveParticleCount = 0;
+	int32 ParticleStride = 0;     // sizeof(FBaseParticle) + payload sum
+	FParticleDataContainer DataContainer;
+	FVector Scale = FVector(1, 1, 1);
+	int32 SortMode = 0;                // 0 = none, 1 = view distance back-to-front
+};
+
+
 // Render-side wrapper
 struct FDynamicEmitterDataBase
 {
@@ -45,17 +57,6 @@ struct FDynamicSpriteEmitterDataBase : public FDynamicEmitterDataBase
 		const uint8* ParticleData, int32 Stride);
 
 	virtual int32 GetDynamicVertexStride(/*ERHIFeatureLevel::Type InFeatureLevel*/) const = 0;
-};
-
-
-struct FDynamicEmitterReplayDataBase
-{
-	EDynamicEmitterType eEmitterType = EDynamicEmitterType::None;
-	int32 ActiveParticleCount = 0;
-	int32 ParticleStride = 0;     // sizeof(FBaseParticle) + payload sum
-	FParticleDataContainer DataContainer;
-	FVector Scale = FVector(1, 1, 1);
-	int32 SortMode = 0;                // 0 = none, 1 = view distance back-to-front
 };
 
 
