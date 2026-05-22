@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Core/EngineTypes.h"
 #include "Object/Object.h"
@@ -49,14 +49,14 @@ public:
 
 	FName EmitterName;
 
-	uint8 bUseLegacySpawningBehavior : 1;
-	uint8 bRequiresLoopNotification : 1;
-	uint8 bAxisLockEnabled : 1;
-	uint8 bMeshRotationActive : 1;
-	uint8 ConvertedModules : 1;
-	uint8 bIsSoloing : 1;
-	uint8 bCookedOut : 1;
-	uint8 bDisabledLODsKeepEmitterAlive : 1;
+	uint8 bUseLegacySpawningBehavior : 1 = false;
+	uint8 bRequiresLoopNotification : 1 = false;
+	uint8 bAxisLockEnabled : 1 = false;
+	uint8 bMeshRotationActive : 1 = false;
+	uint8 ConvertedModules : 1 = false;
+	uint8 bIsSoloing : 1 = false;
+	uint8 bCookedOut : 1 = false;
+	uint8 bDisabledLODsKeepEmitterAlive : 1 = false;
 
 	TArray<UParticleLODLevel*> LODLevels;
 
