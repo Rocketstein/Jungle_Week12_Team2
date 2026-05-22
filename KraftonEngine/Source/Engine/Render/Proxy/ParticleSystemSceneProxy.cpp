@@ -2,12 +2,20 @@
 
 FParticleSystemSceneProxy::~FParticleSystemSceneProxy()
 {
-
+	for (FDynamicEmitterDataBase* P : DynamicData)
+	{
+		delete P;
+	}
+	DynamicData.clear();
 }
 
 void FParticleSystemSceneProxy::UpdateDynamicData(TArray<FDynamicEmitterDataBase*>&& NewData)
 {
-
+	for (FDynamicEmitterDataBase* Old : DynamicData)
+	{
+		delete Old;
+	}
+	DynamicData = std::move(NewData);
 }
 
 void FParticleSystemSceneProxy::UpdateTransform()
