@@ -193,6 +193,11 @@ void FDrawCommandList::SubmitCommand(const FDrawCommand& Cmd,
 		{
 			uint32 Offset = 0;
 			Ctx->IASetVertexBuffers(0, 1, &Cmd.Buffer.VB, &Cmd.Buffer.VBStride, &Offset);
+
+			if (Cmd.Buffer.InstancedCount > 0 && Cmd.Buffer.InstanceVB)
+			{
+				Ctx->IASetVertexBuffers(1, 1, &Cmd.Buffer.InstanceVB, &Cmd.Buffer.InstanceVBStride, &Offset);
+			}
 		}
 		if (bForce || Cmd.Buffer.IB != Cache.Buffer.IB)
 		{
@@ -282,13 +287,27 @@ void FDrawCommandList::SubmitCommand(const FDrawCommand& Cmd,
 	Cache.bForceAll = false;
 
 	// --- Draw ---
-	if (Cmd.Buffer.IndexCount > 0)
+	if (Cmd.Buffer.InstancedCount) 
 	{
-		Ctx->DrawIndexed(Cmd.Buffer.IndexCount, Cmd.Buffer.FirstIndex, Cmd.Buffer.BaseVertex);
-	}
-	else if (Cmd.Buffer.VertexCount > 0)
+		if (Cmd.Buffer.IndexCount > 0) 
+		{
+			Ctx->DrawIndexedInstanced(Cmd.Buffer.IndexCount, Cmd.Buffer.InstancedCount, 0, Cmd.Buffer.BaseVertex, Cmd.Buffer.InstanceStart);
+		}
+		else if (Cmd.Buffer.VertexCount > 0)
+		{
+			Ctx->DrawInstanced(Cmd.Buffer.VertexCount, Cmd.Buffer.InstancedCount, 0, Cmd.Buffer.InstanceStart);
+		}
+	} 
+	else 
 	{
-		Ctx->Draw(Cmd.Buffer.VertexCount, 0);
+		if (Cmd.Buffer.IndexCount > 0)
+		{
+			Ctx->DrawIndexed(Cmd.Buffer.IndexCount, Cmd.Buffer.FirstIndex, Cmd.Buffer.BaseVertex);
+		}
+		else if (Cmd.Buffer.VertexCount > 0)
+		{
+			Ctx->Draw(Cmd.Buffer.VertexCount, 0);
+		}
 	}
 
 	FDrawCallStats::Increment();
