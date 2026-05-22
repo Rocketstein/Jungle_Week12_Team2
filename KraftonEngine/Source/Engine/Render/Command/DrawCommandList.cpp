@@ -189,6 +189,7 @@ void FDrawCommandList::SubmitCommand(const FDrawCommand& Cmd,
 	// --- Geometry (VB + IB) ---
 	if (Cmd.Buffer.HasBuffers())
 	{
+		// Slot 0 (per-vertex)
 		if (bForce || Cmd.Buffer.VB != Cache.Buffer.VB || Cmd.Buffer.VBStride != Cache.Buffer.VBStride)
 		{
 			uint32 Offset = 0;
@@ -199,6 +200,30 @@ void FDrawCommandList::SubmitCommand(const FDrawCommand& Cmd,
 				Ctx->IASetVertexBuffers(1, 1, &Cmd.Buffer.InstanceVB, &Cmd.Buffer.InstanceVBStride, &Offset);
 			}
 		}
+
+		const bool bCmdInstanced   = (Cmd.Buffer.InstancedCount   > 0) && Cmd.Buffer.InstanceVB;
+		const bool bCacheInstanced = (Cache.Buffer.InstancedCount > 0) && Cache.Buffer.InstanceVB;
+		if (bForce ||
+			bCmdInstanced != bCacheInstanced ||
+			Cmd.Buffer.InstanceVB       != Cache.Buffer.InstanceVB ||
+			Cmd.Buffer.InstanceVBStride != Cache.Buffer.InstanceVBStride)
+		{
+			uint32 Offset = 0;
+			if (bCmdInstanced)
+			{
+				Ctx->IASetVertexBuffers(1, 1, &Cmd.Buffer.InstanceVB, &Cmd.Buffer.InstanceVBStride, &Offset);
+			}
+			else if (bCacheInstanced)
+			{
+				// Transitioning instanced → non-instanced: null slot 1 so the
+				// next draw's input-layout doesn't read garbage from the stale
+				// per-instance stream.
+				ID3D11Buffer* nullVB = nullptr;
+				uint32 zeroStride = 0;
+				Ctx->IASetVertexBuffers(1, 1, &nullVB, &zeroStride, &Offset);
+			}
+		}
+
 		if (bForce || Cmd.Buffer.IB != Cache.Buffer.IB)
 		{
 			if (Cmd.Buffer.IB)

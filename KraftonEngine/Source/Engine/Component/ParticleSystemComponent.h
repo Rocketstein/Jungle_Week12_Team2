@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Component/PrimitiveComponent.h"
+#include "Render/Proxy/ParticleSystemSceneProxy.h"
 #include "Particle/ParticleSystem.h"
 #include "ParticleSystemComponent.generated.h"
 
@@ -24,6 +25,8 @@ public:
 
 	UFXSystemAsset* GetFXSystemAsset() const override;
 	void SetTemplate(UParticleSystem* NewTemplate);
+	FPrimitiveSceneProxy* CreateSceneProxy() override;
+	FParticleSystemSceneProxy* GetSceneProxy() const { return static_cast<FParticleSystemSceneProxy*>(SceneProxy); }
 
 	UPROPERTY(Edit, Category="Particles", DisplayName="Template", Type=SoftObject, Class=UParticleSystem)
 	UParticleSystem* Template = nullptr;
