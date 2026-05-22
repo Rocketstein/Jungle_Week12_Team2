@@ -123,40 +123,6 @@ bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device*, ID3D11
 	return true;
 }
 
-void FParticleSystemSceneProxy::PackSprites(const FFrameContext& Frame, ID3D11DeviceContext* InDeviceContext)
-{
-	if (DynamicData.empty())
-	{
-		bVisible = false;
-		return;
-	}
-
-	bVisible = true;
-	TArray<FParticleSpriteVertex> Vertices;
-	TArray<uint32> Indices;
-	uint32 IndexCursor = 0;
-
-	for (size_t i = 0; i < DynamicData.size(); i++)
-	{
-		switch (EmitterDraws[i].Type)
-		{
-		case (EDynamicEmitterType::Sprite):
-		{
-			PackSpriteEmitter(Frame, static_cast<FDynamicSpriteEmitterData&>(*DynamicData[i]), Vertices, Indices, IndexCursor);
-			break;
-		}
-		case (EDynamicEmitterType::Mesh):
-		{
-			PackMeshEmitter(Frame, static_cast<FDynamicMeshEmitterData&>(*DynamicData[i]));
-			break;
-		}
-		}
-	}
-
-	SpriteVB.Update(InDeviceContext, Vertices.data(), Vertices.size() * sizeof(FParticleSpriteVertex));
-	SpriteIB.Update(InDeviceContext, Indices.data(), Indices.size());
-}
-
 void FParticleSystemSceneProxy::PackSpriteEmitter(const FFrameContext& Frame, FDynamicSpriteEmitterData& Emitter,
 	TArray<FParticleSpriteVertex>& OutVerts,
 	TArray<uint32>& OutIndices, uint32& IndexCursor)

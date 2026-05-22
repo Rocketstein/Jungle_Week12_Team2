@@ -24,9 +24,6 @@ public:
 	bool PrepareDrawCommandBindings(ID3D11Device*, ID3D11DeviceContext*,
 		const FPrimitiveDrawOptions&, FDrawCommand&) const override;
 
-	void PackSprites(const FFrameContext& Frame, ID3D11DeviceContext* InDeviceContext);
-	void PackMeshes(const FFrameContext& Frame);
-
 	const char* GetVertexShaderEntryName() const override { return "VS_ParticleSprite"; }
 
 private:
