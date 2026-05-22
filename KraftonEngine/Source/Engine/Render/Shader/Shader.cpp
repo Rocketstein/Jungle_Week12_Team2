@@ -231,6 +231,9 @@ void FShader::Bind(ID3D11DeviceContext* InDeviceContext) const
 namespace
 {
 	constexpr const char* InstanceSemanticPrefix = "INSTANCE_";
+	constexpr size_t InstanceSemanticPrefixLength = sizeof("INSTANCE_") - 1;
+	constexpr UINT VertexInputSlot = 0;
+	constexpr UINT InstanceInputSlot = 1;
 
 	DXGI_FORMAT MaskToFormat(D3D_REGISTER_COMPONENT_TYPE ComponentType, BYTE Mask)
 	{
@@ -280,7 +283,7 @@ namespace
 			return false;
 
 		// Particle mesh instancing uses INSTANCE_* semantics for the slot-1 instance stream.
-		return std::strncmp(SemanticName, InstanceSemanticPrefix, std::strlen(InstanceSemanticPrefix)) == 0;
+		return std::strncmp(SemanticName, InstanceSemanticPrefix, InstanceSemanticPrefixLength) == 0;
 	}
 }
 
@@ -313,13 +316,13 @@ void FShader::CreateInputLayoutFromReflection(ID3D11Device* InDevice, ID3DBlob* 
 
 		if (IsInstanceSemantic(ParamDesc.SemanticName))
 		{
-			Elem.InputSlot = 1;
+			Elem.InputSlot = InstanceInputSlot;
 			Elem.InputSlotClass = D3D11_INPUT_PER_INSTANCE_DATA;
 			Elem.InstanceDataStepRate = 1;
 		}
 		else
 		{
-			Elem.InputSlot = 0;
+			Elem.InputSlot = VertexInputSlot;
 			Elem.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
 			Elem.InstanceDataStepRate = 0;
 		}

@@ -32,6 +32,22 @@ struct VS_Input_PNCTT
     float4 tangent : TANGENT;
 };
 
+// INSTANCE_* inputs are routed to the slot-1 per-instance stream by Shader.cpp.
+struct VS_Input_MeshParticle
+{
+    float3 position : POSITION;
+    float3 normal : NORMAL;
+    float4 color : COLOR;
+    float2 texcoord : TEXTCOORD;
+    float4 tangent : TANGENT;
+    float4 instanceTransform0 : INSTANCE_TRANSFORM0;
+    float4 instanceTransform1 : INSTANCE_TRANSFORM1;
+    float4 instanceTransform2 : INSTANCE_TRANSFORM2;
+    float4 instanceTransform3 : INSTANCE_TRANSFORM3;
+    float4 instanceColor : INSTANCE_COLOR;
+    float4 dynamicParam : INSTANCE_DYNAMICPARAM;
+};
+
 // FVertexPNCTBW (Position + Normal + Color + TexCoord + Tangent + BoneIndex + BoneWeight)
 // 사용: SkeletalMesh
 struct VS_Input_PNCTBW
