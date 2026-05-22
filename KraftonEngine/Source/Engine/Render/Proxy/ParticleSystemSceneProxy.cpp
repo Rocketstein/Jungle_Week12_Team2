@@ -79,7 +79,7 @@ void FParticleSystemSceneProxy::UpdatePerViewport(const FFrameContext& Frame)
 
 }
 
-bool FParticleSystemSceneProxy::PrepareDrawBuffer(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FDrawCommandBuffer& Out) const
+bool FParticleSystemSceneProxy::PrepareDrawBuffer(ID3D11Device*, ID3D11DeviceContext*, FDrawCommandBuffer& Out) const
 {
 	Out.VB = SpriteVB.GetBuffer();
 	Out.IB = SpriteIB.GetBuffer();
@@ -88,10 +88,34 @@ bool FParticleSystemSceneProxy::PrepareDrawBuffer(ID3D11Device* InDevice, ID3D11
 	return (SpriteVB.GetBuffer() != nullptr);
 }
 
-bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevice, ID3D11DeviceContext*,
-	const FPrimitiveDrawOptions&, FDrawCommand&) const
+bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext,
+	const FPrimitiveDrawOptions&, FDrawCommand& Cmd) const
 {
-	return false;
+	// Identify which emitter this command belongs to by FirstIndex (unique per section).
+	const FEmitterDraw* Hit = nullptr; 
+	for (const FEmitterDraw& E : EmitterDraws) {
+		if (E.FirstIndex == Cmd.Buffer.FirstIndex && E.IndexCount == Cmd.Buffer.IndexCount)
+		{
+			Hit = &E; break;
+		}
+	}
+	if (!Hit) return true;   // sprite path. Leave Cmd as is
+
+	if (Hit->Type == EDynamicEmitterType::Mesh && Hit->MeshGeom)
+	{
+		Cmd.Buffer.VB = Hit->MeshGeom->GetVertexBuffer().GetBuffer();
+		Cmd.Buffer.VBStride = Hit->MeshGeom->GetVertexBuffer().GetStride();
+		Cmd.Buffer.IB = Hit->MeshGeom->GetIndexBuffer().GetBuffer();
+		Cmd.Buffer.FirstIndex = 0;
+		Cmd.Buffer.IndexCount = Hit->IndexCount;
+		Cmd.Buffer.BaseVertex = 0;
+
+		Cmd.Buffer.InstanceVB = Hit->InstanceVB.GetBuffer();
+		Cmd.Buffer.InstanceVBStride = sizeof(FMeshParticleInstanceVertex);
+		Cmd.Buffer.InstancedCount = Hit->InstanceCount;
+		Cmd.Buffer.InstanceStart = 0;
+	}
+	return true;
 }
 
 void FParticleSystemSceneProxy::PackSpriteEmitter(const FFrameContext& Frame, FDynamicSpriteEmitterData& Emitter,
