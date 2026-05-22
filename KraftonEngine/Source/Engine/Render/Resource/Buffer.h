@@ -136,6 +136,19 @@ public:
 	FDynamicVertexBuffer() = default;
 	~FDynamicVertexBuffer() { Release(); }
 
+	FDynamicVertexBuffer(FDynamicVertexBuffer&& Other) noexcept
+		: Buffer(Other.Buffer), MaxCount(Other.MaxCount), Stride(Other.Stride)
+	{
+		Other.Buffer = nullptr;
+		Other.MaxCount = 0;
+		Other.Stride = 0;
+	}
+	FDynamicVertexBuffer& operator=(FDynamicVertexBuffer&& Other) noexcept
+	{
+		if (this != &Other) { Release(); /* steal fields */ }
+		return *this;
+	}
+
 	FDynamicVertexBuffer(const FDynamicVertexBuffer&) = delete;
 	FDynamicVertexBuffer& operator=(const FDynamicVertexBuffer&) = delete;
 
@@ -164,6 +177,18 @@ class FDynamicIndexBuffer
 public:
 	FDynamicIndexBuffer() = default;
 	~FDynamicIndexBuffer() { Release(); }
+
+	FDynamicIndexBuffer(FDynamicIndexBuffer&& Other) noexcept
+		: Buffer(Other.Buffer), MaxCount(Other.MaxCount)
+	{
+		Other.Buffer = nullptr;
+		Other.MaxCount = 0;
+	}
+	FDynamicIndexBuffer& operator=(FDynamicIndexBuffer&& Other) noexcept
+	{
+		if (this != &Other) { Release(); /* steal fields */ }
+		return *this;
+	}
 
 	FDynamicIndexBuffer(const FDynamicIndexBuffer&) = delete;
 	FDynamicIndexBuffer& operator=(const FDynamicIndexBuffer&) = delete;
