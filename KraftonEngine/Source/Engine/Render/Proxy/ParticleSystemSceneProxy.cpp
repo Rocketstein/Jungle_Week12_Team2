@@ -25,7 +25,13 @@ void FParticleSystemSceneProxy::UpdateTransform()
 
 void FParticleSystemSceneProxy::UpdateMaterial()
 {
-
+	EmitterDraws.resize(DynamicData.size());
+	for (uint32 i = 0; i < DynamicData.size(); i++)
+	{
+		const FDynamicSpriteEmitterReplayDataBase& Source = static_cast<FDynamicSpriteEmitterReplayDataBase>(DynamicData[i]->GetSource());
+		EmitterDraws[i].Material = Source.MaterialInterface;
+		EmitterDraws[i].Type	 = Source.eEmitterType;
+	}
 }
 
 void FParticleSystemSceneProxy::UpdateVisibility()
