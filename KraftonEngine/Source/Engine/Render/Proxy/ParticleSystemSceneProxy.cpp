@@ -2,6 +2,7 @@
 #include "Particle/ParticleHelper.h"
 #include "Render/Types/FrameContext.h"
 #include "Render/Command/DrawCommand.h"
+#include "Component/ParticleSystemComponent.h"
 
 FParticleSystemSceneProxy::~FParticleSystemSceneProxy()
 {
@@ -23,7 +24,8 @@ void FParticleSystemSceneProxy::UpdateDynamicData(TArray<FDynamicEmitterDataBase
 
 void FParticleSystemSceneProxy::UpdateTransform()
 {
-
+	FPrimitiveSceneProxy::UpdateTransform();
+	ComponentToWorld = GetOwner()->GetWorldMatrix();
 }
 
 void FParticleSystemSceneProxy::UpdateMaterial()

@@ -52,6 +52,8 @@ private:
 	TArray<FDynamicEmitterDataBase*> DynamicData;   // owned, freed on next UpdateDynamicData
 	TArray<FEmitterDraw>             EmitterDraws;
 
+	FMatrix ComponentToWorld = FMatrix::Identity;
+
 	// Sprite path — shared across all sprite emitters this proxy owns
 	mutable FDynamicVertexBuffer SpriteVB;
 	mutable FDynamicIndexBuffer  SpriteIB;
