@@ -18,7 +18,7 @@ public:
 	GENERATED_BODY(UParticleLODLevel)
 
 	int32 Level = 0;
-	uint32 bEnabled : 1;
+	uint32 bEnabled : 1 = false;
 
 	UParticleModuleRequired* RequiredModule = nullptr;
 	TArray<UParticleModule*> Modules;
@@ -32,7 +32,7 @@ public:
 	TArray<UParticleModule*> UpdateModules;
 	TArray<UParticleModuleEventReceiverBase*> EventReceiverModules;
 
-	uint32 ConvertedModules : 1;
+	uint32 ConvertedModules : 1 = false;
 	int32 PeakActiveParticles = 0;
 
 	virtual void UpdateModuleLists();
