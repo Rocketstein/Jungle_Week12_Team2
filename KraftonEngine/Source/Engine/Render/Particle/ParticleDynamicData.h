@@ -68,6 +68,7 @@ struct FDynamicSpriteEmitterReplayDataBase : public FDynamicEmitterReplayDataBas
 	int32 SubImages_Vertical = 1;
 	uint8 ScreenAlignment = 0;    // PSA_Square/PSA_Velocity/PSA_FacingCameraPosition
 	EBlendState BlendMode = EBlendState::AlphaBlend;
+
 	// Offsets into FBaseParticle payload (filled by CacheEmitterModuleInfo on CPU)
 	int32 SubUVDataOffset = -1;
 	int32 DynamicParameterDataOffset = -1;
