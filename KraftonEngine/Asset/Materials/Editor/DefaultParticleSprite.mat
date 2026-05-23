@@ -1,0 +1,10 @@
+{
+  "PathFileName": "Asset/Materials/Editor/DefaultParticleSprite.mat",
+  "ShaderPath": "Shaders/Particle/ParticleSprite.hlsl",
+  "RenderPass": "AlphaBlend",
+  "BlendState": "Additive",
+  "Textures": {
+    "DiffuseTexture": "Asset/Editor/Icons/S_AmbientLight_256x.png"
+  },
+  "Origin": "Editor"
+}

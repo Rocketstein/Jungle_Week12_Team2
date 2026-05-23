@@ -1127,6 +1127,9 @@
     <ClCompile Include="Source\Engine\Render\Particle\ParticleDynamicData.cpp">
       <Filter>Source\Engine\Render\Particle</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Particle\ParticleSpriteSmokeTest.cpp">
+      <Filter>Source\Engine\Render\Particle</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Render\Pipeline\DefaultRenderPipeline.cpp">
       <Filter>Source\Engine\Render\Pipeline</Filter>
     </ClCompile>
@@ -2145,6 +2148,9 @@
       <Filter>Source\Engine\Render\Geometry</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Particle\ParticleDynamicData.h">
+      <Filter>Source\Engine\Render\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Particle\ParticleSpriteSmokeTest.h">
       <Filter>Source\Engine\Render\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Pipeline\DefaultRenderPipeline.h">
