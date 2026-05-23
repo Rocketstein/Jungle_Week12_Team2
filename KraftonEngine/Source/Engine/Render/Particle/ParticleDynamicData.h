@@ -61,6 +61,7 @@ struct FDynamicSpriteEmitterReplayDataBase : public FDynamicEmitterReplayDataBas
 
 struct FDynamicMeshEmitterReplayData : public FDynamicSpriteEmitterReplayDataBase
 {
+	uint16 LODLevel = -1;
 	UStaticMesh* StaticMesh = nullptr;
 
 	FDynamicMeshEmitterReplayData()
