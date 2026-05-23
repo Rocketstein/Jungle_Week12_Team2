@@ -2,6 +2,7 @@
 
 #include "Component/ActorComponent.h"
 #include "Component/ParticleSystemComponent.h"
+#include "Component/SceneComponent.h"
 #include "Core/Log.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
@@ -20,10 +21,12 @@ namespace
 	constexpr float kTwoPi = 6.28318530718f;
 
 	// Build one sprite emitter snapshot — N stationary, camera-facing quads
-	// arranged on a unit circle of given radius around the component origin.
-	// Returns a heap-allocated FDynamicSpriteEmitterData* whose ownership is
-	// passed to FParticleSystemSceneProxy::UpdateDynamicData.
-	FDynamicSpriteEmitterData* BuildRingEmitter(int32 N, UMaterial* Material, float Radius)
+	// arranged on a circle of given radius around WorldCenter. Particle positions
+	// are world-space because FParticleSystemSceneProxy::UpdateTransform forces
+	// PerObjectConstants to identity, so the caller must bake the owning
+	// component's world location into the ring center.
+	// Ownership of the returned ptr is passed to UpdateDynamicData.
+	FDynamicSpriteEmitterData* BuildRingEmitter(int32 N, UMaterial* Material, float Radius, const FVector& WorldCenter)
 	{
 		if (N <= 0) return nullptr;
 
@@ -48,7 +51,8 @@ namespace
 				Src.DataContainer.ParticleData + Src.ParticleStride * i);
 
 			const float t = (kTwoPi * static_cast<float>(i)) / static_cast<float>(N);
-			P->Location           = FVector(Radius * std::cos(t), Radius * std::sin(t), 0.0f);
+			P->Location           = WorldCenter
+			                     + FVector(Radius * std::cos(t), Radius * std::sin(t), 0.0f);
 			P->OldLocation        = P->Location;
 			P->Velocity           = FVector::ZeroVector;
 			P->BaseVelocity       = FVector::ZeroVector;
@@ -120,8 +124,15 @@ int32 ParticleSpriteSmokeTest::InjectIntoWorld(UWorld* World, UMaterial* Materia
 			}
 			++PSCsWithProxy;
 
+			// Bake the component's world location into the ring center — the proxy
+			// renders particle positions as world-space (identity model matrix).
+			const FVector RingCenter = PSC->GetWorldLocation();
+			UE_LOG("[ParticleSmokeTest]   '%s' PSC at world (%.1f, %.1f, %.1f); ring R=%.1f size=20",
+				Actor->GetFName().ToString().c_str(),
+				RingCenter.X, RingCenter.Y, RingCenter.Z, Radius);
+
 			TArray<FDynamicEmitterDataBase*> Data;
-			if (FDynamicSpriteEmitterData* Emitter = BuildRingEmitter(N, Material, Radius))
+			if (FDynamicSpriteEmitterData* Emitter = BuildRingEmitter(N, Material, Radius, RingCenter))
 			{
 				Data.push_back(Emitter);
 			}

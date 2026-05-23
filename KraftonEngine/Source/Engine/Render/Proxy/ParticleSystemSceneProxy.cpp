@@ -3,6 +3,7 @@
 #include "Render/Types/FrameContext.h"
 #include "Render/Command/DrawCommand.h"
 #include "Component/ParticleSystemComponent.h"
+#include "Core/Log.h"
 
 FParticleSystemSceneProxy::FParticleSystemSceneProxy(UParticleSystemComponent* InComponent)
 	: FPrimitiveSceneProxy(InComponent)
@@ -275,7 +276,14 @@ void FParticleSystemSceneProxy::PackSpriteEmitter(const FFrameContext& Frame, FD
 			V.Rotation = P.Rotation;
 			V.SubImageIndex = 0.0f;
 			V.Velocity = P.Velocity;
+
+			//UE_LOG("[Sprite Vertex %d] V.Position=%d,%d,%d V.Size=%d,%d,%d V.UV=%d,%d", i,
+			//	V.Position.X, V.Position.Y, V.Position.Z,
+			//	V.Size.X, V.Size.Y, V.Size.Z,
+			//	V.UV.X, V.UV.Y);
+
 			OutVerts.push_back(V);
+
 		}
 
 		// CCW quad
