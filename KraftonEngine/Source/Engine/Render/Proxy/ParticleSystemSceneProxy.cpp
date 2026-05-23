@@ -255,7 +255,7 @@ bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevic
 {
 	if (SectionIndex < 0 || SectionIndex >= static_cast<int32>(EmitterDraws.size()))
 	{
-		return true;
+		return false;
 	}
 
 	const FEmitterDraw& Hit = EmitterDraws[SectionIndex];
