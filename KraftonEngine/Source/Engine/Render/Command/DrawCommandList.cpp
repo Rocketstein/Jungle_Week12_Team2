@@ -194,11 +194,6 @@ void FDrawCommandList::SubmitCommand(const FDrawCommand& Cmd,
 		{
 			uint32 Offset = 0;
 			Ctx->IASetVertexBuffers(0, 1, &Cmd.Buffer.VB, &Cmd.Buffer.VBStride, &Offset);
-
-			if (Cmd.Buffer.InstancedCount > 0 && Cmd.Buffer.InstanceVB)
-			{
-				Ctx->IASetVertexBuffers(1, 1, &Cmd.Buffer.InstanceVB, &Cmd.Buffer.InstanceVBStride, &Offset);
-			}
 		}
 
 		const bool bCmdInstanced   = (Cmd.Buffer.InstancedCount   > 0) && Cmd.Buffer.InstanceVB;

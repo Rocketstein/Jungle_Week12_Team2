@@ -21,6 +21,7 @@
 #include "Component/Light/LightComponentBase.h"
 #include "Component/DecalComponent.h"
 #include "Component/HeightFogComponent.h"
+#include "Component/ParticleSystemComponent.h"
 #include "Core/Property/FArrayProperty.h"
 #include "Core/Property/FEnumProperty.h"
 #include "Core/Property/FObjectPropertyBase/FSoftObjectProperty.h"
@@ -822,6 +823,7 @@ void FEditorPropertyWidget::RenderComponentTree(AActor* Actor)
 	AddComponentClassGroup(ComponentGroups, "Movement", UMovementComponent::StaticClass());
 	AddComponentClassGroup(ComponentGroups, "UBillboardComponent", UBillboardComponent::StaticClass());
 	//AddComponentClassGroup(ComponentGroups, "UMeshComponent", UMeshComponent::StaticClass());
+	AddComponentClassGroup(ComponentGroups, "Particles", UFXSystemComponent::StaticClass());
 	AddComponentClassGroup(ComponentGroups, "Primitive", UPrimitiveComponent::StaticClass());
 	//AddComponentClassGroup(ComponentGroups, "USceneComponent", USceneComponent::StaticClass());
 	//AddComponentClassGroup(ComponentGroups, "UActorComponent", UActorComponent::StaticClass());
@@ -859,6 +861,9 @@ void FEditorPropertyWidget::RenderComponentTree(AActor* Actor)
 			return strcmp(A->GetName(), B->GetName()) < 0;
 		});
 
+	ImGui::Separator();
+	ImGui::AlignTextToFramePadding();
+	ImGui::TextUnformatted("Components");
 	ImGui::SameLine();
 
 	if (ImGui::Button("Add"))

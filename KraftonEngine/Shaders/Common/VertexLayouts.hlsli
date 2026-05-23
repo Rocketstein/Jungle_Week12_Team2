@@ -32,6 +32,17 @@ struct VS_Input_PNCTT
     float4 tangent : TANGENT;
 };
 
+struct VS_Input_ParticleSprite
+{
+    float3 position : POSITION;
+    float3 size : TEXCOORD0;
+    float2 uv : TEXCOORD1;
+    float4 color : COLOR;
+    float rotation : TEXCOORD2;
+    float subImage : TEXCOORD3;
+    float3 velocity : TEXCOORD4;
+};
+
 // INSTANCE_* inputs are routed to the slot-1 per-instance stream by Shader.cpp.
 struct VS_Input_MeshParticle
 {
@@ -113,6 +124,13 @@ struct PS_Input_UV
 struct PS_Input_PosOnly
 {
     float4 position : SV_POSITION;
+};
+
+struct PS_Input_Particle
+{
+    float4 position : SV_POSITION;
+    float2 texcoord : TEXCOORD0;
+    float4 color    : COLOR;
 };
 
 // SV_POSITION + Color + WorldPos (Editor)
