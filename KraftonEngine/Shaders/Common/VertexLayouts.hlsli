@@ -149,4 +149,11 @@ struct PS_Input_Shadow
     float  depth    : TEXCOORD0;    // VSM용 normalized depth
 };
 
+struct PS_Input_Particle
+{
+    float4 position : SV_POSITION;
+    float2 texcoord : TEXCOORD;
+    float4 color    : COLOR;
+};
+
 #endif // VERTEX_LAYOUTS_HLSL

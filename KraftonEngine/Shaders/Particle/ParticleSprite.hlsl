@@ -17,16 +17,17 @@ float2 RotateParticleCorner(float2 Corner, float Rotation)
     return float2(Corner.x * C - Corner.y * S, Corner.x * S + Corner.y * C);
 }
 
-PS_Input_Tex VS(VS_Input_ParticleSprite Input)
+PS_Input_Particle VS(VS_Input_ParticleSprite Input)
 {
-    PS_Input_Tex Out;
+    PS_Input_Particle Out;
     float2 Corner = Input.uv * 2.0f - 1.0f;
     Corner = RotateParticleCorner(Corner, Input.rotation);
     Corner *= Input.size.xy;
-    float4 viewPos = mul(float4(position, 1), View);
-    viewPos.xy += Corner;
-    Out.position = mul(viewPos, Projection);
     
+    float4 ViewPos = mul(float4(Input.position, 1), View);
+    ViewPos.xy += Corner;
+    Out.position = mul(ViewPos, Projection);
+    Out.texcoord = Input.uv;
     Out.color = Input.color;
     return Out;
 }
