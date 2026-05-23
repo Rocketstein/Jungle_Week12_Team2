@@ -417,6 +417,9 @@
     <FxCompile Include="Shaders\Lighting\VSMBlur.hlsl">
       <Filter>Shaders\Lighting</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\Particle\ParticleCommon.hlsli">
+      <Filter>Shaders\Particle</Filter>
+    </FxCompile>
     <FxCompile Include="Shaders\Particle\ParticleMesh.hlsl">
       <Filter>Shaders\Particle</Filter>
     </FxCompile>
@@ -570,6 +573,9 @@
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\UI\NotificationToast.cpp">
+      <Filter>Source\Editor\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\UI\ParticleSmokeTestPanel.cpp">
       <Filter>Source\Editor\UI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\UI\Asset\AnimInstanceEditorWidget.cpp">
@@ -1130,6 +1136,9 @@
     <ClCompile Include="Source\Engine\Render\Particle\ParticleDynamicData.cpp">
       <Filter>Source\Engine\Render\Particle</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Particle\ParticleMeshSmokeTest.cpp">
+      <Filter>Source\Engine\Render\Particle</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Render\Particle\ParticleSpriteSmokeTest.cpp">
       <Filter>Source\Engine\Render\Particle</Filter>
     </ClCompile>
@@ -1467,6 +1476,9 @@
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\NotificationToast.h">
+      <Filter>Source\Editor\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\UI\ParticleSmokeTestPanel.h">
       <Filter>Source\Editor\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\Asset\AnimInstanceEditorWidget.h">
@@ -2151,6 +2163,9 @@
       <Filter>Source\Engine\Render\Geometry</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Particle\ParticleDynamicData.h">
+      <Filter>Source\Engine\Render\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Particle\ParticleMeshSmokeTest.h">
       <Filter>Source\Engine\Render\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Particle\ParticleSpriteSmokeTest.h">
@@ -4085,10 +4100,5 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="KraftonEngine.rc" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Shaders\Particle\ParticleCommon.hlsli">
-      <Filter>Shaders\Particle</Filter>
-    </None>
   </ItemGroup>
 </Project>
