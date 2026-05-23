@@ -24,8 +24,8 @@ PS_Input_Tex VS(VS_Input_ParticleSprite Input)
     Corner = RotateParticleCorner(Corner, Input.rotation);
     Corner *= Input.size.xy;
     float4 viewPos = mul(float4(position, 1), View);
-    viewPos.xy += corner;
-    output.position = mul(viewPos, Projection);
+    viewPos.xy += Corner;
+    Out.position = mul(viewPos, Projection);
     
     Out.color = Input.color;
     return Out;
