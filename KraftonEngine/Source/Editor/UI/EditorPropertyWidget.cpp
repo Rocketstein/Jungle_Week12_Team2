@@ -859,6 +859,9 @@ void FEditorPropertyWidget::RenderComponentTree(AActor* Actor)
 			return strcmp(A->GetName(), B->GetName()) < 0;
 		});
 
+	ImGui::Separator();
+	ImGui::AlignTextToFramePadding();
+	ImGui::TextUnformatted("Components");
 	ImGui::SameLine();
 
 	if (ImGui::Button("Add"))
