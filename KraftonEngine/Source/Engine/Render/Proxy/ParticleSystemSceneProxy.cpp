@@ -3,6 +3,7 @@
 #include "Render/Types/FrameContext.h"
 #include "Render/Command/DrawCommand.h"
 #include "Component/ParticleSystemComponent.h"
+#include "Mesh/StaticMesh.h"
 
 FParticleSystemSceneProxy::FParticleSystemSceneProxy(UParticleSystemComponent* InComponent)
 	: FPrimitiveSceneProxy(InComponent)
@@ -72,12 +73,13 @@ void FParticleSystemSceneProxy::UpdateMesh()
 	for (size_t i = 0; i < DynamicData.size(); ++i)
 	{
 		FEmitterDraw& Draw = EmitterDraws[i];
-		const auto& Source = static_cast<const FDynamicSpriteEmitterReplayDataBase&>(
-			DynamicData[i]->GetSource());
-		const uint32 ParticleCount = static_cast<uint32>(Source.ActiveParticleCount);
 
 		if (Draw.Type == DET_Sprite)
 		{
+			const auto& Source = static_cast<const FDynamicSpriteEmitterReplayDataBase&>(
+				DynamicData[i]->GetSource());
+			const uint32 ParticleCount = static_cast<uint32>(Source.ActiveParticleCount);
+
 			// 6 indices per particle into the proxy's shared SpriteIB = Quad
 			const uint32 IdxCount = ParticleCount * 6;
 			Draw.FirstIndex = IndexCursor;
@@ -86,11 +88,17 @@ void FParticleSystemSceneProxy::UpdateMesh()
 		}
 		else if (Draw.Type == DET_Mesh)
 		{
+			const auto& Source = static_cast<const FDynamicMeshEmitterReplayData&>(
+				DynamicData[i]->GetSource());
+			const uint32 ParticleCount = static_cast<uint32>(Source.ActiveParticleCount);
+
 			// Mesh path: section's index range is the static mesh's own IB.
 			// FirstIndex/IndexCount come from MeshGeom, and InstanceCount = ParticleCount.
 			Draw.FirstIndex = 0;
 			Draw.IndexCount = Draw.MeshGeom ? Draw.MeshGeom->GetIndexBuffer().GetIndexCount() : 0;
 			Draw.InstanceCount = ParticleCount;
+			Draw.MeshGeom = Source.StaticMesh ? Source.StaticMesh->GetLODMeshBuffer(Source.LODLevel) : nullptr;
+
 		}
 		SectionDraws.push_back({ Draw.Material, Draw.FirstIndex, Draw.IndexCount });
 	}
