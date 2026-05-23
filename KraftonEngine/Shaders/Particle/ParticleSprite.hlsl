@@ -40,7 +40,7 @@ PS_Input_Particle VS(VS_Input_ParticleSprite Input)
         ViewPos.xy += AxisX * (Corner.x * Input.size.x) + AxisY * (Corner.y * Input.size.y);
         Out.position = mul(ViewPos, Projection);
     }
-    else
+    else if (Alignment == PARTICLE_SCREEN_ALIGNMENT_TYPE_SPECIFIC)
     {
         // Non-billboard fallback until type-specific sprite bases are provided.
         float3 WorldCorner = float3(Corner * Input.size.xy, 0.0f);
