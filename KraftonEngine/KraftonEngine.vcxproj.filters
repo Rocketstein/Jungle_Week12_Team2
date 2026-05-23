@@ -4087,7 +4087,7 @@
     <ResourceCompile Include="KraftonEngine.rc" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="ParticleCommon.hlsli">
+    <None Include="Shaders\Particle\ParticleCommon.hlsli">
       <Filter>Shaders\Particle</Filter>
     </None>
   </ItemGroup>

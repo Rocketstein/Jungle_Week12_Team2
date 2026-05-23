@@ -1,17 +1,9 @@
 #include "Common/Functions.hlsli"
 #include "Common/VertexLayouts.hlsli"
 #include "Common/SystemSamplers.hlsli"
-#include "ParticleCommon.hlsli"
+#include "Particle/ParticleCommon.hlsli"
 
 Texture2D ParticleAtlas : register(t0);
-
-//cbuffer ParticleParamBuffer : register(b2)
-//{
-//    float SubUVCols;
-//    float SubUVRows;
-//    float ScreenAlignment;
-//    float _Pad;
-//}
 
 // Rotate a 2D corner offset (radians, CCW).
 float2 RotateParticleCorner(float2 Corner, float Rotation)

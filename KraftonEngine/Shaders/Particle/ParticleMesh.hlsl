@@ -1,7 +1,7 @@
 #include "Common/Functions.hlsli"
 #include "Common/VertexLayouts.hlsli"
 #include "Common/SystemSamplers.hlsli"
-#include "ParticleCommon.hlsli"
+#include "Particle/ParticleCommon.hlsli"
 
 // Mesh-particle base color. Same convention as ParticleSprite.hlsl
 // bound from the material's "DiffuseTexture" slot (EMaterialTextureSlot::Diffuse → t0).

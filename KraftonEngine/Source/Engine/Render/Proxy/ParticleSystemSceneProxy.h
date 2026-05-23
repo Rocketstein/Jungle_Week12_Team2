@@ -43,6 +43,11 @@ private:
 		uint32               InstanceCount  = 0;
 		TArray<FMeshParticleInstanceVertex> PackedInstances;
 		mutable bool bInstanceVBDirty = true;
+
+		// CBuffer, owned by the emitter
+		mutable FConstantBuffer ParticleParamCB;
+		mutable bool bParticleParamCBDirty = true;
+		FParticleParamConstants ParticleParams;
 	};
 
 	// Fills the SpriteVert/IndexScratch member arrays and refreshes per-emitter
