@@ -44,8 +44,6 @@ PS_Input_Particle VS(VS_Input_ParticleSprite Input)
 float4 PS(PS_Input_Particle Input) : SV_Target
 {
     float4 Col = ParticleAtlas.Sample(LinearClampSampler, Input.texcoord);
-
-    // Wireframe overlay support (matches SubUV pattern).
     return float4(ApplyWireframe(Col.rgb) * Input.color.rgb,
                   bIsWireframe ? 1.0f : (Col.a * Input.color.a));
 }
