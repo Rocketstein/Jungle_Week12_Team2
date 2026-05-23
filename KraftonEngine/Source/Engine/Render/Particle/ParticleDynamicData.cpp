@@ -1,6 +1,67 @@
-#include "ParticleDynamicData.h"
+﻿#include "ParticleDynamicData.h"
 
 #include <algorithm>
+
+FParticleDataContainer::~FParticleDataContainer()
+{
+	Free();
+}
+
+FParticleDataContainer::FParticleDataContainer(FParticleDataContainer&& Other) noexcept
+{
+	*this = std::move(Other);
+}
+
+FParticleDataContainer& FParticleDataContainer::operator=(FParticleDataContainer&& Other) noexcept
+{
+	if (this != &Other)
+	{
+		Free();
+
+		MemBlockSize = Other.MemBlockSize;
+		ParticleDataNumBytes = Other.ParticleDataNumBytes;
+		ParticleIndicesNumShorts = Other.ParticleIndicesNumShorts;
+		ParticleData = Other.ParticleData;
+		ParticleIndices = Other.ParticleIndices;
+
+		Other.MemBlockSize = 0;
+		Other.ParticleDataNumBytes = 0;
+		Other.ParticleIndicesNumShorts = 0;
+		Other.ParticleData = nullptr;
+		Other.ParticleIndices = nullptr;
+	}
+	return *this;
+}
+
+void FParticleDataContainer::Alloc(int32 InParticleDataNumBytes, int32 InParticleIndicesNumShorts)
+{
+	Free();
+
+	ParticleDataNumBytes = AlignParticleDataSize(std::max(0, InParticleDataNumBytes), 16);
+	ParticleIndicesNumShorts = std::max(0, InParticleIndicesNumShorts);
+	MemBlockSize = ParticleDataNumBytes + ParticleIndicesNumShorts * static_cast<int32>(sizeof(uint16));
+
+	if (MemBlockSize > 0)
+	{
+		ParticleData = static_cast<uint8*>(_aligned_malloc(MemBlockSize, 16));
+		std::memset(ParticleData, 0, MemBlockSize);
+		ParticleIndices = reinterpret_cast<uint16*>(ParticleData + ParticleDataNumBytes);
+	}
+}
+
+void FParticleDataContainer::Free()
+{
+	if (ParticleData)
+	{
+		_aligned_free(ParticleData);
+	}
+
+	MemBlockSize = 0;
+	ParticleDataNumBytes = 0;
+	ParticleIndicesNumShorts = 0;
+	ParticleData = nullptr;
+	ParticleIndices = nullptr;
+}
 
 void FDynamicSpriteEmitterDataBase::SortSpriteParticles(int32 SortMode, const FVector& CameraOrigin, const FVector& CameraForward,
 	const FMatrix& LocalToWorld,
@@ -19,7 +80,7 @@ void FDynamicSpriteEmitterDataBase::SortSpriteParticles(int32 SortMode, const FV
 	};
 
 	TArray<FParticleSortKey> SortKeys;
-	SortKeys.reserve(Count);
+	SortKeys.reserve(Count);   
 
 	for (int32 i = 0; i < Count; ++i)
 	{

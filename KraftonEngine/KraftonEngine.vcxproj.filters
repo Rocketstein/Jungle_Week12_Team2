@@ -417,6 +417,9 @@
     <FxCompile Include="Shaders\Lighting\VSMBlur.hlsl">
       <Filter>Shaders\Lighting</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\Particle\ParticleMesh.hlsl">
+      <Filter>Shaders\Particle</Filter>
+    </FxCompile>
     <FxCompile Include="Shaders\Particle\ParticleSprite.hlsl">
       <Filter>Shaders\Particle</Filter>
     </FxCompile>
@@ -1125,6 +1128,9 @@
       <Filter>Source\Engine\Render\Geometry</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Particle\ParticleDynamicData.cpp">
+      <Filter>Source\Engine\Render\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Particle\ParticleSpriteSmokeTest.cpp">
       <Filter>Source\Engine\Render\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Render\Pipeline\DefaultRenderPipeline.cpp">
@@ -2145,6 +2151,9 @@
       <Filter>Source\Engine\Render\Geometry</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Particle\ParticleDynamicData.h">
+      <Filter>Source\Engine\Render\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Particle\ParticleSpriteSmokeTest.h">
       <Filter>Source\Engine\Render\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Pipeline\DefaultRenderPipeline.h">
@@ -4076,5 +4085,10 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="KraftonEngine.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Shaders\Particle\ParticleCommon.hlsli">
+      <Filter>Shaders\Particle</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -1,16 +1,9 @@
 #include "Common/Functions.hlsli"
 #include "Common/VertexLayouts.hlsli"
 #include "Common/SystemSamplers.hlsli"
+#include "Particle/ParticleCommon.hlsli"
 
 Texture2D ParticleAtlas : register(t0);
-
-//cbuffer ParticleParamBuffer : register(b2)
-//{
-//    float SubUVCols;
-//    float SubUVRows;
-//    float ScreenAlignment;
-//    float _Pad;
-//}
 
 // Rotate a 2D corner offset (radians, CCW).
 float2 RotateParticleCorner(float2 Corner, float Rotation)
@@ -26,16 +19,37 @@ PS_Input_Particle VS(VS_Input_ParticleSprite Input)
     PS_Input_Particle Out;
 
     float2 Corner = Input.uv * 2.0f - 1.0f;
-    Corner = RotateParticleCorner(Corner, Input.rotation);
-    Corner *= Input.size.xy;
+    uint Alignment = GetParticleScreenAlignment();
 
-    // Particle positions are world-space (proxy uses identity Model).
-    // World -> View, add corner on view-space XY, then View -> Clip.
-    float4 ViewPos = mul(float4(Input.position, 1.0f), View);
-    ViewPos.xy += Corner;
-    Out.position = mul(ViewPos, Projection);
+    if (Alignment == PARTICLE_SCREEN_ALIGNMENT_FACING_CAMERA_POSITION ||
+        Alignment == PARTICLE_SCREEN_ALIGNMENT_SQUARE)
+    {
+        // Camera-facing billboard: spin the quad in view space with the per-particle rotation.
+        float2 ViewCorner = RotateParticleCorner(Corner, Input.rotation) * Input.size.xy;
+        float4 ViewPos = mul(float4(Input.position, 1.0f), View);
+        ViewPos.xy += ViewCorner;
+        Out.position = mul(ViewPos, Projection);
+    }
+    else if (Alignment == PARTICLE_SCREEN_ALIGNMENT_VELOCITY)
+    {
+        float4 ViewPos = mul(float4(Input.position, 1.0f), View);
+        float2 ViewVelocity = mul(float4(Input.velocity, 0.0f), View).xy;
+        float SpeedSq = dot(ViewVelocity, ViewVelocity);
+        float2 AxisX = (SpeedSq > 1e-6f) ? ViewVelocity * rsqrt(SpeedSq) : float2(1.0f, 0.0f);
+        float2 AxisY = float2(-AxisX.y, AxisX.x);
+        ViewPos.xy += AxisX * (Corner.x * Input.size.x) + AxisY * (Corner.y * Input.size.y);
+        Out.position = mul(ViewPos, Projection);
+    }
+    else
+    {
+        // Non-billboard fallback until type-specific sprite bases are provided.
+        float3 WorldCorner = float3(Corner * Input.size.xy, 0.0f);
+        float4 WorldPos = float4(Input.position + WorldCorner, 1.0f);
+        Out.position = mul(mul(WorldPos, View), Projection);
+    }
+
     Out.texcoord = float2(Input.uv.x, 1.0f - Input.uv.y);
-    Out.color = Input.color;
+    Out.color    = Input.color;
     return Out;
 }
 

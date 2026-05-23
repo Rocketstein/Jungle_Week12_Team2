@@ -6,6 +6,8 @@
 #include "Render/Particle/ParticleDynamicData.h"
 #include "Render/Proxy/ParticleSystemSceneProxy.h"
 
+#include <utility>
+
 namespace
 {
 void MoveReplayDataBase(FDynamicEmitterReplayDataBase& Dest, FDynamicEmitterReplayDataBase& Source)
@@ -42,6 +44,7 @@ FDynamicEmitterDataBase* CreateDynamicEmitterData(int32 EmitterIndex, FDynamicEm
 		DynamicData->EmitterIndex = EmitterIndex;
 		MoveSpriteReplayData(DynamicData->MeshSource, *MeshReplayData);
 		DynamicData->MeshSource.StaticMesh = MeshReplayData->StaticMesh;
+		DynamicData->MeshSource.LODLevel = MeshReplayData->LODLevel;
 		delete ReplayData;
 		return DynamicData;
 	}

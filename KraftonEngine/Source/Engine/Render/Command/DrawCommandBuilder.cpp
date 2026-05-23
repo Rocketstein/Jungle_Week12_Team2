@@ -212,6 +212,14 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 				ApplyMaterialRenderState(Cmd.RenderState, Mat, BaseRenderState);
 		}
 
+		// Translucent primitives should test against opaque depth but must not
+		// write depth; otherwise nearer particles incorrectly occlude later
+		// translucent draws and pollute fullscreen depth consumers.
+		if (Pass == ERenderPass::AlphaBlend)
+		{
+			Cmd.RenderState.DepthStencil = EDepthStencilState::DepthReadOnly;
+		}
+
 		FPrimitiveDrawOptions CommandDrawOptions = DrawOptions;
 		if (bDepthOnly)
 		{

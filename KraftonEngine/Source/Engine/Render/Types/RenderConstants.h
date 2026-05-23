@@ -207,6 +207,15 @@ struct FSubUVRegionConstants
 	float Height = 1.0f;
 };
 
+struct FParticleParamConstants
+{
+	float SubUVCols = 1.0f;
+	float SubUVRows = 1.0f;
+	float ScreenAlignment = 0.0f;
+	float _Pad = 0.0f;
+};
+static_assert(sizeof(FParticleParamConstants) == 16);
+
 struct FGizmoConstants
 {
 	FVector4 ColorTint;

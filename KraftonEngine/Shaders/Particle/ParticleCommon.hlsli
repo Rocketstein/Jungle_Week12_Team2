@@ -1,0 +1,25 @@
+#ifndef PARTICLE_COMMON_HLSLI
+#define PARTICLE_COMMON_HLSLI
+
+// b2 (PerShader0): common per-emitter particle parameters.
+cbuffer ParticleParamBuffer : register(b2)
+{
+    float SubUVCols;
+    float SubUVRows;
+    float ScreenAlignment;
+    float _Pad;
+}
+
+static const uint PARTICLE_SCREEN_ALIGNMENT_FACING_CAMERA_POSITION = 0;
+static const uint PARTICLE_SCREEN_ALIGNMENT_SQUARE = 1;
+static const uint PARTICLE_SCREEN_ALIGNMENT_VELOCITY = 2;
+static const uint PARTICLE_SCREEN_ALIGNMENT_TYPE_SPECIFIC = 3;
+static const uint PARTICLE_SCREEN_ALIGNMENT_FACINGCAMERAPOSITION = 4;
+static const uint PARTICLE_SCREEN_ALIGNMENT_AWAYFROMCENTER = 5;
+
+uint GetParticleScreenAlignment()
+{
+    return (uint)(ScreenAlignment + 0.5f);
+}
+
+#endif

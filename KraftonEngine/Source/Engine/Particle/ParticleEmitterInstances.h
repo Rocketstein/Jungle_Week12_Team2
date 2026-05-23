@@ -3,6 +3,7 @@
 #include "Core/CoreTypes.h"
 #include "Math/Vector.h"
 #include "Particle/ParticleHelper.h"
+#include "Render/Particle/ParticleDynamicData.h"
 
 class UParticleEmitter;
 class UParticleLODLevel;

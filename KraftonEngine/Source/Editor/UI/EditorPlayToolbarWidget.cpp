@@ -4,6 +4,7 @@
 #include "Editor/PIE/PIETypes.h"
 #include "Editor/UI/EditorTextureManager.h"
 #include "Platform/Paths.h"
+#include "Render/Particle/ParticleSpriteSmokeTest.h"
 #include "ImGui/imgui.h"
 
 void FEditorPlayToolbarWidget::Initialize(UEditorEngine* InEditor, ID3D11Device* InDevice)
@@ -81,6 +82,18 @@ void FEditorPlayToolbarWidget::Render(float Width)
 	}
 
 	ImGui::PopStyleColor(3);
+
+	// ---- TRANSIENT: sprite particle renderer smoke test ----
+	// Inject a ring of hand-built sprites into every UParticleSystemComponent
+	// proxy in the world. Remove once the CPU sim is wired up end-to-end.
+	ImGui::SameLine(0.0f, ButtonSpacing * 4.0f);
+	if (ImGui::Button("Particles"))
+	{
+		UWorld* World = Editor->GetWorld();
+		UMaterial* Mat = ParticleSpriteSmokeTest::GetDefaultMaterial();
+		ParticleSpriteSmokeTest::InjectIntoWorld(World, Mat);
+	}
+	// --------------------------------------------------------
 
 	// 다음 콘텐츠는 툴바 아래로 이어지도록 커서 복원
 	ImGui::SetCursorScreenPos(ImVec2(CursorStart.x, CursorStart.y + ToolbarHeight));

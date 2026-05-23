@@ -1,0 +1,18 @@
+{
+  "BlendState" : "Additive",
+  "DepthStencilState" : "",
+  "Origin" : "Editor",
+  "Parameters" : {
+    "ScreenAlignment" : 0.000000,
+    "SubUVCols" : 0.000000,
+    "SubUVRows" : 0.000000,
+    "_Pad" : 0.000000
+  },
+  "PathFileName" : "Asset/Materials/Editor/DefaultParticleSprite.mat",
+  "RasterizerState" : "",
+  "RenderPass" : "AlphaBlend",
+  "ShaderPath" : "Shaders/Particle/ParticleSprite.hlsl",
+  "Textures" : {
+    "DiffuseTexture" : "Asset/Editor/Icons/S_AmbientLight_256x.png"
+  }
+}
