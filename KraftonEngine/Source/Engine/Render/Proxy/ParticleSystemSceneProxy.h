@@ -58,15 +58,15 @@ private:
 	void PackMeshEmitter(const FFrameContext& Frame, FDynamicMeshEmitterData& Emitter, uint32 SectionIndex);
 
 	void UpdateCB(FEmitterDraw& EmitterDraw, const FDynamicSpriteEmitterReplayDataBase& Source);
-	
-	bool EnsureSpriteIndexUpdate() const;
+	void EnsureSpriteIndexPattern(uint32 RequiredParticleCount);
 
 	TArray<FDynamicEmitterDataBase*> DynamicData;   // owned, freed on next UpdateDynamicData
 	TArray<FEmitterDraw>             EmitterDraws;
 
 	FMatrix ComponentToWorld = FMatrix::Identity;
 	TArray<FParticleSpriteVertex> PackedSpriteVertices;
-	TArray<uint32>                PackedSpriteIndices;
+	TArray<uint32>                SpriteIndexPattern;
+	uint32                        SpriteIndexPatternParticleCapacity = 0;
 
 	// Sprite path: shared across all sprite emitters this proxy owns.
 	mutable FDynamicVertexBuffer SpriteVB;
@@ -74,6 +74,7 @@ private:
 
 	// Signals PrepareDrawBuffer that scratch arrays must be re-uploaded.
 	mutable bool bGpuBuffersDirty = true;
+	mutable bool bSpriteIBDirty = true;
 
 	// In Cascade particles, the Emitter Instance(specifically FParticleEmitterInstance and its associated FParticleSystemSceneProxy)
 	// owns and manages the uniform buffers(constant buffers), not the individual particles.

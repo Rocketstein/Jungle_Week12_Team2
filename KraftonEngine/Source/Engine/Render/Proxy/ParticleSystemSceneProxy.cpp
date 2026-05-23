@@ -118,7 +118,6 @@ void FParticleSystemSceneProxy::UpdatePerViewport(const FFrameContext& Frame)
 {
 	// Reset scratch arrays. Sprite scratch is shared, mesh scratch is per-emitter.
 	PackedSpriteVertices.clear();
-	PackedSpriteIndices.clear();
 	for (FEmitterDraw& Draw : EmitterDraws)
 	{
 		if (Draw.Type == DET_Mesh)
@@ -156,31 +155,44 @@ void FParticleSystemSceneProxy::UpdatePerViewport(const FFrameContext& Frame)
 bool FParticleSystemSceneProxy::PrepareDrawBuffer(
 	ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FDrawCommandBuffer& Out) const
 {
-	const bool bHasSprites = !PackedSpriteVertices.empty() && !PackedSpriteIndices.empty();
+	const bool bHasSprites = !PackedSpriteVertices.empty() && !SpriteIndexPattern.empty();
 
-	if (bHasSprites && bGpuBuffersDirty)
+	if (bHasSprites)
 	{
 		const uint32 VertCount  = static_cast<uint32>(PackedSpriteVertices.size());
-		const uint32 IndexCount = static_cast<uint32>(PackedSpriteIndices.size());
+		const uint32 IndexCount = static_cast<uint32>(SpriteIndexPattern.size());
 
+		// Grow if needed
 		if (SpriteVB.GetMaxCount() == 0)
 		{
 			SpriteVB.Create(InDevice, VertCount, sizeof(FParticleSpriteVertex));
 		}
-		if (SpriteIB.GetMaxCount() == 0)
+		else
 		{
-			SpriteIB.Create(InDevice, IndexCount);
+			SpriteVB.EnsureCapacity(InDevice, VertCount);
 		}
 
-		// Grow if needed
-		SpriteVB.EnsureCapacity(InDevice, VertCount);
-		SpriteIB.EnsureCapacity(InDevice, IndexCount);
-
 		// NOTE: FDynamicVertexBuffer::Update takes ELEMENT count, not byte count.
-		SpriteVB.Update(InDeviceContext, PackedSpriteVertices.data(),  VertCount);
-		SpriteIB.Update(InDeviceContext, PackedSpriteIndices.data(), IndexCount);
+		if (bGpuBuffersDirty)
+		{
+			SpriteVB.Update(InDeviceContext, PackedSpriteVertices.data(), VertCount);
+			bGpuBuffersDirty = false;
+		}
 
-		bGpuBuffersDirty = false;
+		if (bSpriteIBDirty)
+		{
+			if (SpriteIB.GetMaxCount() == 0)
+			{
+				SpriteIB.Create(InDevice, IndexCount);
+			}
+			else
+			{
+				SpriteIB.EnsureCapacity(InDevice, IndexCount);
+			}
+
+			SpriteIB.Update(InDeviceContext, SpriteIndexPattern.data(), IndexCount);
+			bSpriteIBDirty = false;
+		}
 	}
 
 	if (bHasSprites)
@@ -328,10 +340,11 @@ void FParticleSystemSceneProxy::PackSpriteEmitter(const FFrameContext& Frame, FD
 	Emitter.SortSpriteParticles(Source.SortMode, Frame.CameraPosition, Frame.CameraForward, FMatrix::Identity, Source.DataContainer.ParticleIndices,
 								Count, Source.DataContainer.ParticleData, Source.ParticleStride);
 
-	const bool bShouldUpdateIB = EnsureSpriteIndexUpdate();
+	const uint32 ParticleCount = static_cast<uint32>(Count);
+	const uint32 FirstParticle = IndexCursor / 6;
+	EnsureSpriteIndexPattern(FirstParticle + ParticleCount);
 
 	PackedSpriteVertices.reserve(PackedSpriteVertices.size() + Count * 4);
-	if (bShouldUpdateIB) PackedSpriteIndices.reserve(PackedSpriteIndices.size() + Count * 6);
 	for (int32 i = 0; i < Count; ++i)
 	{
 		const uint16 Idx = Source.DataContainer.ParticleIndices[i];
@@ -351,14 +364,9 @@ void FParticleSystemSceneProxy::PackSpriteEmitter(const FFrameContext& Frame, FD
 			V.Velocity = P.Velocity;
 			PackedSpriteVertices.push_back(V);
 		}
-
-		// CW quad
-		if (bShouldUpdateIB) {
-			PackedSpriteIndices.push_back(V0 + 0); PackedSpriteIndices.push_back(V0 + 2); PackedSpriteIndices.push_back(V0 + 1);
-			PackedSpriteIndices.push_back(V0 + 2); PackedSpriteIndices.push_back(V0 + 3); PackedSpriteIndices.push_back(V0 + 1);
-			IndexCursor += 6;
-		}
 	}
+
+	IndexCursor += ParticleCount * 6;
 }
 
 void FParticleSystemSceneProxy::PackMeshEmitter(const FFrameContext& Frame,
@@ -421,9 +429,27 @@ void FParticleSystemSceneProxy::UpdateCB(FEmitterDraw& EmitterDraw, const FDynam
 	EmitterDraw.bParticleParamCBDirty = true;
 }
 
-bool FParticleSystemSceneProxy::EnsureSpriteIndexUpdate() const 
+// Lazily grows the persistent sprite quad index buffer to cover RequiredParticleCount quads; no-op if already large enough.
+void FParticleSystemSceneProxy::EnsureSpriteIndexPattern(uint32 RequiredParticleCount)
 {
-	if (PackedSpriteIndices.empty() || DynamicData.size() > PackedSpriteIndices.size() * 6 /* Quad = 4 vertices, 6 indices */) return true;
+	if (RequiredParticleCount <= SpriteIndexPatternParticleCapacity)
+	{
+		return;
+	}
 
-	return false;
+	/* Quad = 6 Indices */
+	SpriteIndexPattern.reserve(RequiredParticleCount * 6);
+	for (uint32 ParticleIndex = SpriteIndexPatternParticleCapacity; ParticleIndex < RequiredParticleCount; ++ParticleIndex)
+	{
+		const uint32 V0 = ParticleIndex * 4;
+		SpriteIndexPattern.push_back(V0 + 0);
+		SpriteIndexPattern.push_back(V0 + 2);
+		SpriteIndexPattern.push_back(V0 + 1);
+		SpriteIndexPattern.push_back(V0 + 2);
+		SpriteIndexPattern.push_back(V0 + 3);
+		SpriteIndexPattern.push_back(V0 + 1);
+	}
+
+	SpriteIndexPatternParticleCapacity = RequiredParticleCount;
+	bSpriteIBDirty = true;
 }
