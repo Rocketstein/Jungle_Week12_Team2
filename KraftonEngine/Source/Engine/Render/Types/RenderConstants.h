@@ -209,9 +209,9 @@ struct FSubUVRegionConstants
 
 struct FParticleParamConstants
 {
-	int32 SubUVCols = 1;
-	int32 SubUVRows = 1;
-	int32 ScreenAlignment = 0;
+	uint32 SubUVCols = 1;
+	uint32 SubUVRows = 1;
+	uint32 ScreenAlignment = 0;
 	float _Pad = 0.0f;
 };
 static_assert(sizeof(FParticleParamConstants) == 16);
