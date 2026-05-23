@@ -397,8 +397,8 @@ void FParticleSystemSceneProxy::PackMeshEmitter(const FFrameContext& Frame,
 
 void FParticleSystemSceneProxy::UpdateCB(FEmitterDraw& EmitterDraw, const FDynamicSpriteEmitterReplayDataBase& Source)
 {
-	EmitterDraw.ParticleParams.SubUVCols = static_cast<float>(Source.SubImages_Horizontal);
-	EmitterDraw.ParticleParams.SubUVRows = static_cast<float>(Source.SubImages_Vertical);
-	EmitterDraw.ParticleParams.ScreenAlignment = static_cast<float>(Source.ScreenAlignment);
+	EmitterDraw.ParticleParams.SubUVCols = Source.SubImages_Horizontal;
+	EmitterDraw.ParticleParams.SubUVRows = Source.SubImages_Vertical;
+	EmitterDraw.ParticleParams.ScreenAlignment = Source.ScreenAlignment;
 	EmitterDraw.bParticleParamCBDirty = true;
 }
