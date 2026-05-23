@@ -110,8 +110,12 @@ public:
 		FDrawCommandBuffer& OutBuffer) const;
 	virtual bool PrepareGpuSkinningDrawBuffer(ID3D11Device* Device, ID3D11DeviceContext* Context,
 		FDrawCommandBuffer& OutBuffer) const;
+	// SectionIndex identifies which entry in GetSectionDraws() this command was built for.
+	// Proxies whose per-section binding state lives in a parallel array (e.g. ParticleSystem's
+	// EmitterDraws) can use it as a direct index. Use -1 for ad-hoc callers (ShadowMapPass)
+	// that aren't iterating SectionDraws.
 	virtual bool PrepareDrawCommandBindings(ID3D11Device* Device, ID3D11DeviceContext* Context,
-		const FPrimitiveDrawOptions& Options, FDrawCommand& OutCommand) const;
+		const FPrimitiveDrawOptions& Options, FDrawCommand& OutCommand, int32 SectionIndex) const;
 
 protected:
 	// ================================================================

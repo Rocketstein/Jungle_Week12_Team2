@@ -730,7 +730,7 @@ void FShadowMapPass::DrawShadowCasters(ID3D11DeviceContext* DC, FScene& Scene, F
 		if (!ProxyBuffer.VB || !ProxyBuffer.IB) continue;
 
 		FDrawCommand ShadowCmd;
-		if (!Proxy->PrepareDrawCommandBindings(Device, DC, Options, ShadowCmd)) continue;
+		if (!Proxy->PrepareDrawCommandBindings(Device, DC, Options, ShadowCmd, -1)) continue;
 		BindSkinning(ShadowCmd.Skinning);
 
 		// Two-sided shadow: front-cull ↔ no-cull 전환

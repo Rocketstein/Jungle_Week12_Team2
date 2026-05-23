@@ -19,7 +19,7 @@ public:
 	bool PrepareDrawBuffer(ID3D11Device* Device, ID3D11DeviceContext* Context, FDrawCommandBuffer& OutBuffer) const override;
 	bool PrepareGpuSkinningDrawBuffer(ID3D11Device* Device, ID3D11DeviceContext* Context, FDrawCommandBuffer& OutBuffer) const override;
 	bool PrepareDrawCommandBindings(ID3D11Device* Device, ID3D11DeviceContext* Context,
-		const FPrimitiveDrawOptions& Options, FDrawCommand& OutCommand) const override;
+		const FPrimitiveDrawOptions& Options, FDrawCommand& OutCommand, int32) const override;
 	
 private:
 	void RebuildSectionDraws();

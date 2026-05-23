@@ -3,7 +3,6 @@
 #include "Render/Types/FrameContext.h"
 #include "Render/Command/DrawCommand.h"
 #include "Component/ParticleSystemComponent.h"
-#include "Core/Log.h"
 
 FParticleSystemSceneProxy::FParticleSystemSceneProxy(UParticleSystemComponent* InComponent)
 	: FPrimitiveSceneProxy(InComponent)
@@ -55,6 +54,7 @@ void FParticleSystemSceneProxy::UpdateMaterial()
 			static_cast<const FDynamicSpriteEmitterReplayDataBase&>(DynamicData[i]->GetSource());
 		EmitterDraws[i].Material = Source.MaterialInterface;
 		EmitterDraws[i].Type	 = Source.eEmitterType;
+		EmitterDraws[i].EmitterIndex = DynamicData[i]->EmitterIndex;
 	}
 }
 
@@ -94,6 +94,8 @@ void FParticleSystemSceneProxy::UpdateMesh()
 		}
 		SectionDraws.push_back({ Draw.Material, Draw.FirstIndex, Draw.IndexCount });
 	}
+
+	UpdateMaterial();
 }
 
 // UpdatePerViewport: per-frame CPU work
@@ -218,30 +220,27 @@ void FParticleSystemSceneProxy::PackSprites(const FFrameContext& Frame)
 }
 
 bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device*, ID3D11DeviceContext*,
-	const FPrimitiveDrawOptions&, FDrawCommand& Cmd) const
+	const FPrimitiveDrawOptions&, FDrawCommand& Cmd, int32 SectionIndex) const
 {
-	// Identify which emitter this command belongs to by FirstIndex (unique per section).
-	const FEmitterDraw* Hit = nullptr;
-	for (const FEmitterDraw& E : EmitterDraws) {
-		if (E.FirstIndex == Cmd.Buffer.FirstIndex && E.IndexCount == Cmd.Buffer.IndexCount)
-		{
-			Hit = &E; break;
-		}
-	}
-	if (!Hit) return true;   // sprite path. Leave Cmd as is
-
-	if (Hit->Type == DET_Mesh && Hit->MeshGeom)
+	if (SectionIndex < 0 || SectionIndex >= static_cast<int32>(EmitterDraws.size()))
 	{
-		Cmd.Buffer.VB = Hit->MeshGeom->GetVertexBuffer().GetBuffer();
-		Cmd.Buffer.VBStride = Hit->MeshGeom->GetVertexBuffer().GetStride();
-		Cmd.Buffer.IB = Hit->MeshGeom->GetIndexBuffer().GetBuffer();
+		return true;
+	}
+
+	const FEmitterDraw& Hit = EmitterDraws[SectionIndex];
+
+	if (Hit.Type == DET_Mesh && Hit.MeshGeom)
+	{
+		Cmd.Buffer.VB = Hit.MeshGeom->GetVertexBuffer().GetBuffer();
+		Cmd.Buffer.VBStride = Hit.MeshGeom->GetVertexBuffer().GetStride();
+		Cmd.Buffer.IB = Hit.MeshGeom->GetIndexBuffer().GetBuffer();
 		Cmd.Buffer.FirstIndex = 0;
-		Cmd.Buffer.IndexCount = Hit->IndexCount;
+		Cmd.Buffer.IndexCount = Hit.IndexCount;
 		Cmd.Buffer.BaseVertex = 0;
 
-		Cmd.Buffer.InstanceVB = Hit->InstanceVB.GetBuffer();
+		Cmd.Buffer.InstanceVB = Hit.InstanceVB.GetBuffer();
 		Cmd.Buffer.InstanceVBStride = sizeof(FMeshParticleInstanceVertex);
-		Cmd.Buffer.InstancedCount = Hit->InstanceCount;
+		Cmd.Buffer.InstancedCount = Hit.InstanceCount;
 		Cmd.Buffer.InstanceStart = 0;
 	}
 	return true;
@@ -276,21 +275,10 @@ void FParticleSystemSceneProxy::PackSpriteEmitter(const FFrameContext& Frame, FD
 			V.Rotation = P.Rotation;
 			V.SubImageIndex = 0.0f;
 			V.Velocity = P.Velocity;
-
-			//UE_LOG("[Sprite Vertex %d] V.Position=%d,%d,%d V.Size=%d,%d,%d V.UV=%d,%d", i,
-			//	V.Position.X, V.Position.Y, V.Position.Z,
-			//	V.Size.X, V.Size.Y, V.Size.Z,
-			//	V.UV.X, V.UV.Y);
-
 			OutVerts.push_back(V);
-
 		}
 
-		// CCW quad (useful to toggle when testing culling/winding)
-		//OutIndices.push_back(V0 + 0); OutIndices.push_back(V0 + 1); OutIndices.push_back(V0 + 2);
-		//OutIndices.push_back(V0 + 2); OutIndices.push_back(V0 + 1); OutIndices.push_back(V0 + 3);
-
-		// CW quad for D3D11 default front-face winding with back-face culling.
+		// CW quad
 		OutIndices.push_back(V0 + 0); OutIndices.push_back(V0 + 2); OutIndices.push_back(V0 + 1);
 		OutIndices.push_back(V0 + 2); OutIndices.push_back(V0 + 3); OutIndices.push_back(V0 + 1);
 		IndexCursor += 6;
