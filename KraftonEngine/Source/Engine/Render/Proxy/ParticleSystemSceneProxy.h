@@ -29,7 +29,6 @@ public:
 
 private:
 	// Per-emitter draw range inside the shared dynamic VB/IB.
-	// EmitterDraws[i] is parallel to SectionDraws[i] and DynamicData[i]
 	struct FEmitterDraw
 	{
 		int32  EmitterIndex                 = -1;
@@ -37,16 +36,11 @@ private:
 		UMaterial* Material;
 		uint32 FirstIndex;
 		uint32 IndexCount;
-		// mesh path: per-emitter instance buffer + base static-mesh VB/IB.
-		// InstanceVB is mutable because the lazy upload happens inside the const
-		// PrepareDrawCommandBindings override (same pattern as the proxy's SpriteVB).
+
+		// mesh path
 		mutable FDynamicVertexBuffer InstanceVB;
 		FMeshBuffer*		 MeshGeom		= nullptr;   // borrowed from UStaticMesh
 		uint32               InstanceCount  = 0;
-
-		// Mesh path CPU scratch — PackMeshEmitter writes here each frame, then
-		// PrepareDrawCommandBindings lazily uploads to InstanceVB when dirty.
-		// Per-emitter (not shared) because each mesh emitter has its own InstanceVB.
 		TArray<FMeshParticleInstanceVertex> PackedInstances;
 		mutable bool bInstanceVBDirty = true;
 	};
