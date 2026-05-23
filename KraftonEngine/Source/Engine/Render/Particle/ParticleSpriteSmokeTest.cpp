@@ -2,8 +2,10 @@
 
 #include "Component/ActorComponent.h"
 #include "Component/ParticleSystemComponent.h"
+#include "Core/Log.h"
 #include "GameFramework/AActor.h"
 #include "GameFramework/World.h"
+#include "Materials/Material.h"
 #include "Materials/MaterialManager.h"
 #include "Object/Object.h"
 #include "Particle/ParticleHelper.h"
@@ -82,21 +84,41 @@ UMaterial* ParticleSpriteSmokeTest::GetDefaultMaterial()
 int32 ParticleSpriteSmokeTest::InjectIntoWorld(UWorld* World, UMaterial* Material,
                                                 int32 N, float Radius)
 {
-	if (!World || !Material) return 0;
+	if (!World)
+	{
+		UE_LOG("[ParticleSmokeTest] FAIL: World is null");
+		return 0;
+	}
+	if (!Material)
+	{
+		UE_LOG("[ParticleSmokeTest] FAIL: Material is null. Check Asset/Materials/Editor/DefaultParticleSprite.mat exists and parses.");
+		return 0;
+	}
 
+	int32 ActorsScanned = 0;
+	int32 PSCsFound = 0;
+	int32 PSCsWithProxy = 0;
 	int32 Injected = 0;
 
 	for (AActor* Actor : World->GetActors())
 	{
 		if (!Actor) continue;
+		++ActorsScanned;
 
 		for (UActorComponent* Comp : Actor->GetComponents())
 		{
 			UParticleSystemComponent* PSC = Cast<UParticleSystemComponent>(Comp);
 			if (!PSC) continue;
+			++PSCsFound;
 
 			FParticleSystemSceneProxy* Proxy = PSC->GetSceneProxy();
-			if (!Proxy) continue;
+			if (!Proxy)
+			{
+				UE_LOG("[ParticleSmokeTest] PSC on '%s' has no SceneProxy (component not registered with FScene?)",
+					Actor->GetFName().ToString().c_str());
+				continue;
+			}
+			++PSCsWithProxy;
 
 			TArray<FDynamicEmitterDataBase*> Data;
 			if (FDynamicSpriteEmitterData* Emitter = BuildRingEmitter(N, Material, Radius))
@@ -105,16 +127,17 @@ int32 ParticleSpriteSmokeTest::InjectIntoWorld(UWorld* World, UMaterial* Materia
 			}
 
 			Proxy->UpdateDynamicData(std::move(Data));
-			// FScene::UpdateDirtyProxies uses if/else-if on Mesh→Material, so marking
-			// both still only fires UpdateMesh. ParticleSystemSceneProxy::UpdateMesh
-			// reads EmitterDraws[i].{Type,Material} which only UpdateMaterial populates,
-			// so we call them explicitly in the right order. Once the teammate's CPU
-			// sim wires this up properly, this becomes their concern.
-			Proxy->UpdateMaterial();
-			Proxy->UpdateMesh();
 			++Injected;
 		}
 	}
+
+	UE_LOG("[ParticleSmokeTest] World=%p WorldType=%d  ActorsScanned=%d PSCsFound=%d WithProxy=%d Injected=%d  Material=%p Pass=%d  N=%d Radius=%.1f",
+		World,
+		static_cast<int32>(World->GetWorldType()),
+		ActorsScanned, PSCsFound, PSCsWithProxy, Injected,
+		Material,
+		static_cast<int32>(Material->GetRenderPass()),
+		N, Radius);
 
 	return Injected;
 }
