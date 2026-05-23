@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <cmath>
 #include <malloc.h>
 #include <utility>
 
@@ -157,16 +158,18 @@ bool FParticleEmitterInstance::Resize(int32 NewMaxActiveParticles, bool bSetMaxA
 
 void FParticleEmitterInstance::Tick(float DeltaTime, bool bSuppressSpawning)
 {
-	(void)bSuppressSpawning;
-
 	LastDeltaTime = DeltaTime;
 	SecondsSinceCreation += DeltaTime;
 	EmitterTime += DeltaTime;
+	OldLocation = Location;
+	Location = Component ? Component->GetWorldLocation() : FVector::ZeroVector;
 
 	if (!CurrentLODLevel)
 	{
 		return;
 	}
+
+	SpawnFraction = Tick_SpawnParticles(DeltaTime, CurrentLODLevel, bSuppressSpawning, false);
 
 	for (UParticleModule* Module : CurrentLODLevel->UpdateModules)
 	{
@@ -187,10 +190,16 @@ void FParticleEmitterInstance::Tick(float DeltaTime, bool bSuppressSpawning)
 			continue;
 		}
 
+		const bool bJustSpawned = (Particle->Flags & STATE_Particle_JustSpawned) != 0;
+		Particle->Flags &= ~STATE_Particle_JustSpawned;
+
 		Particle->Velocity = Particle->BaseVelocity;
-		Particle->Location = Particle->Location + Particle->Velocity * DeltaTime;
 		Particle->RotationRate = Particle->BaseRotationRate;
-		Particle->Rotation += Particle->RotationRate * DeltaTime;
+		if (!bJustSpawned)
+		{
+			Particle->Location = Particle->Location + Particle->Velocity * DeltaTime;
+			Particle->Rotation += Particle->RotationRate * DeltaTime;
+		}
 
 		if (Particle->OneOverMaxLifetime > 0.0f)
 		{
@@ -201,6 +210,48 @@ void FParticleEmitterInstance::Tick(float DeltaTime, bool bSuppressSpawning)
 			}
 		}
 	}
+}
+
+float FParticleEmitterInstance::Tick_SpawnParticles(float DeltaTime, UParticleLODLevel* InCurrentLODLevel,
+	bool bSuppressSpawning, bool bFirstTime)
+{
+	(void)InCurrentLODLevel;
+	(void)bFirstTime;
+
+	if (bSuppressSpawning)
+	{
+		return SpawnFraction;
+	}
+
+	return Spawn(DeltaTime);
+}
+
+float FParticleEmitterInstance::Spawn(float DeltaTime)
+{
+	if (!CurrentLODLevel || !CurrentLODLevel->SpawnModule)
+	{
+		return SpawnFraction;
+	}
+
+	const float SpawnRate = std::max(0.0f, CurrentLODLevel->SpawnModule->Rate);
+	if (SpawnRate <= 0.0f)
+	{
+		return SpawnFraction;
+	}
+
+	const float OldLeftover = SpawnFraction;
+	float NewLeftover = OldLeftover + std::max(0.0f, DeltaTime) * SpawnRate;
+	const int32 Number = static_cast<int32>(std::floor(NewLeftover));
+	const float Increment = SpawnRate > 0.0f ? 1.0f / SpawnRate : 0.0f;
+	const float StartTime = DeltaTime + OldLeftover * Increment - Increment;
+	NewLeftover = NewLeftover - static_cast<float>(Number);
+
+	if (Number > 0)
+	{
+		SpawnParticles(Number, StartTime, Increment, Location, FVector::ZeroVector, nullptr);
+	}
+
+	return NewLeftover;
 }
 
 void FParticleEmitterInstance::SpawnParticles(int32 Count, float StartTime, float Increment, const FVector& InitialLocation,
@@ -217,15 +268,19 @@ void FParticleEmitterInstance::SpawnParticles(int32 Count, float StartTime, floa
 	{
 		Resize(std::max(ActiveParticles + Count, std::max(1, MaxActiveParticles * 2)));
 	}
+	if (!ParticleData || !ParticleIndices)
+	{
+		return;
+	}
 
 	float SpawnTime = StartTime;
 	for (int32 Index = 0; Index < Count; ++Index)
 	{
-		const int32 DirectIndex = ActiveParticles;
+		const int32 DirectIndex = ParticleIndices ? ParticleIndices[ActiveParticles] : ActiveParticles;
 		DECLARE_PARTICLE_PTR(Particle, ParticleData + ParticleStride * DirectIndex);
 		std::memset(&Particle, 0, ParticleSize);
 
-		PreSpawn(Particle, InitialLocation, InitialVelocity);
+		PreSpawn(&Particle, InitialLocation, InitialVelocity);
 
 		if (CurrentLODLevel)
 		{
@@ -241,11 +296,9 @@ void FParticleEmitterInstance::SpawnParticles(int32 Count, float StartTime, floa
 			}
 		}
 
-		PostSpawn(Particle, 0.0f, SpawnTime);
+		PostSpawn(&Particle, 0.0f, SpawnTime);
 
-		ParticleIndices[ActiveParticles] = static_cast<uint16>(DirectIndex);
 		++ActiveParticles;
-		++ParticleCounter;
 		SpawnTime += Increment;
 	}
 }
@@ -258,12 +311,96 @@ void FParticleEmitterInstance::KillParticle(int32 Index)
 	}
 
 	const int32 LastActiveIndex = ActiveParticles - 1;
+	const uint16 RemovedDirectIndex = ParticleIndices[Index];
 	if (Index != LastActiveIndex)
 	{
 		ParticleIndices[Index] = ParticleIndices[LastActiveIndex];
 	}
+	ParticleIndices[LastActiveIndex] = RemovedDirectIndex;
 
 	--ActiveParticles;
+}
+
+FDynamicEmitterReplayDataBase* FParticleEmitterInstance::GetReplayData()
+{
+	if (ActiveParticles <= 0)
+	{
+		return nullptr;
+	}
+
+	FDynamicEmitterReplayDataBase* NewEmitterReplayData = nullptr;
+	if (CurrentLODLevel && CurrentLODLevel->TypeDataModule && CurrentLODLevel->TypeDataModule->IsAMeshEmitter())
+	{
+		NewEmitterReplayData = new FDynamicMeshEmitterReplayData();
+	}
+	else
+	{
+		NewEmitterReplayData = new FDynamicSpriteEmitterReplayDataBase();
+	}
+
+	if (!FillReplayData(*NewEmitterReplayData))
+	{
+		delete NewEmitterReplayData;
+		return nullptr;
+	}
+
+	return NewEmitterReplayData;
+}
+
+bool FParticleEmitterInstance::FillReplayData(FDynamicEmitterReplayDataBase& OutData)
+{
+	if (ActiveParticles <= 0 || !ParticleData || !ParticleIndices || ParticleStride <= 0)
+	{
+		return false;
+	}
+
+	OutData.ActiveParticleCount = ActiveParticles;
+	OutData.ParticleStride = ParticleStride;
+	OutData.Scale = FVector::OneVector;
+	OutData.SortMode = 0;
+
+	if (CurrentLODLevel && CurrentLODLevel->RequiredModule)
+	{
+		OutData.SortMode = static_cast<int32>(CurrentLODLevel->RequiredModule->SortMode);
+		if (FDynamicSpriteEmitterReplayDataBase* SpriteData = dynamic_cast<FDynamicSpriteEmitterReplayDataBase*>(&OutData))
+		{
+			SpriteData->MaterialInterface = CurrentLODLevel->RequiredModule->Material;
+			SpriteData->ScreenAlignment = static_cast<uint8>(CurrentLODLevel->RequiredModule->ScreenAlignment);
+		}
+	}
+
+	if (CurrentLODLevel && CurrentLODLevel->TypeDataModule && CurrentLODLevel->TypeDataModule->IsAMeshEmitter())
+	{
+		OutData.eEmitterType = DET_Mesh;
+		if (FDynamicMeshEmitterReplayData* MeshData = dynamic_cast<FDynamicMeshEmitterReplayData*>(&OutData))
+		{
+			if (UParticleModuleTypeDataMesh* MeshTypeData = Cast<UParticleModuleTypeDataMesh>(CurrentLODLevel->TypeDataModule))
+			{
+				MeshData->StaticMesh = MeshTypeData->Mesh;
+			}
+		}
+	}
+	else
+	{
+		OutData.eEmitterType = DET_Sprite;
+	}
+
+	OutData.DataContainer.Alloc(ParticleStride * ActiveParticles, ActiveParticles);
+	if (!OutData.DataContainer.ParticleData || !OutData.DataContainer.ParticleIndices)
+	{
+		return false;
+	}
+
+	for (int32 Index = 0; Index < ActiveParticles; ++Index)
+	{
+		const uint16 DirectIndex = ParticleIndices[Index];
+		std::memcpy(OutData.DataContainer.ParticleData + ParticleStride * Index,
+			ParticleData + ParticleStride * DirectIndex,
+			ParticleSize);
+		OutData.DataContainer.ParticleIndices[Index] = static_cast<uint16>(Index);
+	}
+
+	return true;
 }
 
 FBaseParticle* FParticleEmitterInstance::GetParticleDirect(int32 DirectIndex) const
@@ -275,24 +412,35 @@ FBaseParticle* FParticleEmitterInstance::GetParticleDirect(int32 DirectIndex) co
 	return reinterpret_cast<FBaseParticle*>(ParticleData + ParticleStride * DirectIndex);
 }
 
-void FParticleEmitterInstance::PreSpawn(FBaseParticle& Particle, const FVector& InitialLocation, const FVector& InitialVelocity)
+void FParticleEmitterInstance::PreSpawn(FBaseParticle* Particle, const FVector& InitialLocation, const FVector& InitialVelocity)
 {
-	Particle.OldLocation = InitialLocation;
-	Particle.Location = InitialLocation;
-	Particle.BaseVelocity = InitialVelocity;
-	Particle.Velocity = InitialVelocity;
-	Particle.BaseSize = FVector::OneVector;
-	Particle.Size = FVector::OneVector;
-	Particle.Color = FLinearColor(1.0f, 1.0f, 1.0f, 1.0f);
-	Particle.BaseColor = Particle.Color;
-	Particle.RelativeTime = 0.0f;
-	Particle.OneOverMaxLifetime = 1.0f;
-	Particle.Flags = STATE_Particle_JustSpawned;
+	if (!Particle)
+	{
+		return;
+	}
+
+	Particle->OldLocation = InitialLocation;
+	Particle->Location = InitialLocation;
+	Particle->BaseVelocity = InitialVelocity;
+	Particle->Velocity = InitialVelocity;
+	Particle->BaseSize = FVector::OneVector;
+	Particle->Size = FVector::OneVector;
+	Particle->Color = FLinearColor(1.0f, 1.0f, 1.0f, 1.0f);
+	Particle->BaseColor = Particle->Color;
+	Particle->RelativeTime = 0.0f;
+	Particle->OneOverMaxLifetime = 1.0f;
+	Particle->Flags = 0;
 }
 
-void FParticleEmitterInstance::PostSpawn(FBaseParticle& Particle, float Interp, float SpawnTime)
+void FParticleEmitterInstance::PostSpawn(FBaseParticle* Particle, float Interp, float SpawnTime)
 {
 	(void)Interp;
 	(void)SpawnTime;
-	Particle.Flags &= ~STATE_Particle_JustSpawned;
+	if (!Particle)
+	{
+		return;
+	}
+
+	Particle->Flags |= ((ParticleCounter++) & STATE_CounterMask);
+	Particle->Flags |= STATE_Particle_JustSpawned;
 }

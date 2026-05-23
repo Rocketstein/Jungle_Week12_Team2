@@ -52,13 +52,17 @@ struct FParticleEmitterInstance : FParticleEmitterInstanceFixLayout
 	virtual void Init();
 	virtual bool Resize(int32 NewMaxActiveParticles, bool bSetMaxActiveCount = true);
 	virtual void Tick(float DeltaTime, bool bSuppressSpawning);
+	virtual float Tick_SpawnParticles(float DeltaTime, UParticleLODLevel* CurrentLODLevel, bool bSuppressSpawning, bool bFirstTime);
+	virtual float Spawn(float DeltaTime);
 	virtual void SpawnParticles(int32 Count, float StartTime, float Increment, const FVector& InitialLocation,
 		const FVector& InitialVelocity, FParticleEventInstancePayload* EventPayload);
 	virtual void KillParticle(int32 Index);
+	virtual FDynamicEmitterReplayDataBase* GetReplayData();
+	virtual bool FillReplayData(FDynamicEmitterReplayDataBase& OutData);
 
 	FBaseParticle* GetParticleDirect(int32 DirectIndex) const;
 
 protected:
-	virtual void PreSpawn(FBaseParticle& Particle, const FVector& InitialLocation, const FVector& InitialVelocity);
-	virtual void PostSpawn(FBaseParticle& Particle, float Interp, float SpawnTime);
+	virtual void PreSpawn(FBaseParticle* Particle, const FVector& InitialLocation, const FVector& InitialVelocity);
+	virtual void PostSpawn(FBaseParticle* Particle, float Interp, float SpawnTime);
 };

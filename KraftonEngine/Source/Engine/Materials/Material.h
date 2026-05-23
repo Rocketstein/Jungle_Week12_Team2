@@ -14,6 +14,7 @@
 class UTexture2D;
 class FArchive;
 class FShader;
+class UMaterial;
 
 // 파라미터 이름 → 상수 버퍼 내 위치 매핑
 struct FMaterialParameterInfo
@@ -69,10 +70,20 @@ struct FMaterialConstantBuffer
 	FConstantBuffer* GetConstantBuffer() { return &GPUBuffer; }
 };
 
+UCLASS()
+class UMaterialInterface : public UObject
+{
+public:
+	GENERATED_BODY(UMaterialInterface)
+
+	virtual UMaterial* GetMaterial() { return nullptr; }
+	virtual const UMaterial* GetMaterial() const { return nullptr; }
+};
+
 //파라미터 값 + 텍스처 (런타임 데이터)
 //JSON으로 직렬화되는 데이터
 UCLASS()
-class UMaterial : public UObject
+class UMaterial : public UMaterialInterface
 {
 private:
 	FString PathFileName;// 어떤 Material인지 판별하는 고유 이름
@@ -101,6 +112,9 @@ private:
 public:
 	GENERATED_BODY(UMaterial)
 	~UMaterial() override;
+
+	UMaterial* GetMaterial() override { return this; }
+	const UMaterial* GetMaterial() const override { return this; }
 
 	void Create(const FString& InPathFileName, FMaterialTemplate* InTemplate,
 		ERenderPass InRenderPass,
