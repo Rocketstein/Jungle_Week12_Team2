@@ -109,3 +109,67 @@ enum EParticleStates
 	/** Counter mask. */
 	STATE_CounterMask = (~STATE_Mask)
 };
+
+struct FParticleDataContainer
+{
+	int32 MemBlockSize = 0;
+	int32 ParticleDataNumBytes = 0;
+	int32 ParticleIndicesNumShorts = 0;
+	uint8* ParticleData = nullptr;		// this is also the memory block we allocated
+	uint16* ParticleIndices = nullptr;	// not allocated, this is at the end of the memory block
+
+	FParticleDataContainer() = default;
+	~FParticleDataContainer();
+
+	FParticleDataContainer(const FParticleDataContainer&) = delete;
+	FParticleDataContainer& operator=(const FParticleDataContainer&) = delete;
+
+	FParticleDataContainer(FParticleDataContainer&& Other) noexcept;
+	FParticleDataContainer& operator=(FParticleDataContainer&& Other) noexcept;
+
+	void Alloc(int32 InParticleDataNumBytes, int32 InParticleIndicesNumShorts);
+	void Free();
+};
+
+struct FDynamicEmitterReplayDataBase
+{
+	/** The type of emitter. */
+	EDynamicEmitterType eEmitterType = DET_Unknown;
+
+	/** The number of particles currently active in this emitter. */
+	int32 ActiveParticleCount = 0;
+
+	int32 ParticleStride = 0;
+	FParticleDataContainer DataContainer;
+
+	FVector Scale = FVector::OneVector;
+
+	int32 SortMode = 0;
+
+	virtual ~FDynamicEmitterReplayDataBase() = default;
+};
+
+struct FDynamicSpriteEmitterReplayDataBase : public FDynamicEmitterReplayDataBase
+{
+	UMaterial* MaterialInterface = nullptr;
+
+	int32 SubImages_Horizontal = 1;
+	int32 SubImages_Vertical = 1;
+	uint8 ScreenAlignment = 0;
+	EBlendState BlendMode = EBlendState::AlphaBlend;
+
+	FDynamicSpriteEmitterReplayDataBase()
+	{
+		eEmitterType = DET_Sprite;
+	}
+};
+
+struct FDynamicMeshEmitterReplayData : public FDynamicSpriteEmitterReplayDataBase
+{
+	UStaticMesh* StaticMesh = nullptr;
+
+	FDynamicMeshEmitterReplayData()
+	{
+		eEmitterType = DET_Mesh;
+	}
+};
