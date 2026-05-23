@@ -1,11 +1,11 @@
 ﻿#pragma once
 
 #include "Component/PrimitiveComponent.h"
-#include "Render/Proxy/ParticleSystemSceneProxy.h"
 #include "Particle/ParticleSystem.h"
 #include "ParticleSystemComponent.generated.h"
 
 class UFXSystemAsset;
+class FParticleSystemSceneProxy;
 struct FParticleEmitterInstance;
 
 UCLASS(HiddenInComponentList)
@@ -27,7 +27,7 @@ public:
 	UFXSystemAsset* GetFXSystemAsset() const override;
 	void SetTemplate(UParticleSystem* NewTemplate);
 	FPrimitiveSceneProxy* CreateSceneProxy() override;
-	FParticleSystemSceneProxy* GetSceneProxy() const { return static_cast<FParticleSystemSceneProxy*>(SceneProxy); }
+	FParticleSystemSceneProxy* GetSceneProxy() const;
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 	virtual void InitParticles();
 	void ResetParticles(bool bEmptyInstances = false);

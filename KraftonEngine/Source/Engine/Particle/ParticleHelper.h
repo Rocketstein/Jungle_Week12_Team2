@@ -5,7 +5,7 @@
 #include "Math/Vector.h"
 #include "Render/Types/RenderTypes.h"
 
-class UMaterial;
+class UMaterialInterface;
 class UParticleSystem;
 class UParticleEmitter;
 class UParticleSpriteEmitter;
@@ -151,7 +151,7 @@ struct FDynamicEmitterReplayDataBase
 
 struct FDynamicSpriteEmitterReplayDataBase : public FDynamicEmitterReplayDataBase
 {
-	UMaterial* MaterialInterface = nullptr;
+	UMaterialInterface* MaterialInterface = nullptr;
 
 	int32 SubImages_Horizontal = 1;
 	int32 SubImages_Vertical = 1;

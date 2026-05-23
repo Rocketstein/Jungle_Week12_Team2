@@ -160,8 +160,12 @@ class UParticleModuleSpawn : public UParticleModuleSpawnBase
 public:
 	GENERATED_BODY(UParticleModuleSpawn)
 
-	UPROPERTY(Edit, Category="Spawn", DisplayName="Rate", Min=0.0, Max=10000.0, Speed=1.0)
+	UPROPERTY(Edit, Category="Spawn", DisplayName="Rate", Min=0.0f, Max=10000.0f, Speed=1.0f)
 	float Rate = 10.0f;
+
+	bool GetSpawnAmount(const FContext& Context, int32 Offset, float OldLeftover, float DeltaTime, int32& Number, float& OutRate) override;
+	float GetMaximumSpawnRate() override { return Rate; }
+	float GetEstimatedSpawnRate() override { return Rate; }
 };
 
 UCLASS()
@@ -184,8 +188,13 @@ class UParticleModuleLifetime : public UParticleModuleLifetimeBase
 public:
 	GENERATED_BODY(UParticleModuleLifetime)
 
-	UPROPERTY(Edit, Category="Lifetime", DisplayName="Lifetime", Min=0.0, Max=1000.0, Speed=0.1)
+	UParticleModuleLifetime();
+
+	UPROPERTY(Edit, Category="Lifetime", DisplayName="Lifetime", Min=0.0f, Max=1000.0f, Speed=0.1f)
 	float Lifetime = 1.0f;
+
+	void Spawn(const FSpawnContext& Context) override;
+	float GetMaxLifetime() override { return Lifetime; }
 };
 
 UCLASS()
@@ -201,8 +210,12 @@ class UParticleModuleLocation : public UParticleModuleLocationBase
 public:
 	GENERATED_BODY(UParticleModuleLocation)
 
+	UParticleModuleLocation();
+
 	UPROPERTY(Edit, Category="Location", DisplayName="Start Location")
 	FVector StartLocation = FVector::ZeroVector;
+
+	void Spawn(const FSpawnContext& Context) override;
 };
 
 UCLASS()
@@ -221,8 +234,12 @@ class UParticleModuleVelocity : public UParticleModuleVelocityBase
 public:
 	GENERATED_BODY(UParticleModuleVelocity)
 
+	UParticleModuleVelocity();
+
 	UPROPERTY(Edit, Category="Velocity", DisplayName="Start Velocity")
 	FVector StartVelocity = FVector::UpVector;
+
+	void Spawn(const FSpawnContext& Context) override;
 };
 
 UCLASS()
@@ -237,6 +254,16 @@ class UParticleModuleColor : public UParticleModuleColorBase
 {
 public:
 	GENERATED_BODY(UParticleModuleColor)
+
+	UParticleModuleColor();
+
+	UPROPERTY(Edit, Category="Color", DisplayName="Start Color")
+	FVector StartColor = FVector::OneVector;
+
+	UPROPERTY(Edit, Category="Color", DisplayName="Start Alpha", Min=0.0f, Max=1.0f, Speed=0.01f)
+	float StartAlpha = 1.0f;
+
+	void Spawn(const FSpawnContext& Context) override;
 };
 
 UCLASS()
@@ -252,8 +279,12 @@ class UParticleModuleSize : public UParticleModuleSizeBase
 public:
 	GENERATED_BODY(UParticleModuleSize)
 
+	UParticleModuleSize();
+
 	UPROPERTY(Edit, Category="Size", DisplayName="Start Size")
 	FVector StartSize = FVector::OneVector;
+
+	void Spawn(const FSpawnContext& Context) override;
 };
 
 UCLASS()

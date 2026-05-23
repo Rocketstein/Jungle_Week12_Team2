@@ -3,6 +3,7 @@
 #include "Render/Types/FrameContext.h"
 #include "Render/Command/DrawCommand.h"
 #include "Component/ParticleSystemComponent.h"
+#include "Materials/Material.h"
 
 FParticleSystemSceneProxy::FParticleSystemSceneProxy(UParticleSystemComponent* InComponent)
 	: FPrimitiveSceneProxy(InComponent)
@@ -52,7 +53,7 @@ void FParticleSystemSceneProxy::UpdateMaterial()
 	{
 		const FDynamicSpriteEmitterReplayDataBase& Source =
 			static_cast<const FDynamicSpriteEmitterReplayDataBase&>(DynamicData[i]->GetSource());
-		EmitterDraws[i].Material = Source.MaterialInterface;
+		EmitterDraws[i].Material = Source.MaterialInterface ? Source.MaterialInterface->GetMaterial() : nullptr;
 		EmitterDraws[i].Type	 = Source.eEmitterType;
 		EmitterDraws[i].EmitterIndex = DynamicData[i]->EmitterIndex;
 	}
