@@ -22,11 +22,16 @@ class UParticleSystemComponent : public UFXSystemComponent
 {
 public:
 	GENERATED_BODY(UParticleSystemComponent)
+	~UParticleSystemComponent() override;
 
 	UFXSystemAsset* GetFXSystemAsset() const override;
 	void SetTemplate(UParticleSystem* NewTemplate);
 	FPrimitiveSceneProxy* CreateSceneProxy() override;
 	FParticleSystemSceneProxy* GetSceneProxy() const { return static_cast<FParticleSystemSceneProxy*>(SceneProxy); }
+	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
+	virtual void InitParticles();
+	void ResetParticles(bool bEmptyInstances = false);
+	void InitializeSystem();
 
 	UPROPERTY(Edit, Category="Particles", DisplayName="Template", Type=SoftObject, Class=UParticleSystem)
 	UParticleSystem* Template = nullptr;
