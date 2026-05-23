@@ -171,8 +171,9 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 	const bool bDepthOnly = (Pass == ERenderPass::PreDepth);
 
 	// 섹션당 1개 커맨드 (per-section 셰이더)
- 	for (const FMeshSectionDraw& Section : Proxy.GetSectionDraws())
+ 	for (uint32 SectionIndex = 0; SectionIndex < Proxy.GetSectionDraws().size(); SectionIndex++)
 	{
+		const FMeshSectionDraw& Section = Proxy.GetSectionDraws()[SectionIndex];
 		if (Section.IndexCount == 0) continue;
 		if (!ProxyBuffer.IB) continue;
 
@@ -218,7 +219,7 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 			CommandDrawOptions.BoneWeightHeatmapBoneIndex = -1;
 		}
 
-		if (!Proxy.PrepareDrawCommandBindings(CachedDevice, Ctx, CommandDrawOptions, Cmd))
+		if (!Proxy.PrepareDrawCommandBindings(CachedDevice, Ctx, CommandDrawOptions, Cmd, SectionIndex))
 		{
 			continue;
 		}

@@ -121,7 +121,7 @@ bool FSkeletalMeshSceneProxy::PrepareGpuSkinningDrawBuffer(ID3D11Device* Device,
 }
 
 bool FSkeletalMeshSceneProxy::PrepareDrawCommandBindings(ID3D11Device* Device, ID3D11DeviceContext* Context,
-	const FPrimitiveDrawOptions& Options, FDrawCommand& OutCommand) const
+	const FPrimitiveDrawOptions& Options, FDrawCommand& OutCommand, int32) const
 {
 	if (!Device || !Context)
 	{
