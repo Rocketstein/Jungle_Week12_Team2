@@ -325,6 +325,8 @@ void FParticleSystemSceneProxy::PackSpriteEmitter(const FFrameContext& Frame, FD
 	Emitter.SortSpriteParticles(Source.SortMode, Frame.CameraPosition, Frame.CameraForward, FMatrix::Identity, Source.DataContainer.ParticleIndices,
 								Count, Source.DataContainer.ParticleData, Source.ParticleStride);
 
+	PackedSpriteVertices.reserve(PackedSpriteVertices.size() + Count * 4);
+	PackedSpriteIndices.reserve(PackedSpriteIndices.size() + Count * 6);
 	for (int32 i = 0; i < Count; ++i)
 	{
 		const uint16 Idx = Source.DataContainer.ParticleIndices[i];
