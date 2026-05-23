@@ -2,6 +2,7 @@
 
 #include "SWindow.h"
 #include "Input/InputSystem.h"
+#include "ImGui/imgui.h"
 
 void FSlateApplication::RegisterViewport(SWindow* Window, FViewportClient* Client)
 {
@@ -56,9 +57,12 @@ void FSlateApplication::UpdateInputOwner()
 	}
 
 	FPoint MousePoint;
-	POINT ClientMouse = Input.GetMouseClientPos();
-	MousePoint.X = static_cast<float>(ClientMouse.x);
-	MousePoint.Y = static_cast<float>(ClientMouse.y);
+	const bool bUseScreenSpace =
+		(ImGui::GetCurrentContext() != nullptr) &&
+		((ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) != 0);
+	POINT Mouse = bUseScreenSpace ? Input.GetMousePos() : Input.GetMouseClientPos();
+	MousePoint.X = static_cast<float>(Mouse.x);
+	MousePoint.Y = static_cast<float>(Mouse.y);
 
 	HoveredClient = nullptr;
 
