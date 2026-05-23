@@ -33,5 +33,6 @@ PS_Input_Tex VS(VS_Input_ParticleSprite Input)
 
 float4 PS(PS_Input_Tex Input) : SV_Target
 {
-    return float4(1, 1, 1, 1);
+    float4 col = ParticleAtlas.Sample(LinearClampSampler, input.texcoord);
+    return col * input.color;
 }
