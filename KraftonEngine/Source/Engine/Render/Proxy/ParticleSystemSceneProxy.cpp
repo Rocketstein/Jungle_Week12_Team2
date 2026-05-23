@@ -95,9 +95,9 @@ void FParticleSystemSceneProxy::UpdateMesh()
 			// Mesh path: section's index range is the static mesh's own IB.
 			// FirstIndex/IndexCount come from MeshGeom, and InstanceCount = ParticleCount.
 			Draw.FirstIndex = 0;
-			Draw.IndexCount = Draw.MeshGeom ? Draw.MeshGeom->GetIndexBuffer().GetIndexCount() : 0;
 			Draw.InstanceCount = ParticleCount;
 			Draw.MeshGeom = Source.StaticMesh ? Source.StaticMesh->GetLODMeshBuffer(Source.LODLevel) : nullptr;
+			Draw.IndexCount = Draw.MeshGeom ? Draw.MeshGeom->GetIndexBuffer().GetIndexCount() : 0;
 
 		}
 		SectionDraws.push_back({ Draw.Material, Draw.FirstIndex, Draw.IndexCount });
