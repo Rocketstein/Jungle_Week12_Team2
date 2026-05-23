@@ -37,27 +37,33 @@ private:
 		UMaterial* Material;
 		uint32 FirstIndex;
 		uint32 IndexCount;
-		// mesh path: per-emitter instance buffer + base static-mesh VB/IB
-		FDynamicVertexBuffer InstanceVB;
+		// mesh path: per-emitter instance buffer + base static-mesh VB/IB.
+		// InstanceVB is mutable because the lazy upload happens inside the const
+		// PrepareDrawCommandBindings override (same pattern as the proxy's SpriteVB).
+		mutable FDynamicVertexBuffer InstanceVB;
 		FMeshBuffer*		 MeshGeom		= nullptr;   // borrowed from UStaticMesh
 		uint32               InstanceCount  = 0;
+
+		// Mesh path CPU scratch — PackMeshEmitter writes here each frame, then
+		// PrepareDrawCommandBindings lazily uploads to InstanceVB when dirty.
+		// Per-emitter (not shared) because each mesh emitter has its own InstanceVB.
+		TArray<FMeshParticleInstanceVertex> PackedInstances;
+		mutable bool bInstanceVBDirty = true;
 	};
 
 	// Fills the SpriteVert/IndexScratch member arrays and refreshes per-emitter
 	// (FirstIndex, IndexCount). Sets bGpuBuffersDirty for PrepareDrawBuffer to consume.
-	void PackSprites(const FFrameContext& Frame);
+	void PackParticles(const FFrameContext& Frame);
 
-	void PackSpriteEmitter(const FFrameContext& Frame, FDynamicSpriteEmitterData& Emitter,
-		TArray<FParticleSpriteVertex>& OutVerts,
-		TArray<uint32>& OutIndices, uint32& IndexCursor);
-	void PackMeshEmitter(const FFrameContext& Frame, FDynamicMeshEmitterData& Emitter);
+	void PackSpriteEmitter(const FFrameContext& Frame, FDynamicSpriteEmitterData& Emitter, uint32& IndexCursor);
+	void PackMeshEmitter(const FFrameContext& Frame, FDynamicMeshEmitterData& Emitter, uint32 SectionIndex);
 
 	TArray<FDynamicEmitterDataBase*> DynamicData;   // owned, freed on next UpdateDynamicData
 	TArray<FEmitterDraw>             EmitterDraws;
 
 	FMatrix ComponentToWorld = FMatrix::Identity;
-	TArray<FParticleSpriteVertex> PackedVertices;
-	TArray<uint32>                PackedIndices;
+	TArray<FParticleSpriteVertex> PackedSpriteVertices;
+	TArray<uint32>                PackedSpriteIndices;
 
 	// Sprite path: shared across all sprite emitters this proxy owns.
 	mutable FDynamicVertexBuffer SpriteVB;

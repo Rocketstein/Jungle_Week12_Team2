@@ -80,7 +80,7 @@ void FDynamicSpriteEmitterDataBase::SortSpriteParticles(int32 SortMode, const FV
 	};
 
 	TArray<FParticleSortKey> SortKeys;
-	SortKeys.reserve(Count);
+	SortKeys.reserve(Count);   
 
 	for (int32 i = 0; i < Count; ++i)
 	{
