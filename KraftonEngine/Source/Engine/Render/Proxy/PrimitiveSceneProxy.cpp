@@ -104,7 +104,7 @@ bool FPrimitiveSceneProxy::PrepareGpuSkinningDrawBuffer(ID3D11Device* Device, ID
 }
 
 bool FPrimitiveSceneProxy::PrepareDrawCommandBindings(ID3D11Device* Device, ID3D11DeviceContext* Context,
-	const FPrimitiveDrawOptions& Options, FDrawCommand& OutCommand) const
+	const FPrimitiveDrawOptions& Options, FDrawCommand& OutCommand, int32 SectionIndex) const
 {
 	return true;
 }
