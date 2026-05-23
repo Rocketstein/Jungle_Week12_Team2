@@ -56,7 +56,7 @@ namespace
 			P->OldLocation        = P->Location;
 			P->Velocity           = FVector::ZeroVector;
 			P->BaseVelocity       = FVector::ZeroVector;
-			P->Size               = FVector(20.0f, 20.0f, 0.0f);
+			P->Size               = FVector(10.0f, 10.0f, 0.0f);
 			P->BaseSize           = P->Size;
 			P->Rotation           = 0.0f;
 			P->BaseRotationRate   = 0.0f;

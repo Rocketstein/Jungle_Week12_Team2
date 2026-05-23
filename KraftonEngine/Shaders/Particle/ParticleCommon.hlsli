@@ -4,9 +4,9 @@
 // b2 (PerShader0): common per-emitter particle parameters.
 cbuffer ParticleParamBuffer : register(b2)
 {
-    float SubUVCols;
-    float SubUVRows;
-    float ScreenAlignment;
+    uint SubUVCols;
+    uint SubUVRows;
+    uint ScreenAlignment;
     float _Pad;
 }
 
@@ -19,7 +19,7 @@ static const uint PARTICLE_SCREEN_ALIGNMENT_AWAYFROMCENTER = 5;
 
 uint GetParticleScreenAlignment()
 {
-    return (uint)(ScreenAlignment + 0.5f);
+    return ScreenAlignment;
 }
 
 #endif

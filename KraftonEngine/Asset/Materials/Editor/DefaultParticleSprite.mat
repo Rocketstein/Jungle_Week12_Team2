@@ -3,9 +3,9 @@
   "DepthStencilState" : "",
   "Origin" : "Editor",
   "Parameters" : {
-    "ScreenAlignment" : 0.000000,
-    "SubUVCols" : 0.000000,
-    "SubUVRows" : 0.000000,
+    "ScreenAlignment" : 0,
+    "SubUVCols" : 0,
+    "SubUVRows" : 0,
     "_Pad" : 0.000000
   },
   "PathFileName" : "Asset/Materials/Editor/DefaultParticleSprite.mat",
