@@ -1,4 +1,4 @@
-#include "Render/Particle/ParticleSpriteSmokeTest.h"
+﻿#include "Render/Particle/ParticleSpriteSmokeTest.h"
 
 #include "Component/ActorComponent.h"
 #include "Component/ParticleSystemComponent.h"
@@ -127,16 +127,21 @@ int32 ParticleSpriteSmokeTest::InjectIntoWorld(UWorld* World, UMaterial* Materia
 			}
 
 			Proxy->UpdateDynamicData(std::move(Data));
+			Proxy->UpdateMaterial();
+			Proxy->UpdateMesh();
 			++Injected;
 		}
 	}
 
-	UE_LOG("[ParticleSmokeTest] World=%p WorldType=%d  ActorsScanned=%d PSCsFound=%d WithProxy=%d Injected=%d  Material=%p Pass=%d  N=%d Radius=%.1f",
+	const ID3D11ShaderResourceView* const* SRVs = Material->GetCachedSRVs();
+	UE_LOG("[ParticleSmokeTest] World=%p WorldType=%d  ActorsScanned=%d PSCsFound=%d WithProxy=%d Injected=%d  Material=%p Pass=%d Shader=%p t0SRV=%p  N=%d Radius=%.1f",
 		World,
 		static_cast<int32>(World->GetWorldType()),
 		ActorsScanned, PSCsFound, PSCsWithProxy, Injected,
 		Material,
 		static_cast<int32>(Material->GetRenderPass()),
+		Material->GetShader(),
+		SRVs ? SRVs[0] : nullptr,
 		N, Radius);
 
 	return Injected;

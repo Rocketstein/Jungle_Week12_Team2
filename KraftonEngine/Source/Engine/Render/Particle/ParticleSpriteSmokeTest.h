@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Core/CoreTypes.h"
 
@@ -30,7 +30,7 @@ namespace ParticleSpriteSmokeTest
 	// Repeated calls replace previous test data (proxy frees the prior emitter
 	// inside UpdateDynamicData). Returns the number of proxies that received
 	// data. Safe to call when World or Material is null (returns 0).
-	int32 InjectIntoWorld(UWorld* World, UMaterial* Material, int32 N = 32, float Radius = 100.0f);
+	int32 InjectIntoWorld(UWorld* World, UMaterial* Material, int32 N = 32, float Radius = 1.0f);
 
 	// Resolves Asset/Materials/Editor/DefaultParticleSprite.mat via
 	// FMaterialManager. The material binds the ParticleSprite shader at
