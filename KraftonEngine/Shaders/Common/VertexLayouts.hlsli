@@ -126,6 +126,13 @@ struct PS_Input_PosOnly
     float4 position : SV_POSITION;
 };
 
+struct PS_Input_Particle
+{
+    float4 position : SV_POSITION;
+    float2 texcoord : TEXCOORD0;
+    float4 color    : COLOR;
+};
+
 // SV_POSITION + Color + WorldPos (Editor)
 struct PS_Input_ColorWorld
 {
@@ -147,13 +154,6 @@ struct PS_Input_Shadow
 {
     float4 position : SV_POSITION;
     float  depth    : TEXCOORD0;    // VSM용 normalized depth
-};
-
-struct PS_Input_Particle
-{
-    float4 position : SV_POSITION;
-    float2 texcoord : TEXCOORD;
-    float4 color    : COLOR;
 };
 
 #endif // VERTEX_LAYOUTS_HLSL
