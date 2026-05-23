@@ -36,7 +36,11 @@ void FParticleSystemSceneProxy::UpdateDynamicData(TArray<FDynamicEmitterDataBase
 		delete Old;
 	}
 	DynamicData = std::move(NewData);
-	EmitterDraws.resize(DynamicData.size());
+
+	if (EmitterDraws.size() != DynamicData.size())
+	{
+		EmitterDraws.resize(DynamicData.size());
+	}
 }
 
 void FParticleSystemSceneProxy::UpdateTransform()
@@ -49,7 +53,6 @@ void FParticleSystemSceneProxy::UpdateTransform()
 
 void FParticleSystemSceneProxy::UpdateMaterial()
 {
-	EmitterDraws.resize(DynamicData.size());
 	for (uint32 i = 0; i < DynamicData.size(); i++)
 	{
 		const FDynamicSpriteEmitterReplayDataBase& Source =
