@@ -286,9 +286,13 @@ void FParticleSystemSceneProxy::PackSpriteEmitter(const FFrameContext& Frame, FD
 
 		}
 
-		// CCW quad
-		OutIndices.push_back(V0 + 0); OutIndices.push_back(V0 + 1); OutIndices.push_back(V0 + 2);
-		OutIndices.push_back(V0 + 2); OutIndices.push_back(V0 + 1); OutIndices.push_back(V0 + 3);
+		// CCW quad (useful to toggle when testing culling/winding)
+		//OutIndices.push_back(V0 + 0); OutIndices.push_back(V0 + 1); OutIndices.push_back(V0 + 2);
+		//OutIndices.push_back(V0 + 2); OutIndices.push_back(V0 + 1); OutIndices.push_back(V0 + 3);
+
+		// CW quad for D3D11 default front-face winding with back-face culling.
+		OutIndices.push_back(V0 + 0); OutIndices.push_back(V0 + 2); OutIndices.push_back(V0 + 1);
+		OutIndices.push_back(V0 + 2); OutIndices.push_back(V0 + 3); OutIndices.push_back(V0 + 1);
 		IndexCursor += 6;
 	}
 }
