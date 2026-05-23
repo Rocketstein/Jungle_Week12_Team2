@@ -1781,6 +1781,9 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
   <ItemGroup>
     <ResourceCompile Include="KraftonEngine.rc" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="ParticleCommon.hlsli" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="GenerateCode" BeforeTargets="ClCompile">
     <Exec Command="python &quot;$(ProjectDir)..\Scripts\GenerateCode.py&quot;" />

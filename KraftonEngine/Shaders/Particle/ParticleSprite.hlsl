@@ -1,6 +1,7 @@
 #include "Common/Functions.hlsli"
 #include "Common/VertexLayouts.hlsli"
 #include "Common/SystemSamplers.hlsli"
+#include "ParticleCommon.hlsli"
 
 Texture2D ParticleAtlas : register(t0);
 

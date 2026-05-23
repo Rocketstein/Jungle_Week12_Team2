@@ -1,18 +1,11 @@
 #include "Common/Functions.hlsli"
 #include "Common/VertexLayouts.hlsli"
 #include "Common/SystemSamplers.hlsli"
+#include "ParticleCommon.hlsli"
 
-// Mesh-particle base color. Same convention as ParticleSprite.hlsl —
+// Mesh-particle base color. Same convention as ParticleSprite.hlsl
 // bound from the material's "DiffuseTexture" slot (EMaterialTextureSlot::Diffuse → t0).
 Texture2D ParticleAtlas : register(t0);
-
-//cbuffer ParticleParamBuffer : register(b2)
-//{
-//    float SubUVCols;
-//    float SubUVRows;
-//    float ScreenAlignment;
-//    float _Pad;
-//}
 
 // VS:
 PS_Input_Particle VS(VS_Input_MeshParticle Input)
