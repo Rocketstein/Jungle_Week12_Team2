@@ -41,7 +41,6 @@ private:
 		uint32               InstanceCount  = 0;
 	};
 
-	// Orchestrator — called by UpdatePerViewport. CPU-only; no device/context.
 	// Fills the SpriteVert/IndexScratch member arrays and refreshes per-emitter
 	// (FirstIndex, IndexCount). Sets bGpuBuffersDirty for PrepareDrawBuffer to consume.
 	void PackSprites(const FFrameContext& Frame);
@@ -55,9 +54,6 @@ private:
 	TArray<FEmitterDraw>             EmitterDraws;
 
 	FMatrix ComponentToWorld = FMatrix::Identity;
-
-	// CPU scratch: built by UpdatePerViewport, drained by PrepareDrawBuffer.
-	// Members (not locals) so capacity is reused across frames.
 	TArray<FParticleSpriteVertex> PackedVertices;
 	TArray<uint32>                PackedIndices;
 
@@ -66,7 +62,6 @@ private:
 	mutable FDynamicIndexBuffer  SpriteIB;
 
 	// Signals PrepareDrawBuffer that scratch arrays must be re-uploaded.
-	// Set by UpdatePerViewport, cleared by PrepareDrawBuffer.
 	mutable bool bGpuBuffersDirty = true;
 
 	// In Cascade particles, the Emitter Instance(specifically FParticleEmitterInstance and its associated FParticleSystemSceneProxy)
