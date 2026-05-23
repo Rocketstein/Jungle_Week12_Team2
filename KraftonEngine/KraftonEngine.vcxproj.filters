@@ -16,6 +16,9 @@
     <Filter Include="Shaders\Lighting">
       <UniqueIdentifier>{97acd6e6-5b21-8302-b62a-106ac9f908a0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders\Particle">
+      <UniqueIdentifier>{c3e402bb-3ff7-e6aa-2922-dc75ff266376}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Shaders\PostProcess">
       <UniqueIdentifier>{99e90c3e-d2e3-6436-6596-dd1cf09f1909}</UniqueIdentifier>
     </Filter>
@@ -413,6 +416,9 @@
     </FxCompile>
     <FxCompile Include="Shaders\Lighting\VSMBlur.hlsl">
       <Filter>Shaders\Lighting</Filter>
+    </FxCompile>
+    <FxCompile Include="Shaders\Particle\ParticleSprite.hlsl">
+      <Filter>Shaders\Particle</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\PostProcess\Blit.hlsl">
       <Filter>Shaders\PostProcess</Filter>

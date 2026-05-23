@@ -58,13 +58,13 @@ struct FVertexPNCTBW
 
 struct FParticleSpriteVertex
 {
-    FVector  Position;
-	FVector  Size;
-	FVector2 UV;
-	FVector4 Color;
-	float	 Rotation;
-	float	 SubImageIndex;
-	FVector  Velocity;
+	FVector  Position;       // 12 B
+	FVector  Size;           // 12 B  ← (sizeX, sizeY, subImageLerp)
+	FVector2 UV;             //  8 B  ← corner ID 0..1
+	FVector4 Color;          // 16 B
+	float    Rotation;       //  4 B
+	float    SubImageIndex;  //  4 B
+	FVector  Velocity;       // 12 B
 };
 
 struct FMeshParticleInstanceVertex
