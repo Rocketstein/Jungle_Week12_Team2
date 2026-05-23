@@ -1782,7 +1782,9 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ResourceCompile Include="KraftonEngine.rc" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Shaders\Particle\ParticleCommon.hlsli" />
+    <None Include="Shaders\Particle\ParticleCommon.hlsli">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </None>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="GenerateCode" BeforeTargets="ClCompile">
