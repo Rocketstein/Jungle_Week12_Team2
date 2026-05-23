@@ -259,6 +259,26 @@ bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevic
 
 	const FEmitterDraw& Hit = EmitterDraws[SectionIndex];
 
+	// Upload CB if dirty
+	if (Hit.bParticleParamCBDirty)
+	{
+		if (!Hit.ParticleParamCB.GetBuffer())
+		{
+			Hit.ParticleParamCB.Create(
+				InDevice,
+				sizeof(FParticleParamConstants),
+				"ParticleParamCB");
+		}
+
+		Hit.ParticleParamCB.Update(
+			InDeviceContext,
+			&Hit.ParticleParams,
+			sizeof(FParticleParamConstants));
+
+		Hit.bParticleParamCBDirty = false;
+	}
+	Cmd.Bindings.PerShaderCB[0] = &Hit.ParticleParamCB;
+
 	if (Hit.Type == DET_Mesh && Hit.MeshGeom && Hit.InstanceCount > 0)
 	{
 		if (Hit.bInstanceVBDirty && !Hit.PackedInstances.empty())
