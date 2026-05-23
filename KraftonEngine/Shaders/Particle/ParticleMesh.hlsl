@@ -35,6 +35,13 @@ PS_Input_Particle VS(VS_Input_MeshParticle Input)
 float4 PS(PS_Input_Particle Input) : SV_Target
 {
     float4 Col = ParticleAtlas.Sample(LinearClampSampler, Input.texcoord);
+
+    // Match ParticleSprite — discard fully-transparent texels so the alpha mask
+    // works regardless of blend mode (Additive ignores alpha; AlphaBlend still
+    // benefits from the early-out and avoids depth writes for invisible pixels
+    // if depth-write is ever turned back on).
+    clip(Col.a * Input.color.a - 0.01f);
+
     return float4(ApplyWireframe(Col.rgb) * Input.color.rgb,
                   bIsWireframe ? 1.0f : (Col.a * Input.color.a));
 }

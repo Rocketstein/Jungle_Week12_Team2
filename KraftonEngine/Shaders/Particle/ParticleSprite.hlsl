@@ -34,9 +34,7 @@ PS_Input_Particle VS(VS_Input_ParticleSprite Input)
     float4 ViewPos = mul(float4(Input.position, 1.0f), View);
     ViewPos.xy += Corner;
     Out.position = mul(ViewPos, Projection);
-
-    // Out.texcoord = SubUVOffset + Input.uv * SubUVSize;
-    Out.texcoord = Input.uv;
+    Out.texcoord = float2(Input.uv.x, 1.0f - Input.uv.y);
     Out.color    = Input.color;
     return Out;
 }
@@ -44,6 +42,8 @@ PS_Input_Particle VS(VS_Input_ParticleSprite Input)
 float4 PS(PS_Input_Particle Input) : SV_Target
 {
     float4 Col = ParticleAtlas.Sample(LinearClampSampler, Input.texcoord);
+    clip(Col.a * Input.color.a - 0.01f);
+
     return float4(ApplyWireframe(Col.rgb) * Input.color.rgb,
                   bIsWireframe ? 1.0f : (Col.a * Input.color.a));
 }
