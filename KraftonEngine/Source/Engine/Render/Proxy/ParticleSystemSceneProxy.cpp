@@ -313,7 +313,13 @@ void FParticleSystemSceneProxy::PackSpriteEmitter(const FFrameContext& Frame, FD
 {
 	const FDynamicSpriteEmitterReplayDataBase& Source = Emitter.Source;
 	const int32 Count = Source.ActiveParticleCount;
-	if (Count <= 0) return;
+	if (Count <= 0 ||
+		!Source.DataContainer.ParticleData ||
+		!Source.DataContainer.ParticleIndices ||
+		Source.ParticleStride < static_cast<int32>(sizeof(FBaseParticle)))
+	{
+		return;
+	}
 
 	// Sort
 	Emitter.SortSpriteParticles(Source.SortMode, Frame.CameraPosition, Frame.CameraForward, FMatrix::Identity, Source.DataContainer.ParticleIndices,
