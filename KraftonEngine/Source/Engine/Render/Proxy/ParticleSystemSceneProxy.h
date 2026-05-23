@@ -58,6 +58,8 @@ private:
 	void PackMeshEmitter(const FFrameContext& Frame, FDynamicMeshEmitterData& Emitter, uint32 SectionIndex);
 
 	void UpdateCB(FEmitterDraw& EmitterDraw, const FDynamicSpriteEmitterReplayDataBase& Source);
+	
+	bool EnsureSpriteIndexUpdate() const;
 
 	TArray<FDynamicEmitterDataBase*> DynamicData;   // owned, freed on next UpdateDynamicData
 	TArray<FEmitterDraw>             EmitterDraws;

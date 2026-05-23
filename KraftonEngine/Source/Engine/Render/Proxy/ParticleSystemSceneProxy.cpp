@@ -328,8 +328,10 @@ void FParticleSystemSceneProxy::PackSpriteEmitter(const FFrameContext& Frame, FD
 	Emitter.SortSpriteParticles(Source.SortMode, Frame.CameraPosition, Frame.CameraForward, FMatrix::Identity, Source.DataContainer.ParticleIndices,
 								Count, Source.DataContainer.ParticleData, Source.ParticleStride);
 
+	const bool bShouldUpdateIB = EnsureSpriteIndexUpdate();
+
 	PackedSpriteVertices.reserve(PackedSpriteVertices.size() + Count * 4);
-	PackedSpriteIndices.reserve(PackedSpriteIndices.size() + Count * 6);
+	if (bShouldUpdateIB) PackedSpriteIndices.reserve(PackedSpriteIndices.size() + Count * 6);
 	for (int32 i = 0; i < Count; ++i)
 	{
 		const uint16 Idx = Source.DataContainer.ParticleIndices[i];
@@ -351,9 +353,11 @@ void FParticleSystemSceneProxy::PackSpriteEmitter(const FFrameContext& Frame, FD
 		}
 
 		// CW quad
-		PackedSpriteIndices.push_back(V0 + 0); PackedSpriteIndices.push_back(V0 + 2); PackedSpriteIndices.push_back(V0 + 1);
-		PackedSpriteIndices.push_back(V0 + 2); PackedSpriteIndices.push_back(V0 + 3); PackedSpriteIndices.push_back(V0 + 1);
-		IndexCursor += 6;
+		if (bShouldUpdateIB) {
+			PackedSpriteIndices.push_back(V0 + 0); PackedSpriteIndices.push_back(V0 + 2); PackedSpriteIndices.push_back(V0 + 1);
+			PackedSpriteIndices.push_back(V0 + 2); PackedSpriteIndices.push_back(V0 + 3); PackedSpriteIndices.push_back(V0 + 1);
+			IndexCursor += 6;
+		}
 	}
 }
 
@@ -415,4 +419,11 @@ void FParticleSystemSceneProxy::UpdateCB(FEmitterDraw& EmitterDraw, const FDynam
 	EmitterDraw.ParticleParams.SubUVRows = SubUVRows;
 	EmitterDraw.ParticleParams.ScreenAlignment = ScreenAlignment;
 	EmitterDraw.bParticleParamCBDirty = true;
+}
+
+bool FParticleSystemSceneProxy::EnsureSpriteIndexUpdate() const 
+{
+	if (PackedSpriteIndices.empty() || DynamicData.size() > PackedSpriteIndices.size() * 6 /* Quad = 4 vertices, 6 indices */) return true;
+
+	return false;
 }
