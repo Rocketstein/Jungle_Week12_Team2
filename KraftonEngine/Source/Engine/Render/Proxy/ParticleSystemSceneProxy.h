@@ -53,9 +53,10 @@ private:
 	// Fills the SpriteVert/IndexScratch member arrays and refreshes per-emitter
 	// (FirstIndex, IndexCount). Sets bGpuBuffersDirty for PrepareDrawBuffer to consume.
 	void PackParticles(const FFrameContext& Frame);
-
 	void PackSpriteEmitter(const FFrameContext& Frame, FDynamicSpriteEmitterData& Emitter, uint32& IndexCursor);
 	void PackMeshEmitter(const FFrameContext& Frame, FDynamicMeshEmitterData& Emitter, uint32 SectionIndex);
+
+	void UpdateCB(FEmitterDraw& EmitterDraw, const FDynamicSpriteEmitterReplayDataBase& Source);
 
 	TArray<FDynamicEmitterDataBase*> DynamicData;   // owned, freed on next UpdateDynamicData
 	TArray<FEmitterDraw>             EmitterDraws;

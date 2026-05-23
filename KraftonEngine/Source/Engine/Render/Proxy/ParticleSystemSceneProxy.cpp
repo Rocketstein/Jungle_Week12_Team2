@@ -56,6 +56,8 @@ void FParticleSystemSceneProxy::UpdateMaterial()
 		EmitterDraws[i].Material = Source.MaterialInterface;
 		EmitterDraws[i].Type	 = Source.eEmitterType;
 		EmitterDraws[i].EmitterIndex = DynamicData[i]->EmitterIndex;
+
+		UpdateCB(EmitterDraws[i], Source);
 	}
 }
 
@@ -362,4 +364,12 @@ void FParticleSystemSceneProxy::PackMeshEmitter(const FFrameContext& Frame,
 	}
 
 	Draw.bInstanceVBDirty = true;
+}
+
+void FParticleSystemSceneProxy::UpdateCB(FEmitterDraw& EmitterDraw, const FDynamicSpriteEmitterReplayDataBase& Source)
+{
+	EmitterDraw.ParticleParams.SubUVCols = static_cast<float>(Source.SubImages_Horizontal);
+	EmitterDraw.ParticleParams.SubUVRows = static_cast<float>(Source.SubImages_Vertical);
+	EmitterDraw.ParticleParams.ScreenAlignment = static_cast<float>(Source.ScreenAlignment);
+	EmitterDraw.bParticleParamCBDirty = true;
 }
