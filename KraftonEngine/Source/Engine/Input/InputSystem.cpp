@@ -1,10 +1,60 @@
 #include "Engine/Input/InputSystem.h"
 #include <cmath>
 
+namespace
+{
+    bool IsCurrentProcessImGuiPlatformWindow(HWND HWnd)
+    {
+        if (!HWnd)
+        {
+            return false;
+        }
+
+        DWORD WindowProcessId = 0;
+        GetWindowThreadProcessId(HWnd, &WindowProcessId);
+        if (WindowProcessId != GetCurrentProcessId())
+        {
+            return false;
+        }
+
+        return GetPropA(HWnd, "IMGUI_CONTEXT") != nullptr;
+    }
+
+    bool IsFocusedWindowOwnedBy(HWND FocusedHWnd, HWND OwnerHWnd)
+    {
+        if (!OwnerHWnd || !FocusedHWnd)
+        {
+            return !OwnerHWnd;
+        }
+
+        if (IsCurrentProcessImGuiPlatformWindow(FocusedHWnd))
+        {
+            return true;
+        }
+
+        if (FocusedHWnd == OwnerHWnd || IsChild(OwnerHWnd, FocusedHWnd))
+        {
+            return true;
+        }
+
+        for (HWND CurrentOwner = GetWindow(FocusedHWnd, GW_OWNER);
+            CurrentOwner != nullptr;
+            CurrentOwner = GetWindow(CurrentOwner, GW_OWNER))
+        {
+            if (CurrentOwner == OwnerHWnd)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
 void InputSystem::Tick()
 {
     // 윈도우 포커스가 없으면 모든 입력 상태 해제
-    bWindowFocused = !OwnerHWnd || GetForegroundWindow() == OwnerHWnd;
+    bWindowFocused = IsFocusedWindowOwnedBy(GetForegroundWindow(), OwnerHWnd);
     if (!bWindowFocused)
     {
         ResetAllKeyStates();
