@@ -54,6 +54,7 @@ void FParticleSystemSceneProxy::UpdateMaterial()
 			static_cast<const FDynamicSpriteEmitterReplayDataBase&>(DynamicData[i]->GetSource());
 		EmitterDraws[i].Material = Source.MaterialInterface;
 		EmitterDraws[i].Type	 = Source.eEmitterType;
+		EmitterDraws[i].EmitterIndex = DynamicData[i]->EmitterIndex;
 	}
 }
 
@@ -219,30 +220,27 @@ void FParticleSystemSceneProxy::PackSprites(const FFrameContext& Frame)
 }
 
 bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device*, ID3D11DeviceContext*,
-	const FPrimitiveDrawOptions&, FDrawCommand& Cmd) const
+	const FPrimitiveDrawOptions&, FDrawCommand& Cmd, int32 SectionIndex) const
 {
-	// Identify which emitter this command belongs to by FirstIndex (unique per section).
-	const FEmitterDraw* Hit = nullptr;
-	for (const FEmitterDraw& E : EmitterDraws) {
-		if (E.FirstIndex == Cmd.Buffer.FirstIndex && E.IndexCount == Cmd.Buffer.IndexCount)
-		{
-			Hit = &E; break;
-		}
-	}
-	if (!Hit) return true;   // sprite path. Leave Cmd as is
-
-	if (Hit->Type == DET_Mesh && Hit->MeshGeom)
+	if (SectionIndex < 0 || SectionIndex >= static_cast<int32>(EmitterDraws.size()))
 	{
-		Cmd.Buffer.VB = Hit->MeshGeom->GetVertexBuffer().GetBuffer();
-		Cmd.Buffer.VBStride = Hit->MeshGeom->GetVertexBuffer().GetStride();
-		Cmd.Buffer.IB = Hit->MeshGeom->GetIndexBuffer().GetBuffer();
+		return true;
+	}
+
+	const FEmitterDraw& Hit = EmitterDraws[SectionIndex];
+
+	if (Hit.Type == DET_Mesh && Hit.MeshGeom)
+	{
+		Cmd.Buffer.VB = Hit.MeshGeom->GetVertexBuffer().GetBuffer();
+		Cmd.Buffer.VBStride = Hit.MeshGeom->GetVertexBuffer().GetStride();
+		Cmd.Buffer.IB = Hit.MeshGeom->GetIndexBuffer().GetBuffer();
 		Cmd.Buffer.FirstIndex = 0;
-		Cmd.Buffer.IndexCount = Hit->IndexCount;
+		Cmd.Buffer.IndexCount = Hit.IndexCount;
 		Cmd.Buffer.BaseVertex = 0;
 
-		Cmd.Buffer.InstanceVB = Hit->InstanceVB.GetBuffer();
+		Cmd.Buffer.InstanceVB = Hit.InstanceVB.GetBuffer();
 		Cmd.Buffer.InstanceVBStride = sizeof(FMeshParticleInstanceVertex);
-		Cmd.Buffer.InstancedCount = Hit->InstanceCount;
+		Cmd.Buffer.InstancedCount = Hit.InstanceCount;
 		Cmd.Buffer.InstanceStart = 0;
 	}
 	return true;

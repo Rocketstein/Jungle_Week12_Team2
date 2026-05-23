@@ -23,14 +23,16 @@ public:
 
 	bool PrepareDrawBuffer(ID3D11Device*, ID3D11DeviceContext*, FDrawCommandBuffer&) const override;
 	bool PrepareDrawCommandBindings(ID3D11Device*, ID3D11DeviceContext*,
-		const FPrimitiveDrawOptions&, FDrawCommand&) const override;
+		const FPrimitiveDrawOptions&, FDrawCommand&, int32 SectionIndex) const override;
 
 	//const char* GetVertexShaderEntryName() const override { return "VS_ParticleSprite"; }
 
 private:
-	// Per-emitter draw range inside the shared dynamic VB/IB
+	// Per-emitter draw range inside the shared dynamic VB/IB.
+	// EmitterDraws[i] is parallel to SectionDraws[i] and DynamicData[i]
 	struct FEmitterDraw
 	{
+		int32  EmitterIndex                 = -1;
 		EDynamicEmitterType Type;
 		UMaterial* Material;
 		uint32 FirstIndex;
