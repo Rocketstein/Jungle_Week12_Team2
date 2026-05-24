@@ -148,6 +148,31 @@ void FDynamicSpriteEmitterDataBase::SortParticles(EParticleSortMode SortMode, co
 	const uint8* ParticleData, int32 Stride)
 {
 	SortParticleIndices(SortMode, CameraOrigin, CameraForward, LocalToWorld, InOutIndices, Count, ParticleData, Stride);
+
+	switch (SortMode)
+	{
+	case (PSORTMODE_ViewProjDepth):
+	{
+		break;
+	}
+	case (PSORTMODE_DistanceToView):
+	{
+		break;
+	}
+	case (PSORTMODE_Age_OldestFirst):
+	{
+		break;
+	}
+	case (PSORTMODE_Age_NewestFirst):
+	{
+		break;
+	}
+	case (PSORTMODE_None):
+		[[fallthrough]];
+	case (PSORTMODE_MAX):
+		// Nothing to do here
+		break;
+	}
 }
 
 // Mesh Particle sorting logic
