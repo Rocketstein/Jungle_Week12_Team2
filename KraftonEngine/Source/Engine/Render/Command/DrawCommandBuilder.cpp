@@ -80,6 +80,8 @@ void FDrawCommandBuilder::BeginCollect(const FFrameContext& Frame)
 {
 	DrawCommandList.Reset();
 	CollectViewMode = Frame.RenderOptions.ViewMode;
+	CollectCameraPosition = Frame.CameraPosition;
+	CollectCameraForward = Frame.CameraForward;
 
 	// FPrimitiveDrawOptions 설정
 	DrawOptions = {};
@@ -218,6 +220,8 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 		if (Pass == ERenderPass::AlphaBlend)
 		{
 			Cmd.RenderState.DepthStencil = EDepthStencilState::DepthReadOnly;
+			Cmd.TranslucencySortPriority = Proxy.GetTranslucencySortPriority();
+			Cmd.TranslucencySortDepth = (Proxy.GetCachedWorldPos() - CollectCameraPosition).Dot(CollectCameraForward);
 		}
 
 		FPrimitiveDrawOptions CommandDrawOptions = DrawOptions;

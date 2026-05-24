@@ -83,6 +83,8 @@ struct FDrawCommand
 
 	// ===== Sort =====
 	uint64 SortKey = 0;                              // 정렬 키 (Pass → Shader → MeshBuffer → SRV)
+	uint16 TranslucencySortPriority = 0;
+	float TranslucencySortDepth = 0.0f;
 
 	// Fullscreen triangle 초기화 (PostProcess 등 SV_VertexID 기반 드로우)
 	void InitFullscreenTriangle(FShader* InShader, ERenderPass InPass, const FDrawCommandRenderState& InRenderState)

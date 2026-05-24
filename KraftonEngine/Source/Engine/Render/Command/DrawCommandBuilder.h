@@ -70,6 +70,8 @@ private:
 	// Collect 페이즈 상태
 	const FPassRenderStateTable* PassRenderStateTable = nullptr;
 	EViewMode CollectViewMode = EViewMode::Lit_Phong;
+	FVector CollectCameraPosition = FVector::ZeroVector;
+	FVector CollectCameraForward = FVector(0.0f, 0.0f, 1.0f);
 	FPrimitiveDrawOptions DrawOptions;
 	bool bHasSelectionMaskCommands = false;
 

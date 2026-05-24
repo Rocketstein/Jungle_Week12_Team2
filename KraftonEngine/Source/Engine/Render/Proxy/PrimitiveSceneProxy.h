@@ -83,6 +83,8 @@ public:
 	const FBoundingBox&             GetCachedBounds()       const { return CachedBounds; }
 	const FVector&                  GetCachedWorldPos()     const { return CachedWorldPos; }
 	const TArray<FMeshSectionDraw>& GetSectionDraws()       const { return SectionDraws; }
+	uint16                          GetTranslucencySortPriority() const { return TranslucencySortPriority; }
+	void                            SetTranslucencySortPriority(uint16 InPriority) { TranslucencySortPriority = InPriority; }
 
 	// --- PerObject CB 상태 ---
 	void MarkPerObjectCBDirty()   const { bPerObjectCBDirty = true; }
@@ -139,6 +141,7 @@ protected:
 	FPerObjectConstants PerObjectConstants = {};
 	FBoundingBox        CachedBounds;
 	FVector             CachedWorldPos;
+	uint16              TranslucencySortPriority = 0;
 
 	TArray<FMeshSectionDraw>  SectionDraws;
 
