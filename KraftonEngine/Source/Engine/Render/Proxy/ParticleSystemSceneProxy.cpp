@@ -168,6 +168,13 @@ bool FParticleSystemSceneProxy::PrepareDrawBuffer(
 	return Out.VB != nullptr && Out.IB != nullptr;
 }
 
+void FParticleSystemSceneProxy::SetEmitterSortingPriority(uint16 EmitterIndex, uint16 InPriority)
+{
+	if (EmitterIndex >= EmitterDraws.size()) return;
+	EmitterDraws[EmitterIndex].SortingPriority = InPriority;
+	bIsEmitterOrderDirty = true;
+}
+
 void FParticleSystemSceneProxy::SortEmitters()
 {
 	const uint16 Count = static_cast<uint16>(EmitterDraws.size());

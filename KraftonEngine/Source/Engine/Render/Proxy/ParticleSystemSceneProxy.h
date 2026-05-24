@@ -25,6 +25,8 @@ public:
 	bool PrepareDrawCommandBindings(ID3D11Device*, ID3D11DeviceContext*,
 		const FPrimitiveDrawOptions&, FDrawCommand&, int32 SectionIndex) const override;
 
+	void SetEmitterSortingPriority(uint16 EmitterDrawIndex, uint16 InPriority);
+
 	//const char* GetVertexShaderEntryName() const override { return "VS_ParticleSprite"; }
 
 private:
@@ -37,7 +39,6 @@ private:
 		UMaterial* Material                = nullptr;
 		uint32 FirstIndex                  = 0;
 		uint32 IndexCount                  = 0;
-		uint16 SortingPriority			   = 0;
 
 		// mesh path
 		mutable FDynamicVertexBuffer InstanceVB;
@@ -50,6 +51,13 @@ private:
 		mutable FConstantBuffer ParticleParamCB;
 		mutable bool bParticleParamCBDirty = true;
 		FParticleParamConstants ParticleParams;
+
+	public:
+		uint16 GetSortingPriority() const { return SortingPriority; }
+
+	private:
+		friend class FParticleSystemSceneProxy;
+		uint16 SortingPriority = 0;
 	};
 
 	struct FSpriteParticlePacker
