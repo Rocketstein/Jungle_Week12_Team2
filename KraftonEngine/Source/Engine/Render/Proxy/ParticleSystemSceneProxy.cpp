@@ -9,6 +9,24 @@
 
 #include <algorithm>
 
+namespace {
+	bool ShouldSortEmitter(EBlendState BlendState) 
+	{
+		switch (BlendState)
+		{
+		case (EBlendState::Additive): 
+		{
+			return false;
+		}
+		case (EBlendState::AlphaBlend):
+		case (EBlendState::Opaque):
+		default:
+			return true;
+		}
+	}
+
+}
+
 FParticleSystemSceneProxy::FParticleSystemSceneProxy(UParticleSystemComponent* InComponent)
 	: FPrimitiveSceneProxy(InComponent)
 {
