@@ -178,14 +178,14 @@ void FParticleSystemSceneProxy::SetEmitterSortingPriority(uint16 EmitterIndex, u
 void FParticleSystemSceneProxy::SortEmitters()
 {
 	const uint16 Count = static_cast<uint16>(EmitterDraws.size());
-	EmitterDrawOrder.resize(Count);
+	SectionToEmitterDrawIndex.resize(Count);
 	for (uint16 i = 0; i < Count; ++i)
 	{
-		EmitterDrawOrder[i] = i;
+		SectionToEmitterDrawIndex[i] = i;
 	}
 
 	// Ascending: lower SortingPriority draws first, higher draws on top.
-	std::stable_sort(EmitterDrawOrder.begin(), EmitterDrawOrder.end(),
+	std::stable_sort(SectionToEmitterDrawIndex.begin(), SectionToEmitterDrawIndex.end(),
 		[this](uint16 A, uint16 B)
 		{
 			return EmitterDraws[A].SortingPriority < EmitterDraws[B].SortingPriority;

@@ -89,7 +89,7 @@ private:
 	};
 
 	// Sorts EmitterData according to its Sorting Priority, which should be a user-defined numeric value
-	// Does NOT reorder the physical array of EmitterDraws. Fills EmitterDrawOrder instead.
+	// Does NOT reorder the physical array of EmitterDraws. Fills SectionToEmitterDrawIndex instead.
 	void SortEmitters();
 
 	// Delegates type-specific CPU packing and refreshes per-emitter
@@ -101,7 +101,7 @@ private:
 private:
 	TArray<FDynamicEmitterDataBase*> DynamicData;   // owned, freed on next UpdateDynamicData
 	TArray<FEmitterDraw>             EmitterDraws;
-	TArray<uint16>					 EmitterDrawOrder;
+	TArray<uint16>					 SectionToEmitterDrawIndex;
 
 	FMatrix ComponentToWorld = FMatrix::Identity;
 	FSpriteParticlePacker SpritePacker;
