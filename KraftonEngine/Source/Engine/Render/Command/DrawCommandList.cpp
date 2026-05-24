@@ -72,6 +72,19 @@ void FDrawCommandList::Sort()
 		std::sort(Commands.begin(), Commands.end(),
 			[](const FDrawCommand& A, const FDrawCommand& B)
 			{
+				if (A.Pass != B.Pass)
+				{
+					return A.Pass < B.Pass;
+				}
+
+				if (A.Pass == ERenderPass::AlphaBlend)
+				{
+					if (A.TranslucencySortPriority != B.TranslucencySortPriority)
+					{
+						return A.TranslucencySortPriority < B.TranslucencySortPriority;
+					}
+				}
+
 				return A.SortKey < B.SortKey;
 			});
 	}

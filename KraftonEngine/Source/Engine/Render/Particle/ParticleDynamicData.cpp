@@ -151,6 +151,9 @@ void FDynamicSpriteEmitterDataBase::SortParticles(EParticleSortMode SortMode, co
 }
 
 // Mesh Particle sorting logic
+// NOTE: only reorders InOutIndices. The mesh instance-buffer builder must
+// iterate via InOutIndices (instance[i] = data from particle[InOutIndices[i]])
+// for the sort to actually affect draw order on the GPU.
 void FDynamicMeshEmitterDataBase::SortParticles(EParticleSortMode SortMode, const FVector& CameraOrigin, const FVector& CameraForward,
 	const FMatrix& LocalToWorld,
 	uint16* InOutIndices, int32 Count,

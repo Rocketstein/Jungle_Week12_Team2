@@ -6,6 +6,8 @@
 #include "Render/Particle/ParticleDynamicData.h"
 #include "Render/Proxy/ParticleSystemSceneProxy.h"
 
+#include <algorithm>
+#include <cstring>
 #include <utility>
 
 namespace
@@ -18,6 +20,7 @@ void MoveReplayDataBase(FDynamicEmitterReplayDataBase& Dest, FDynamicEmitterRepl
 	Dest.DataContainer = std::move(Source.DataContainer);
 	Dest.Scale = Source.Scale;
 	Dest.SortMode = Source.SortMode;
+	Dest.EmitterSortPriority = Source.EmitterSortPriority;
 }
 
 void MoveRenderableReplayData(FDynamicRenderableEmitterReplayDataBase& Dest, FDynamicRenderableEmitterReplayDataBase& Source)
@@ -78,11 +81,35 @@ void DeleteDynamicEmitterData(TArray<FDynamicEmitterDataBase*>& DynamicData)
 	}
 	DynamicData.clear();
 }
+
+uint16 ToTranslucencySortPriority(int32 SortPriority)
+{
+	return static_cast<uint16>(std::clamp(SortPriority, 0, 65535));
+}
 }
 
 UParticleSystemComponent::~UParticleSystemComponent()
 {
 	ResetParticles(true);
+}
+
+void UParticleSystemComponent::PostEditProperty(const char* PropertyName)
+{
+	UPrimitiveComponent::PostEditProperty(PropertyName);
+
+	if (!PropertyName)
+	{
+		return;
+	}
+
+	if (std::strcmp(PropertyName, "Particle System Priority") == 0 || std::strcmp(PropertyName, "SortPriority") == 0)
+	{
+		FParticleSystemSceneProxy* ParticleSceneProxy = GetSceneProxy();
+		if (ParticleSceneProxy)
+		{
+			ParticleSceneProxy->SetTranslucencySortPriority(ToTranslucencySortPriority(SortPriority));
+		}
+	}
 }
 
 UFXSystemAsset* UParticleSystemComponent::GetFXSystemAsset() const
@@ -104,7 +131,9 @@ void UParticleSystemComponent::SetTemplate(UParticleSystem* NewTemplate)
 
 FPrimitiveSceneProxy* UParticleSystemComponent::CreateSceneProxy()
 {
-	return new FParticleSystemSceneProxy(this);
+	FParticleSystemSceneProxy* ParticleSceneProxy = new FParticleSystemSceneProxy(this);
+	ParticleSceneProxy->SetTranslucencySortPriority(ToTranslucencySortPriority(SortPriority));
+	return ParticleSceneProxy;
 }
 
 FParticleSystemSceneProxy* UParticleSystemComponent::GetSceneProxy() const

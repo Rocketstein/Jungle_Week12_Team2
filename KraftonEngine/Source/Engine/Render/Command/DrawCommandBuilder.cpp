@@ -218,6 +218,7 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 		if (Pass == ERenderPass::AlphaBlend)
 		{
 			Cmd.RenderState.DepthStencil = EDepthStencilState::DepthReadOnly;
+			Cmd.TranslucencySortPriority = Proxy.GetTranslucencySortPriority();
 		}
 
 		FPrimitiveDrawOptions CommandDrawOptions = DrawOptions;

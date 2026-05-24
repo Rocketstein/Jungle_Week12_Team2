@@ -7,6 +7,8 @@
 #include "Materials/Material.h"
 #include "Mesh/StaticMesh.h"
 
+#include <algorithm>
+
 FParticleSystemSceneProxy::FParticleSystemSceneProxy(UParticleSystemComponent* InComponent)
 	: FPrimitiveSceneProxy(InComponent)
 {
@@ -40,6 +42,7 @@ void FParticleSystemSceneProxy::UpdateDynamicData(TArray<FDynamicEmitterDataBase
 
 	if (EmitterDraws.size() != DynamicData.size())
 	{
+		bIsEmitterOrderDirty = true;
 		EmitterDraws.resize(DynamicData.size());
 	}
 }
@@ -65,6 +68,11 @@ void FParticleSystemSceneProxy::UpdateMaterial()
 			: nullptr;
 		EmitterDraws[i].Type	 = Source.eEmitterType;
 		EmitterDraws[i].EmitterIndex = DynamicData[i]->EmitterIndex;
+		if (EmitterDraws[i].SortingPriority != Source.EmitterSortPriority)
+		{
+			EmitterDraws[i].SortingPriority = Source.EmitterSortPriority;
+			bIsEmitterOrderDirty = true;
+		}
 
 		UpdateCB(EmitterDraws[i], Source);
 	}
@@ -80,24 +88,14 @@ void FParticleSystemSceneProxy::UpdateMesh()
 {
 	UpdateMaterial();
 
-	SectionDraws.clear();
-	uint32 IndexCursor = 0;
-
 	for (size_t i = 0; i < DynamicData.size(); ++i)
 	{
 		FEmitterDraw& Draw = EmitterDraws[i];
 
 		if (Draw.Type == DET_Sprite)
 		{
-			const auto& Source = static_cast<const FDynamicSpriteEmitterReplayData&>(
-				DynamicData[i]->GetSource());
-			const uint32 ParticleCount = static_cast<uint32>(Source.ActiveParticleCount);
-
-			// 6 indices per particle into the proxy's shared SpriteIB = Quad
-			const uint32 IdxCount = ParticleCount * 6;
-			Draw.FirstIndex = IndexCursor;
-			Draw.IndexCount = IdxCount;
-			IndexCursor += IdxCount;
+			Draw.FirstIndex = 0;
+			Draw.IndexCount = 0;
 		}
 		else if (Draw.Type == DET_Mesh)
 		{
@@ -113,7 +111,11 @@ void FParticleSystemSceneProxy::UpdateMesh()
 			Draw.IndexCount = Draw.MeshGeom ? Draw.MeshGeom->GetIndexBuffer().GetIndexCount() : 0;
 
 		}
-		SectionDraws.push_back({ Draw.Material, Draw.FirstIndex, Draw.IndexCount });
+	}
+
+	if (bIsEmitterOrderDirty)
+	{
+		SortEmitters();
 	}
 }
 
@@ -122,14 +124,8 @@ void FParticleSystemSceneProxy::UpdateMesh()
 void FParticleSystemSceneProxy::UpdatePerViewport(const FFrameContext& Frame)
 {
 	// Reset scratch arrays. Sprite scratch is shared, mesh scratch is per-emitter.
-	PackedSpriteVertices.clear();
-	for (FEmitterDraw& Draw : EmitterDraws)
-	{
-		if (Draw.Type == DET_Mesh)
-		{
-			Draw.PackedInstances.clear();
-		}
-	}
+	SpritePacker.ResetFrame();
+	MeshPacker.ResetFrame(EmitterDraws);
 
 	if (DynamicData.empty())
 	{
@@ -137,109 +133,109 @@ void FParticleSystemSceneProxy::UpdatePerViewport(const FFrameContext& Frame)
 		return;
 	}
 
-	// CPU pack: sort + quad expansion (sprites)
+	// CPU pack: sort, quad expansion, and mesh instance payloads.
 	PackParticles(Frame);
 
-	// Visibility = at least one emitter produced data.
-	bool bAnyMeshInstances = false;
-	for (const FEmitterDraw& Draw : EmitterDraws)
-	{
-		if (Draw.Type == DET_Mesh && !Draw.PackedInstances.empty())
-		{
-			bAnyMeshInstances = true;
-			break;
-		}
-	}
-	bVisible = !PackedSpriteVertices.empty() || bAnyMeshInstances;
+	bVisible = bInstancePacked;
+	bInstancePacked = false;
 	if (!bVisible) return;
 
-	bGpuBuffersDirty = true;
+	SpritePacker.MarkGpuBuffersDirty();
 }
 
 // PrepareDrawBuffer: GPU upload + bind hand-off
 bool FParticleSystemSceneProxy::PrepareDrawBuffer(
 	ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FDrawCommandBuffer& Out) const
 {
-	const bool bHasSprites = !PackedSpriteVertices.empty() && !SpriteIndexPattern.empty();
-
-	if (bHasSprites)
+	if (SpritePacker.HasPackedSprites())
 	{
-		const uint32 VertCount  = static_cast<uint32>(PackedSpriteVertices.size());
-		const uint32 IndexCount = static_cast<uint32>(SpriteIndexPattern.size());
-
-		// Grow if needed
-		if (SpriteVB.GetMaxCount() == 0)
-		{
-			SpriteVB.Create(InDevice, VertCount, sizeof(FParticleSpriteVertex));
-		}
-		else
-		{
-			SpriteVB.EnsureCapacity(InDevice, VertCount);
-		}
-
-		// NOTE: FDynamicVertexBuffer::Update takes ELEMENT count, not byte count.
-		if (bGpuBuffersDirty)
-		{
-			SpriteVB.Update(InDeviceContext, PackedSpriteVertices.data(), VertCount);
-			bGpuBuffersDirty = false;
-		}
-
-		if (bSpriteIBDirty)
-		{
-			if (SpriteIB.GetMaxCount() == 0)
-			{
-				SpriteIB.Create(InDevice, IndexCount);
-			}
-			else
-			{
-				SpriteIB.EnsureCapacity(InDevice, IndexCount);
-			}
-
-			SpriteIB.Update(InDeviceContext, SpriteIndexPattern.data(), IndexCount);
-			bSpriteIBDirty = false;
-		}
+		return SpritePacker.PrepareDrawBuffer(InDevice, InDeviceContext, Out);
 	}
 
-	if (bHasSprites)
+	for (const FEmitterDraw& Draw : EmitterDraws)
 	{
-		Out.VB         = SpriteVB.GetBuffer();
-		Out.VBStride   = sizeof(FParticleSpriteVertex);
-		Out.IB         = SpriteIB.GetBuffer();
-		Out.BaseVertex = 0;
-	}
-	else
-	{
-		for (const FEmitterDraw& Draw : EmitterDraws)
+		if (Draw.Type == DET_Mesh && Draw.MeshGeom && Draw.InstanceCount > 0)
 		{
-			if (Draw.Type == DET_Mesh && Draw.MeshGeom && Draw.InstanceCount > 0)
-			{
-				Out.VB         = Draw.MeshGeom->GetVertexBuffer().GetBuffer();
-				Out.VBStride   = Draw.MeshGeom->GetVertexBuffer().GetStride();
-				Out.IB         = Draw.MeshGeom->GetIndexBuffer().GetBuffer();
-				Out.BaseVertex = 0;
-				break;
-			}
+			Out.VB         = Draw.MeshGeom->GetVertexBuffer().GetBuffer();
+			Out.VBStride   = Draw.MeshGeom->GetVertexBuffer().GetStride();
+			Out.IB         = Draw.MeshGeom->GetIndexBuffer().GetBuffer();
+			Out.BaseVertex = 0;
+			break;
 		}
 	}
 
 	return Out.VB != nullptr && Out.IB != nullptr;
 }
 
+void FParticleSystemSceneProxy::SetEmitterSortingPriority(uint16 EmitterIndex, uint16 InPriority)
+{
+	if (EmitterIndex >= EmitterDraws.size()) return;
+	EmitterDraws[EmitterIndex].SortingPriority = InPriority;
+	bIsEmitterOrderDirty = true;
+}
+
+void FParticleSystemSceneProxy::SortEmitters()
+{
+	const uint16 Count = static_cast<uint16>(EmitterDraws.size());
+	SectionToEmitterDrawIndex.resize(Count);
+	for (uint16 i = 0; i < Count; ++i)
+	{
+		SectionToEmitterDrawIndex[i] = i;
+	}
+
+	// Ascending: lower SortingPriority draws first, higher draws on top.
+	std::stable_sort(SectionToEmitterDrawIndex.begin(), SectionToEmitterDrawIndex.end(),
+		[this](uint16 A, uint16 B)
+		{
+			return EmitterDraws[A].SortingPriority < EmitterDraws[B].SortingPriority;
+		});
+
+	bIsEmitterOrderDirty = false;
+}
+
+void FParticleSystemSceneProxy::RebuildSectionDraws()
+{
+	if (SectionToEmitterDrawIndex.size() != EmitterDraws.size())
+	{
+		SortEmitters();
+	}
+
+	SectionDraws.clear();
+	SectionDraws.reserve(SectionToEmitterDrawIndex.size());
+
+	for (uint16 DrawIndex : SectionToEmitterDrawIndex)
+	{
+		if (DrawIndex >= EmitterDraws.size())
+		{
+			continue;
+		}
+
+		const FEmitterDraw& Draw = EmitterDraws[DrawIndex];
+		SectionDraws.push_back({ Draw.Material, Draw.FirstIndex, Draw.IndexCount });
+	}
+}
+
 void FParticleSystemSceneProxy::PackParticles(const FFrameContext& Frame)
 {
+	// Rebuild Emitter order before packing vertices
+	if (bIsEmitterOrderDirty) {
+		SortEmitters();
+	}
+
 	uint32 IndexCursor = 0;
-	for (size_t i = 0; i < DynamicData.size(); ++i)
+	for (size_t i = 0; i < SectionToEmitterDrawIndex.size(); ++i)
 	{
-		if (i >= EmitterDraws.size()) break;
-		FEmitterDraw& Draw = EmitterDraws[i];
+		const uint16 DrawIndex = SectionToEmitterDrawIndex[i];
+		if (DrawIndex >= EmitterDraws.size() || DrawIndex >= DynamicData.size()) continue;
+		FEmitterDraw& Draw = EmitterDraws[DrawIndex];
 
 		switch (Draw.Type)
 		{
 		case DET_Sprite:
 		{
 			const uint32 IndexBefore = IndexCursor;
-			PackSpriteEmitter(Frame,
-				static_cast<FDynamicSpriteEmitterData&>(*DynamicData[i]), IndexCursor);
+			SpritePacker.PackEmitter(Frame,
+				static_cast<FDynamicSpriteEmitterData&>(*DynamicData[DrawIndex]), IndexCursor);
 
 			// Refresh section range so DrawCommandBuilder sees the right slice
 			// even if ActiveParticleCount shrank since UpdateMesh.
@@ -249,9 +245,9 @@ void FParticleSystemSceneProxy::PackParticles(const FFrameContext& Frame)
 		}
 		case DET_Mesh:
 		{
-			PackMeshEmitter(Frame,
-				static_cast<FDynamicMeshEmitterData&>(*DynamicData[i]),
-				static_cast<uint32>(i));
+			MeshPacker.PackEmitter(Frame,
+				static_cast<FDynamicMeshEmitterData&>(*DynamicData[DrawIndex]),
+				Draw);
 			// Mesh section range stays as UpdateMesh set it (static-mesh IB range
 			// is fixed; InstanceCount is the per-frame variable).
 			break;
@@ -260,25 +256,28 @@ void FParticleSystemSceneProxy::PackParticles(const FFrameContext& Frame)
 			break;
 		}
 
-		// Mirror the refreshed range into SectionDraws so the builder picks it up.
-		if (i < SectionDraws.size())
-		{
-			SectionDraws[i].FirstIndex = Draw.FirstIndex;
-			SectionDraws[i].IndexCount = Draw.IndexCount;
-		}
+		if (!Draw.PackedInstances.empty() || SpritePacker.HasPackedSprites()) { bInstancePacked = true; }
 	}
+
+	RebuildSectionDraws();
 }
 
 bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevice,
 	ID3D11DeviceContext* InDeviceContext,
 	const FPrimitiveDrawOptions&, FDrawCommand& Cmd, int32 SectionIndex) const
 {
-	if (SectionIndex < 0 || SectionIndex >= static_cast<int32>(EmitterDraws.size()))
+	if (SectionIndex < 0 || SectionIndex >= static_cast<int32>(SectionToEmitterDrawIndex.size()))
 	{
 		return false;
 	}
 
-	const FEmitterDraw& Hit = EmitterDraws[SectionIndex];
+	const uint16 DrawIndex = SectionToEmitterDrawIndex[SectionIndex];
+	if (DrawIndex >= EmitterDraws.size())
+	{
+		return false;
+	}
+
+	const FEmitterDraw& Hit = EmitterDraws[DrawIndex];
 
 	// Upload CB if dirty
 	if (Hit.bParticleParamCBDirty)
@@ -329,7 +328,56 @@ bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevic
 	return true;
 }
 
-void FParticleSystemSceneProxy::PackSpriteEmitter(const FFrameContext& Frame, FDynamicSpriteEmitterData& Emitter, uint32& IndexCursor)
+bool FParticleSystemSceneProxy::FSpriteParticlePacker::PrepareDrawBuffer(
+	ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FDrawCommandBuffer& Out) const
+{
+	if (!HasPackedSprites())
+	{
+		return false;
+	}
+
+	const uint32 VertCount  = static_cast<uint32>(PackedVertices.size());
+	const uint32 IndexCount = static_cast<uint32>(IndexPattern.size());
+
+	if (VertexBuffer.GetMaxCount() == 0)
+	{
+		VertexBuffer.Create(InDevice, VertCount, sizeof(FParticleSpriteVertex));
+	}
+	else
+	{
+		VertexBuffer.EnsureCapacity(InDevice, VertCount);
+	}
+
+	// NOTE: FDynamicVertexBuffer::Update takes ELEMENT count, not byte count.
+	if (bGpuBuffersDirty)
+	{
+		VertexBuffer.Update(InDeviceContext, PackedVertices.data(), VertCount);
+		bGpuBuffersDirty = false;
+	}
+
+	if (bIndexBufferDirty)
+	{
+		if (IndexBuffer.GetMaxCount() == 0)
+		{
+			IndexBuffer.Create(InDevice, IndexCount);
+		}
+		else
+		{
+			IndexBuffer.EnsureCapacity(InDevice, IndexCount);
+		}
+
+		IndexBuffer.Update(InDeviceContext, IndexPattern.data(), IndexCount);
+		bIndexBufferDirty = false;
+	}
+
+	Out.VB         = VertexBuffer.GetBuffer();
+	Out.VBStride   = sizeof(FParticleSpriteVertex);
+	Out.IB         = IndexBuffer.GetBuffer();
+	Out.BaseVertex = 0;
+	return Out.VB != nullptr && Out.IB != nullptr;
+}
+
+void FParticleSystemSceneProxy::FSpriteParticlePacker::PackEmitter(const FFrameContext& Frame, FDynamicSpriteEmitterData& Emitter, uint32& IndexCursor)
 {
 	const FDynamicSpriteEmitterReplayData& Source = Emitter.Source;
 	const int32 Count = Source.ActiveParticleCount;
@@ -347,16 +395,15 @@ void FParticleSystemSceneProxy::PackSpriteEmitter(const FFrameContext& Frame, FD
 
 	const uint32 ParticleCount = static_cast<uint32>(Count);
 	const uint32 FirstParticle = IndexCursor / 6;
-	EnsureSpriteIndexPattern(FirstParticle + ParticleCount);
+	EnsureIndexPattern(FirstParticle + ParticleCount);
 
-	PackedSpriteVertices.reserve(PackedSpriteVertices.size() + Count * 4);
+	PackedVertices.reserve(PackedVertices.size() + Count * 4);
 	for (int32 i = 0; i < Count; ++i)
 	{
 		const uint16 Idx = SortedParticleIndices[i];
 		const uint8* Bytes = Source.DataContainer.ParticleData + Idx * Source.ParticleStride;
 		const FBaseParticle& P = *reinterpret_cast<const FBaseParticle*>(Bytes);
 
-		const uint32 V0 = static_cast<uint32>(PackedSpriteVertices.size());
 		for (int corner = 0; corner < 4; ++corner)
 		{
 			FParticleSpriteVertex V;
@@ -367,19 +414,39 @@ void FParticleSystemSceneProxy::PackSpriteEmitter(const FFrameContext& Frame, FD
 			V.Rotation = P.Rotation;
 			V.SubImageIndex = 0.0f;
 			V.Velocity = P.Velocity;
-			PackedSpriteVertices.push_back(V);
+			PackedVertices.push_back(V);
 		}
 	}
 
 	IndexCursor += ParticleCount * 6;
 }
 
-void FParticleSystemSceneProxy::PackMeshEmitter(const FFrameContext& Frame,
-	FDynamicMeshEmitterData& Emitter, uint32 SectionIndex)
+void FParticleSystemSceneProxy::FMeshParticlePacker::ResetFrame(TArray<FEmitterDraw>& EmitterDraws)
 {
-	if (SectionIndex >= EmitterDraws.size()) return;
-	FEmitterDraw& Draw = EmitterDraws[SectionIndex];
+	for (FEmitterDraw& Draw : EmitterDraws)
+	{
+		if (Draw.Type == DET_Mesh)
+		{
+			Draw.PackedInstances.clear();
+		}
+	}
+}
 
+bool FParticleSystemSceneProxy::FMeshParticlePacker::HasPackedInstances(const TArray<FEmitterDraw>& EmitterDraws) const
+{
+	for (const FEmitterDraw& Draw : EmitterDraws)
+	{
+		if (Draw.Type == DET_Mesh && !Draw.PackedInstances.empty())
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+void FParticleSystemSceneProxy::FMeshParticlePacker::PackEmitter(const FFrameContext& Frame,
+	FDynamicMeshEmitterData& Emitter, FEmitterDraw& Draw)
+{
 	const FDynamicMeshEmitterReplayData& Source = Emitter.MeshSource;
 	const int32 Count = Source.ActiveParticleCount;
 	Draw.InstanceCount = static_cast<uint32>(Count > 0 ? Count : 0);
@@ -440,26 +507,26 @@ void FParticleSystemSceneProxy::UpdateCB(FEmitterDraw& EmitterDraw, const FDynam
 }
 
 // Lazily grows the persistent sprite quad index buffer to cover RequiredParticleCount quads; no-op if already large enough.
-void FParticleSystemSceneProxy::EnsureSpriteIndexPattern(uint32 RequiredParticleCount)
+void FParticleSystemSceneProxy::FSpriteParticlePacker::EnsureIndexPattern(uint32 RequiredParticleCount)
 {
-	if (RequiredParticleCount <= SpriteIndexPatternParticleCapacity)
+	if (RequiredParticleCount <= IndexPatternParticleCapacity)
 	{
 		return;
 	}
 
 	/* Quad = 6 Indices */
-	SpriteIndexPattern.reserve(RequiredParticleCount * 6);
-	for (uint32 ParticleIndex = SpriteIndexPatternParticleCapacity; ParticleIndex < RequiredParticleCount; ++ParticleIndex)
+	IndexPattern.reserve(RequiredParticleCount * 6);
+	for (uint32 ParticleIndex = IndexPatternParticleCapacity; ParticleIndex < RequiredParticleCount; ++ParticleIndex)
 	{
 		const uint32 V0 = ParticleIndex * 4;
-		SpriteIndexPattern.push_back(V0 + 0);
-		SpriteIndexPattern.push_back(V0 + 2);
-		SpriteIndexPattern.push_back(V0 + 1);
-		SpriteIndexPattern.push_back(V0 + 2);
-		SpriteIndexPattern.push_back(V0 + 3);
-		SpriteIndexPattern.push_back(V0 + 1);
+		IndexPattern.push_back(V0 + 0);
+		IndexPattern.push_back(V0 + 2);
+		IndexPattern.push_back(V0 + 1);
+		IndexPattern.push_back(V0 + 2);
+		IndexPattern.push_back(V0 + 3);
+		IndexPattern.push_back(V0 + 1);
 	}
 
-	SpriteIndexPatternParticleCapacity = RequiredParticleCount;
-	bSpriteIBDirty = true;
+	IndexPatternParticleCapacity = RequiredParticleCount;
+	bIndexBufferDirty = true;
 }
