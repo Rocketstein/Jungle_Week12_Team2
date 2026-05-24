@@ -177,6 +177,18 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 		if (Section.IndexCount == 0) continue;
 		if (!ProxyBuffer.IB) continue;
 
+		// filter sections by requested pass
+		const ERenderPass SectionPass = ResolveSectionPass(Section);
+		if (Pass == ERenderPass::PreDepth)
+		{
+			if (SectionPass != ERenderPass::Opaque)
+				continue;
+		}
+		else if (SectionPass != Pass)
+		{
+			continue;
+		}
+
 		// Section Material이 셰이더를 가지면 사용, 없으면 Proxy 폴백
 		FShader* SectionShader = (Section.Material && Section.Material->GetShader())
 			? Section.Material->GetShader()
@@ -212,9 +224,13 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 				ApplyMaterialRenderState(Cmd.RenderState, Mat, BaseRenderState);
 		}
 
-		// Translucent primitives should test against opaque depth but must not
-		// write depth; otherwise nearer particles incorrectly occlude later
-		// translucent draws and pollute fullscreen depth consumers.
+		// Blend override by section
+		if (Section.BlendOverride != EBlendState::MAX)
+		{
+			Cmd.RenderState.Blend = Section.BlendOverride;
+		}
+
+		// Translucent primitives should test against opaque depth but must not write depth
 		if (Pass == ERenderPass::AlphaBlend)
 		{
 			Cmd.RenderState.DepthStencil = EDepthStencilState::DepthReadOnly;
@@ -414,10 +430,43 @@ void FDrawCommandBuilder::BuildDecalCommands(FScene& Scene, FPrimitiveSceneProxy
 // ============================================================
 void FDrawCommandBuilder::BuildMeshCommands(FScene& Scene, const FPrimitiveSceneProxy* Proxy)
 {
-	if (Proxy->GetRenderPass() == ERenderPass::Opaque)
-		BuildCommandForProxy(Scene, *Proxy, ERenderPass::PreDepth);
+	bool bNeedsPass[(uint32)ERenderPass::MAX] = {};
+	bool bNeedsPreDepth = false;
 
-	BuildCommandForProxy(Scene, *Proxy, Proxy->GetRenderPass());
+	for (const FMeshSectionDraw& Section : Proxy->GetSectionDraws())
+	{
+		if (Section.IndexCount == 0)
+		{
+			continue;
+		}
+
+		const ERenderPass SectionPass = ResolveSectionPass(Section);
+		if (SectionPass == ERenderPass::MAX)
+		{
+			continue;
+		}
+
+		bNeedsPass[(uint32)SectionPass] = true;
+		if (SectionPass == ERenderPass::Opaque)
+		{
+			bNeedsPreDepth = true;
+		}
+	}
+
+	if (bNeedsPreDepth)
+	{
+		BuildCommandForProxy(Scene, *Proxy, ERenderPass::PreDepth);
+	}
+
+	for (uint32 PassIndex = 0; PassIndex < (uint32)ERenderPass::MAX; ++PassIndex)
+	{
+		if (!bNeedsPass[PassIndex] || PassIndex == (uint32)ERenderPass::PreDepth)
+		{
+			continue;
+		}
+
+		BuildCommandForProxy(Scene, *Proxy, static_cast<ERenderPass>(PassIndex));
+	}
 }
 
 // ============================================================
@@ -789,4 +838,21 @@ FConstantBuffer* FDrawCommandBuilder::GetPerObjectCBForProxy(FScene* Scene, cons
 
 	EnsurePerObjectCBPoolCapacity(Scene, Proxy.GetProxyId() + 1);
 	return &PerSceneObjectCBPool[Scene][Proxy.GetProxyId()];
+}
+
+// ============================================================
+// Section Pass / BlendState override helper
+// ============================================================
+ERenderPass FDrawCommandBuilder::ResolveSectionPass(const FMeshSectionDraw& Section)
+{
+	if (Section.PassOverride != ERenderPass::MAX)
+		return Section.PassOverride;
+	return Section.Material ? Section.Material->GetRenderPass() : ERenderPass::Opaque;
+}
+
+EBlendState FDrawCommandBuilder::ResolveSectionBlend(const FMeshSectionDraw& Section, EBlendState Fallback)
+{
+	return Section.BlendOverride != EBlendState::MAX
+		? Section.BlendOverride
+		: Fallback;
 }

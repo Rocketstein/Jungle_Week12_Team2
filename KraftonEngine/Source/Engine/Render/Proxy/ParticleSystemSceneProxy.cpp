@@ -9,6 +9,24 @@
 
 #include <algorithm>
 
+namespace {
+	bool ShouldSortEmitter(EBlendState BlendState) 
+	{
+		switch (BlendState)
+		{
+		case (EBlendState::Additive): 
+		{
+			return false;
+		}
+		case (EBlendState::AlphaBlend):
+		case (EBlendState::Opaque):
+		default:
+			return true;
+		}
+	}
+
+}
+
 FParticleSystemSceneProxy::FParticleSystemSceneProxy(UParticleSystemComponent* InComponent)
 	: FPrimitiveSceneProxy(InComponent)
 {
@@ -59,21 +77,23 @@ void FParticleSystemSceneProxy::UpdateMaterial()
 {
 	for (uint32 i = 0; i < DynamicData.size(); i++)
 	{
-		const FDynamicEmitterReplayDataBase& Source = DynamicData[i]->GetSource();
+		const auto& Source = static_cast<const FDynamicRenderableEmitterReplayDataBase&>(
+			DynamicData[i]->GetSource());
 		const FDynamicRenderableEmitterReplayDataBase* RenderableSource =
 			dynamic_cast<const FDynamicRenderableEmitterReplayDataBase*>(&Source);
 
-		EmitterDraws[i].Material = RenderableSource && RenderableSource->MaterialInterface
+		auto& Draw = EmitterDraws[i];
+		Draw.Material = RenderableSource && RenderableSource->MaterialInterface
 			? RenderableSource->MaterialInterface->GetMaterial()
 			: nullptr;
-		EmitterDraws[i].Type	 = Source.eEmitterType;
-		EmitterDraws[i].EmitterIndex = DynamicData[i]->EmitterIndex;
-		if (EmitterDraws[i].SortingPriority != Source.EmitterSortPriority)
+		Draw.Type	 = Source.eEmitterType;
+		Draw.EmitterIndex = DynamicData[i]->EmitterIndex;
+		if (Draw.SortingPriority != Source.EmitterSortPriority)
 		{
-			EmitterDraws[i].SortingPriority = Source.EmitterSortPriority;
+			Draw.SortingPriority = Source.EmitterSortPriority;
 			bIsEmitterOrderDirty = true;
 		}
-
+		Draw.SetParticleBlendRoute(Source.BlendMode);
 		UpdateCB(EmitterDraws[i], Source);
 	}
 }
@@ -109,7 +129,6 @@ void FParticleSystemSceneProxy::UpdateMesh()
 			Draw.InstanceCount = ParticleCount;
 			Draw.MeshGeom = Source.StaticMesh ? Source.StaticMesh->GetLODMeshBuffer(Source.LODLevel) : nullptr;
 			Draw.IndexCount = Draw.MeshGeom ? Draw.MeshGeom->GetIndexBuffer().GetIndexCount() : 0;
-
 		}
 	}
 
@@ -211,7 +230,13 @@ void FParticleSystemSceneProxy::RebuildSectionDraws()
 		}
 
 		const FEmitterDraw& Draw = EmitterDraws[DrawIndex];
-		SectionDraws.push_back({ Draw.Material, Draw.FirstIndex, Draw.IndexCount });
+		FMeshSectionDraw SectionDraw;
+		SectionDraw.Material		= Draw.Material;
+		SectionDraw.FirstIndex		= Draw.FirstIndex;
+		SectionDraw.IndexCount		= Draw.IndexCount;
+		SectionDraw.PassOverride	= Draw.ParticleBlendState.RenderPass;
+		SectionDraw.BlendOverride	= Draw.ParticleBlendState.BlendState;
+		SectionDraws.push_back(SectionDraw);
 	}
 }
 
@@ -390,8 +415,11 @@ void FParticleSystemSceneProxy::FSpriteParticlePacker::PackEmitter(const FFrameC
 	}
 
 	TArray<uint16> SortedParticleIndices(Source.DataContainer.ParticleIndices, Source.DataContainer.ParticleIndices + Count);
-	Emitter.SortParticles(Source.SortMode, Frame.CameraPosition, Frame.CameraForward, FMatrix::Identity,
-		SortedParticleIndices.data(), Count, Source.DataContainer.ParticleData, Source.ParticleStride);
+
+	if (ShouldSortEmitter(Emitter.Source.BlendMode)) {
+		Emitter.SortParticles(Source.SortMode, Frame.CameraPosition, Frame.CameraForward, FMatrix::Identity,
+			SortedParticleIndices.data(), Count, Source.DataContainer.ParticleData, Source.ParticleStride);
+	}
 
 	const uint32 ParticleCount = static_cast<uint32>(Count);
 	const uint32 FirstParticle = IndexCursor / 6;
@@ -463,8 +491,11 @@ void FParticleSystemSceneProxy::FMeshParticlePacker::PackEmitter(const FFrameCon
 	Draw.PackedInstances.reserve(Count);
 
 	TArray<uint16> SortedParticleIndices(Source.DataContainer.ParticleIndices, Source.DataContainer.ParticleIndices + Count);
-	Emitter.SortParticles(Source.SortMode, Frame.CameraPosition, Frame.CameraForward, FMatrix::Identity,
-		SortedParticleIndices.data(), Count, Source.DataContainer.ParticleData, Source.ParticleStride);
+
+	if (ShouldSortEmitter(Emitter.MeshSource.BlendMode)) {
+		Emitter.SortParticles(Source.SortMode, Frame.CameraPosition, Frame.CameraForward, FMatrix::Identity,
+			SortedParticleIndices.data(), Count, Source.DataContainer.ParticleData, Source.ParticleStride);
+	}
 
 	for (int32 i = 0; i < Count; ++i)
 	{
@@ -534,4 +565,15 @@ void FParticleSystemSceneProxy::FSpriteParticlePacker::EnsureIndexPattern(uint32
 
 	IndexPatternParticleCapacity = RequiredParticleCount;
 	bIndexBufferDirty = true;
+}
+
+void FParticleSystemSceneProxy::FEmitterDraw::SetParticleBlendRoute(EBlendState Mode)
+{
+	switch (Mode)
+	{
+	case EBlendState::Opaque:        ParticleBlendState = { ERenderPass::Opaque,     EBlendState::Opaque };   break;
+	case EBlendState::Additive:      ParticleBlendState = { ERenderPass::AlphaBlend, EBlendState::Additive }; break;
+	case EBlendState::AlphaBlend:
+	default:                         ParticleBlendState = { ERenderPass::AlphaBlend, EBlendState::AlphaBlend };
+	}
 }

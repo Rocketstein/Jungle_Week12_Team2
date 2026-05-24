@@ -47,6 +47,13 @@ private:
 		TArray<FMeshParticleInstanceVertex> PackedInstances;
 		mutable bool bInstanceVBDirty = true;
 
+		struct FParticleBlendState
+		{
+			ERenderPass RenderPass = ERenderPass::AlphaBlend;
+			EBlendState BlendState = EBlendState::AlphaBlend;
+		};
+		FParticleBlendState ParticleBlendState;
+
 		// CBuffer, owned by the emitter
 		mutable FConstantBuffer ParticleParamCB;
 		mutable bool bParticleParamCBDirty = true;
@@ -54,6 +61,7 @@ private:
 
 	public:
 		uint16 GetSortingPriority() const { return SortingPriority; }
+		void SetParticleBlendRoute(EBlendState Mode);
 
 	private:
 		friend class FParticleSystemSceneProxy;

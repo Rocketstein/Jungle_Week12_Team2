@@ -64,6 +64,9 @@ private:
 	FConstantBuffer* GetPerObjectCBForProxy(FScene* Scene, const FPrimitiveSceneProxy& Proxy);
 	void EnsurePerObjectCBPoolCapacity(FScene* Scene, uint32 RequiredCount);
 
+	static ERenderPass ResolveSectionPass(const FMeshSectionDraw& Section);
+	static EBlendState ResolveSectionBlend(const FMeshSectionDraw& Section, EBlendState Fallback);
+
 	// 커맨드 버퍼
 	FDrawCommandList DrawCommandList;
 

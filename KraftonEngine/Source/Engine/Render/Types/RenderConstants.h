@@ -346,5 +346,9 @@ struct FMeshSectionDraw
 	UMaterial* Material = nullptr;
 	uint32 FirstIndex = 0;
 	uint32 IndexCount = 0;
+
+	// Optional per-section overrides. EBlendState::Count == "no override; use material".
+	EBlendState BlendOverride = EBlendState::MAX;
+	ERenderPass PassOverride = ERenderPass::MAX;
 };
 
