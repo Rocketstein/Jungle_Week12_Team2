@@ -177,6 +177,18 @@ void FDrawCommandBuilder::BuildCommandForProxy(FScene& Scene, const FPrimitiveSc
 		if (Section.IndexCount == 0) continue;
 		if (!ProxyBuffer.IB) continue;
 
+		// filter sections by requested pass
+		const ERenderPass SectionPass = ResolveSectionPass(Section);
+		if (Pass == ERenderPass::PreDepth)
+		{
+			if (SectionPass != ERenderPass::Opaque)
+				continue;
+		}
+		else if (SectionPass != Pass)
+		{
+			continue;
+		}
+
 		// Section Material이 셰이더를 가지면 사용, 없으면 Proxy 폴백
 		FShader* SectionShader = (Section.Material && Section.Material->GetShader())
 			? Section.Material->GetShader()
