@@ -2,7 +2,8 @@
 
 #include "Core/CoreTypes.h"
 #include "Math/Matrix.h"
-#include "Particle/ParticleModule.h"
+#include "Particle/ParticleHelper.h"
+#include "Particle/ParticleModule.h"  
 #include "Render/Types/VertexTypes.h"
 
 struct FParticleDataContainer
