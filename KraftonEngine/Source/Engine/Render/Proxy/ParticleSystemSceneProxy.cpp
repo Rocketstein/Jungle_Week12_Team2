@@ -490,8 +490,11 @@ void FParticleSystemSceneProxy::FMeshParticlePacker::PackEmitter(const FFrameCon
 	Draw.PackedInstances.reserve(Count);
 
 	TArray<uint16> SortedParticleIndices(Source.DataContainer.ParticleIndices, Source.DataContainer.ParticleIndices + Count);
-	Emitter.SortParticles(Source.SortMode, Frame.CameraPosition, Frame.CameraForward, FMatrix::Identity,
-		SortedParticleIndices.data(), Count, Source.DataContainer.ParticleData, Source.ParticleStride);
+
+	if (ShouldSortEmitter(Emitter.MeshSource.BlendMode)) {
+		Emitter.SortParticles(Source.SortMode, Frame.CameraPosition, Frame.CameraForward, FMatrix::Identity,
+			SortedParticleIndices.data(), Count, Source.DataContainer.ParticleData, Source.ParticleStride);
+	}
 
 	for (int32 i = 0; i < Count; ++i)
 	{
