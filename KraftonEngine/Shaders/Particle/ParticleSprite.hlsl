@@ -14,31 +14,86 @@ float2 RotateParticleCorner(float2 Corner, float Rotation)
                   Corner.x * S + Corner.y * C);
 }
 
+float2 SafeNormalize2(float2 Value, float2 Fallback)
+{
+    float LenSq = dot(Value, Value);
+    return (LenSq > 1e-6f) ? Value * rsqrt(LenSq) : Fallback;
+}
+
+float3 SafeNormalize3(float3 Value, float3 Fallback)
+{
+    float LenSq = dot(Value, Value);
+    return (LenSq > 1e-6f) ? Value * rsqrt(LenSq) : Fallback;
+}
+
+float2 RightAxisFromUpAxis(float2 AxisY)
+{
+    return float2(AxisY.y, -AxisY.x);
+}
+
+float4 ProjectCameraPlaneBillboard(float4 ViewPos, float2 Corner, float2 Size, float Rotation)
+{
+    float2 ViewCorner = RotateParticleCorner(Corner, Rotation) * Size;
+    ViewPos.xy += ViewCorner;
+    return mul(ViewPos, Projection);
+}
+
+float4 ProjectViewAxisBillboard(float4 ViewPos, float2 Corner, float2 AxisY, float2 Size)
+{
+    float2 AxisX = RightAxisFromUpAxis(AxisY);
+    ViewPos.xy += AxisX * (Corner.x * Size.x) + AxisY * (Corner.y * Size.y);
+    return mul(ViewPos, Projection);
+}
+
+float4 ProjectCameraPositionBillboard(float3 WorldPosition, float2 Corner, float2 Size, float Rotation)
+{
+    float3 Forward = SafeNormalize3(CameraWorldPos - WorldPosition, float3(0.0f, 0.0f, 1.0f));
+    float3 WorldUp = (abs(Forward.z) > 0.99f) ? float3(0.0f, 1.0f, 0.0f) : float3(0.0f, 0.0f, 1.0f);
+    float3 Right = SafeNormalize3(cross(Forward, WorldUp), float3(1.0f, 0.0f, 0.0f));
+    float3 Up = cross(Right, Forward);
+    float2 RotatedCorner = RotateParticleCorner(Corner, Rotation);
+    float3 WorldOffset = Right * (RotatedCorner.x * Size.x) + Up * (RotatedCorner.y * Size.y);
+    return mul(mul(float4(WorldPosition + WorldOffset, 1.0f), View), Projection);
+}
+
 PS_Input_Particle VS(VS_Input_ParticleSprite Input)
 {
     PS_Input_Particle Out;
 
     float2 Corner = Input.uv * 2.0f - 1.0f;
     uint Alignment = GetParticleScreenAlignment();
+    float4 ViewPos = mul(float4(Input.position, 1.0f), View);
 
-    if (Alignment == PARTICLE_SCREEN_ALIGNMENT_FACING_CAMERA_POSITION ||
-        Alignment == PARTICLE_SCREEN_ALIGNMENT_SQUARE)
+    if (Alignment == PARTICLE_SCREEN_ALIGNMENT_SQUARE)
     {
-        // Camera-facing billboard: spin the quad in view space with the per-particle rotation.
-        float2 ViewCorner = RotateParticleCorner(Corner, Input.rotation) * Input.size.xy;
-        float4 ViewPos = mul(float4(Input.position, 1.0f), View);
-        ViewPos.xy += ViewCorner;
-        Out.position = mul(ViewPos, Projection);
+        float UniformSize = Input.size.x;
+        Out.position = ProjectCameraPlaneBillboard(ViewPos, Corner, float2(UniformSize, UniformSize), Input.rotation);
+    }
+    else if (Alignment == PARTICLE_SCREEN_ALIGNMENT_RECTANGLE)
+    {
+        Out.position = ProjectCameraPlaneBillboard(ViewPos, Corner, Input.size.xy, Input.rotation);
     }
     else if (Alignment == PARTICLE_SCREEN_ALIGNMENT_VELOCITY)
     {
-        float4 ViewPos = mul(float4(Input.position, 1.0f), View);
         float2 ViewVelocity = mul(float4(Input.velocity, 0.0f), View).xy;
-        float SpeedSq = dot(ViewVelocity, ViewVelocity);
-        float2 AxisX = (SpeedSq > 1e-6f) ? ViewVelocity * rsqrt(SpeedSq) : float2(1.0f, 0.0f);
-        float2 AxisY = float2(-AxisX.y, AxisX.x);
-        ViewPos.xy += AxisX * (Corner.x * Input.size.x) + AxisY * (Corner.y * Input.size.y);
-        Out.position = mul(ViewPos, Projection);
+        float2 AxisY = SafeNormalize2(ViewVelocity, float2(0.0f, 1.0f));
+        Out.position = ProjectViewAxisBillboard(ViewPos, Corner, AxisY, Input.size.xy);
+    }
+    else if (Alignment == PARTICLE_SCREEN_ALIGNMENT_AWAY_FROM_CENTER)
+    {
+        float2 ViewAwayFromCenter = mul(float4(Input.position - EmitterOrigin, 0.0f), View).xy;
+        float2 AxisY = SafeNormalize2(ViewAwayFromCenter, float2(0.0f, 1.0f));
+        Out.position = ProjectViewAxisBillboard(ViewPos, Corner, AxisY, Input.size.xy);
+    }
+    else if (Alignment == PARTICLE_SCREEN_ALIGNMENT_TYPE_SPECIFIC)
+    {
+        float3 WorldCorner = float3(Corner * Input.size.xy, 0.0f);
+        float4 WorldPos = float4(Input.position + WorldCorner, 1.0f);
+        Out.position = mul(mul(WorldPos, View), Projection);
+    }
+    else if (Alignment == PARTICLE_SCREEN_ALIGNMENT_FACING_CAMERA_POSITION)
+    {
+        Out.position = ProjectCameraPositionBillboard(Input.position, Corner, Input.size.xy, Input.rotation);
     }
     else
     {

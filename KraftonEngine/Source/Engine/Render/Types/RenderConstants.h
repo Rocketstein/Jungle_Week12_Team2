@@ -213,8 +213,10 @@ struct FParticleParamConstants
 	uint32 SubUVRows = 1;
 	uint32 ScreenAlignment = 0;
 	float _Pad = 0.0f;
+	FVector EmitterOrigin = FVector::ZeroVector;
+	float _Pad1 = 0.0f;
 };
-static_assert(sizeof(FParticleParamConstants) == 16);
+static_assert(sizeof(FParticleParamConstants) == 32);
 
 struct FGizmoConstants
 {

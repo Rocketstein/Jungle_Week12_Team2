@@ -109,7 +109,7 @@ public:
 
 	UMaterialInterface* Material = nullptr;
 	FVector EmitterOrigin = FVector::ZeroVector;
-	EParticleScreenAlignment ScreenAlignment = PSA_Square;
+	EParticleScreenAlignment ScreenAlignment = PSA_FacingCameraPosition;
 	uint8 bUseLocalSpace : 1 = false;
 	uint8 bKillOnDeactivate : 1 = false;
 	uint8 bKillOnCompleted : 1 = false;
