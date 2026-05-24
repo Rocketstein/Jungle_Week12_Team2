@@ -83,11 +83,6 @@ void FDrawCommandList::Sort()
 					{
 						return A.TranslucencySortPriority < B.TranslucencySortPriority;
 					}
-
-					if (A.TranslucencySortDepth != B.TranslucencySortDepth)
-					{
-						return A.TranslucencySortDepth > B.TranslucencySortDepth;
-					}
 				}
 
 				return A.SortKey < B.SortKey;
