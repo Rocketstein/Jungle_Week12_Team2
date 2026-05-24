@@ -414,8 +414,11 @@ void FParticleSystemSceneProxy::FSpriteParticlePacker::PackEmitter(const FFrameC
 	}
 
 	TArray<uint16> SortedParticleIndices(Source.DataContainer.ParticleIndices, Source.DataContainer.ParticleIndices + Count);
-	Emitter.SortParticles(Source.SortMode, Frame.CameraPosition, Frame.CameraForward, FMatrix::Identity,
-		SortedParticleIndices.data(), Count, Source.DataContainer.ParticleData, Source.ParticleStride);
+
+	if (ShouldSortEmitter(Emitter.Source.BlendMode)) {
+		Emitter.SortParticles(Source.SortMode, Frame.CameraPosition, Frame.CameraForward, FMatrix::Identity,
+			SortedParticleIndices.data(), Count, Source.DataContainer.ParticleData, Source.ParticleStride);
+	}
 
 	const uint32 ParticleCount = static_cast<uint32>(Count);
 	const uint32 FirstParticle = IndexCursor / 6;
