@@ -31,7 +31,7 @@ public:
 
 private:
 	// Per-emitter draw range inside the shared dynamic VB/IB.
-	// EmitterDraws[i] is parallel to SectionDraws[i] and DynamicData[i]
+	// EmitterDraws[i] is stable storage; SectionToEmitterDrawIndex maps section order back to it.
 	struct FEmitterDraw
 	{
 		int32  EmitterIndex                 = -1;
@@ -91,6 +91,7 @@ private:
 	// Sorts EmitterData according to its Sorting Priority, which should be a user-defined numeric value
 	// Does NOT reorder the physical array of EmitterDraws. Fills SectionToEmitterDrawIndex instead.
 	void SortEmitters();
+	void RebuildSectionDraws();
 
 	// Delegates type-specific CPU packing and refreshes per-emitter
 	// (FirstIndex, IndexCount) for DrawCommandBuilder.
@@ -109,8 +110,8 @@ private:
 
 	bool bInstancePacked	  = false;
 
-	// Set to true when EmitterDraws.size() changes, or is signaled that one of its element changed its Sort Priotiy.
+	// Set to true when EmitterDraws.size() changes, or is signaled that one of its elements changed its sort priority.
 	// True by default as to ensure Emitter sorting upon initialization
-	bool bIsEmitterOrderDirty = true;		
+	bool bIsEmitterOrderDirty = true;
 
 };

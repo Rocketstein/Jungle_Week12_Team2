@@ -68,6 +68,11 @@ void FParticleSystemSceneProxy::UpdateMaterial()
 			: nullptr;
 		EmitterDraws[i].Type	 = Source.eEmitterType;
 		EmitterDraws[i].EmitterIndex = DynamicData[i]->EmitterIndex;
+		if (EmitterDraws[i].SortingPriority != Source.EmitterSortPriority)
+		{
+			EmitterDraws[i].SortingPriority = Source.EmitterSortPriority;
+			bIsEmitterOrderDirty = true;
+		}
 
 		UpdateCB(EmitterDraws[i], Source);
 	}
@@ -83,7 +88,6 @@ void FParticleSystemSceneProxy::UpdateMesh()
 {
 	UpdateMaterial();
 
-	SectionDraws.clear();
 	uint32 IndexCursor = 0;
 
 	for (size_t i = 0; i < DynamicData.size(); ++i)
@@ -116,8 +120,13 @@ void FParticleSystemSceneProxy::UpdateMesh()
 			Draw.IndexCount = Draw.MeshGeom ? Draw.MeshGeom->GetIndexBuffer().GetIndexCount() : 0;
 
 		}
-		SectionDraws.push_back({ Draw.Material, Draw.FirstIndex, Draw.IndexCount });
 	}
+
+	if (bIsEmitterOrderDirty)
+	{
+		SortEmitters();
+	}
+	RebuildSectionDraws();
 }
 
 // UpdatePerViewport: per-frame CPU work
@@ -194,6 +203,28 @@ void FParticleSystemSceneProxy::SortEmitters()
 	bIsEmitterOrderDirty = false;
 }
 
+void FParticleSystemSceneProxy::RebuildSectionDraws()
+{
+	if (SectionToEmitterDrawIndex.size() != EmitterDraws.size())
+	{
+		SortEmitters();
+	}
+
+	SectionDraws.clear();
+	SectionDraws.reserve(SectionToEmitterDrawIndex.size());
+
+	for (uint16 DrawIndex : SectionToEmitterDrawIndex)
+	{
+		if (DrawIndex >= EmitterDraws.size())
+		{
+			continue;
+		}
+
+		const FEmitterDraw& Draw = EmitterDraws[DrawIndex];
+		SectionDraws.push_back({ Draw.Material, Draw.FirstIndex, Draw.IndexCount });
+	}
+}
+
 void FParticleSystemSceneProxy::PackParticles(const FFrameContext& Frame)
 {
 	// Rebuild Emitter order before packing vertices
@@ -204,8 +235,9 @@ void FParticleSystemSceneProxy::PackParticles(const FFrameContext& Frame)
 	uint32 IndexCursor = 0;
 	for (size_t i = 0; i < SectionToEmitterDrawIndex.size(); ++i)
 	{
-		if (i >= EmitterDraws.size()) break;
-		FEmitterDraw& Draw = EmitterDraws[SectionToEmitterDrawIndex[i]];
+		const uint16 DrawIndex = SectionToEmitterDrawIndex[i];
+		if (DrawIndex >= EmitterDraws.size() || DrawIndex >= DynamicData.size()) break;
+		FEmitterDraw& Draw = EmitterDraws[DrawIndex];
 
 		switch (Draw.Type)
 		{
@@ -213,7 +245,7 @@ void FParticleSystemSceneProxy::PackParticles(const FFrameContext& Frame)
 		{
 			const uint32 IndexBefore = IndexCursor;
 			SpritePacker.PackEmitter(Frame,
-				static_cast<FDynamicSpriteEmitterData&>(*DynamicData[i]), IndexCursor);
+				static_cast<FDynamicSpriteEmitterData&>(*DynamicData[DrawIndex]), IndexCursor);
 
 			// Refresh section range so DrawCommandBuilder sees the right slice
 			// even if ActiveParticleCount shrank since UpdateMesh.
@@ -224,7 +256,7 @@ void FParticleSystemSceneProxy::PackParticles(const FFrameContext& Frame)
 		case DET_Mesh:
 		{
 			MeshPacker.PackEmitter(Frame,
-				static_cast<FDynamicMeshEmitterData&>(*DynamicData[i]),
+				static_cast<FDynamicMeshEmitterData&>(*DynamicData[DrawIndex]),
 				Draw);
 			// Mesh section range stays as UpdateMesh set it (static-mesh IB range
 			// is fixed; InstanceCount is the per-frame variable).
@@ -234,27 +266,28 @@ void FParticleSystemSceneProxy::PackParticles(const FFrameContext& Frame)
 			break;
 		}
 
-		// Mirror the refreshed range into SectionDraws so the builder picks it up.
-		if (i < SectionDraws.size())
-		{
-			SectionDraws[i].FirstIndex = Draw.FirstIndex;
-			SectionDraws[i].IndexCount = Draw.IndexCount;
-		}
-
 		if (!Draw.PackedInstances.empty() || SpritePacker.HasPackedSprites()) { bInstancePacked = true; }
 	}
+
+	RebuildSectionDraws();
 }
 
 bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevice,
 	ID3D11DeviceContext* InDeviceContext,
 	const FPrimitiveDrawOptions&, FDrawCommand& Cmd, int32 SectionIndex) const
 {
-	if (SectionIndex < 0 || SectionIndex >= static_cast<int32>(EmitterDraws.size()))
+	if (SectionIndex < 0 || SectionIndex >= static_cast<int32>(SectionToEmitterDrawIndex.size()))
 	{
 		return false;
 	}
 
-	const FEmitterDraw& Hit = EmitterDraws[SectionIndex];
+	const uint16 DrawIndex = SectionToEmitterDrawIndex[SectionIndex];
+	if (DrawIndex >= EmitterDraws.size())
+	{
+		return false;
+	}
+
+	const FEmitterDraw& Hit = EmitterDraws[DrawIndex];
 
 	// Upload CB if dirty
 	if (Hit.bParticleParamCBDirty)

@@ -18,6 +18,7 @@ void MoveReplayDataBase(FDynamicEmitterReplayDataBase& Dest, FDynamicEmitterRepl
 	Dest.DataContainer = std::move(Source.DataContainer);
 	Dest.Scale = Source.Scale;
 	Dest.SortMode = Source.SortMode;
+	Dest.EmitterSortPriority = Source.EmitterSortPriority;
 }
 
 void MoveRenderableReplayData(FDynamicRenderableEmitterReplayDataBase& Dest, FDynamicRenderableEmitterReplayDataBase& Source)
