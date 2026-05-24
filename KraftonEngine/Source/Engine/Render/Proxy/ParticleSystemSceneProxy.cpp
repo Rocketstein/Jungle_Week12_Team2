@@ -77,21 +77,23 @@ void FParticleSystemSceneProxy::UpdateMaterial()
 {
 	for (uint32 i = 0; i < DynamicData.size(); i++)
 	{
-		const FDynamicEmitterReplayDataBase& Source = DynamicData[i]->GetSource();
+		const auto& Source = static_cast<const FDynamicRenderableEmitterReplayDataBase&>(
+			DynamicData[i]->GetSource());
 		const FDynamicRenderableEmitterReplayDataBase* RenderableSource =
 			dynamic_cast<const FDynamicRenderableEmitterReplayDataBase*>(&Source);
 
-		EmitterDraws[i].Material = RenderableSource && RenderableSource->MaterialInterface
+		auto& Draw = EmitterDraws[i];
+		Draw.Material = RenderableSource && RenderableSource->MaterialInterface
 			? RenderableSource->MaterialInterface->GetMaterial()
 			: nullptr;
-		EmitterDraws[i].Type	 = Source.eEmitterType;
-		EmitterDraws[i].EmitterIndex = DynamicData[i]->EmitterIndex;
-		if (EmitterDraws[i].SortingPriority != Source.EmitterSortPriority)
+		Draw.Type	 = Source.eEmitterType;
+		Draw.EmitterIndex = DynamicData[i]->EmitterIndex;
+		if (Draw.SortingPriority != Source.EmitterSortPriority)
 		{
-			EmitterDraws[i].SortingPriority = Source.EmitterSortPriority;
+			Draw.SortingPriority = Source.EmitterSortPriority;
 			bIsEmitterOrderDirty = true;
 		}
-
+		Draw.SetParticleBlendRoute(Source.BlendMode);
 		UpdateCB(EmitterDraws[i], Source);
 	}
 }
@@ -127,7 +129,6 @@ void FParticleSystemSceneProxy::UpdateMesh()
 			Draw.InstanceCount = ParticleCount;
 			Draw.MeshGeom = Source.StaticMesh ? Source.StaticMesh->GetLODMeshBuffer(Source.LODLevel) : nullptr;
 			Draw.IndexCount = Draw.MeshGeom ? Draw.MeshGeom->GetIndexBuffer().GetIndexCount() : 0;
-			Draw.SetParticleBlendRoute(Source.BlendMode);
 		}
 	}
 
