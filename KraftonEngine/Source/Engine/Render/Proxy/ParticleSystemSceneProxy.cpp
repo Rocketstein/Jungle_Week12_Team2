@@ -7,6 +7,8 @@
 #include "Materials/Material.h"
 #include "Mesh/StaticMesh.h"
 
+#include <algorithm>
+
 FParticleSystemSceneProxy::FParticleSystemSceneProxy(UParticleSystemComponent* InComponent)
 	: FPrimitiveSceneProxy(InComponent)
 {
@@ -167,10 +169,20 @@ bool FParticleSystemSceneProxy::PrepareDrawBuffer(
 
 void FParticleSystemSceneProxy::SortEmitters()
 {
-	for (const auto& Draw : EmitterDraws)
+	const uint16 Count = static_cast<uint16>(EmitterDraws.size());
+	EmitterDrawOrder.resize(Count);
+	for (uint16 i = 0; i < Count; ++i)
 	{
-		uint16 SortPriority = Draw.SortingPriority;
+		EmitterDrawOrder[i] = i;
 	}
+
+	// Ascending: lower SortingPriority draws first, higher draws on top.
+	std::stable_sort(EmitterDrawOrder.begin(), EmitterDrawOrder.end(),
+		[this](uint16 A, uint16 B)
+		{
+			return EmitterDraws[A].SortingPriority < EmitterDraws[B].SortingPriority;
+		});
+
 	bIsEmitterOrderDirty = false;
 }
 
