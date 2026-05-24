@@ -42,6 +42,7 @@ void FParticleSystemSceneProxy::UpdateDynamicData(TArray<FDynamicEmitterDataBase
 
 	if (EmitterDraws.size() != DynamicData.size())
 	{
+		bIsEmitterOrderDirty = true;
 		EmitterDraws.resize(DynamicData.size());
 	}
 }
