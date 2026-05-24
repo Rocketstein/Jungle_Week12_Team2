@@ -167,7 +167,10 @@ bool FParticleSystemSceneProxy::PrepareDrawBuffer(
 
 void FParticleSystemSceneProxy::SortEmitters()
 {
-
+	for (const auto& Draw : EmitterDraws)
+	{
+		uint16 SortPriority = Draw.SortingPriority;
+	}
 	bIsEmitterOrderDirty = false;
 }
 
