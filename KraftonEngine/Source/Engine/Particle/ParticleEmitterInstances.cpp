@@ -296,11 +296,11 @@ bool FParticleEmitterInstance::FillReplayData(FDynamicEmitterReplayDataBase& Out
 	OutData.ActiveParticleCount = ActiveParticles;
 	OutData.ParticleStride = ParticleStride;
 	OutData.Scale = FVector::OneVector;
-	OutData.SortMode = 0;
+	OutData.SortMode = EParticleSortMode::PSORTMODE_None;
 
 	if (CurrentLODLevel && CurrentLODLevel->RequiredModule)
 	{
-		OutData.SortMode = static_cast<int32>(CurrentLODLevel->RequiredModule->SortMode);
+		OutData.SortMode = CurrentLODLevel->RequiredModule->SortMode;
 		if (FDynamicSpriteEmitterReplayDataBase* SpriteData = dynamic_cast<FDynamicSpriteEmitterReplayDataBase*>(&OutData))
 		{
 			SpriteData->MaterialInterface = CurrentLODLevel->RequiredModule->Material;

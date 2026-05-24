@@ -1,4 +1,5 @@
 ﻿#include "ParticleDynamicData.h"
+#include "Particle/ParticleHelper.h"
 
 #include <algorithm>
 
@@ -63,7 +64,8 @@ void FParticleDataContainer::Free()
 	ParticleIndices = nullptr;
 }
 
-void FDynamicSpriteEmitterDataBase::SortSpriteParticles(int32 SortMode, const FVector& CameraOrigin, const FVector& CameraForward,
+// Sprite particle sorting logic
+void FDynamicSpriteEmitterDataBase::SortParticles(EParticleSortMode SortMode, const FVector& CameraOrigin, const FVector& CameraForward,
 	const FMatrix& LocalToWorld,
 	uint16* InOutIndices, int32 Count,
 	const uint8* ParticleData, int32 Stride)
@@ -103,4 +105,13 @@ void FDynamicSpriteEmitterDataBase::SortSpriteParticles(int32 SortMode, const FV
 	{
 		InOutIndices[i] = SortKeys[i].ParticleIndex;
 	}
+}
+
+// Mesh Particle sorting logic
+void FDynamicMeshEmitterDataBase::SortParticles(EParticleSortMode SortMode, const FVector& CameraOrigin, const FVector& CameraForward,
+	const FMatrix& LocalToWorld,
+	uint16* InOutIndices, int32 Count,
+	const uint8* ParticleData, int32 Stride)
+{
+	
 }

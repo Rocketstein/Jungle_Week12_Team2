@@ -2,7 +2,7 @@
 
 #include "Core/CoreTypes.h"
 #include "Math/Matrix.h"
-#include "Particle/ParticleHelper.h"
+#include "Particle/ParticleModule.h"
 #include "Render/Types/VertexTypes.h"
 
 struct FParticleDataContainer
@@ -39,13 +39,8 @@ struct FDynamicEmitterReplayDataBase
 
 	FVector Scale = FVector::OneVector;
 
-	int32 SortMode = 0;
+	EParticleSortMode SortMode = EParticleSortMode::PSORTMODE_None;
 
-	virtual ~FDynamicEmitterReplayDataBase() = default;
-};
-
-struct FDynamicSpriteEmitterReplayDataBase : public FDynamicEmitterReplayDataBase
-{
 	UMaterialInterface* MaterialInterface = nullptr;
 
 	int32 SubImages_Horizontal = 1;
@@ -53,6 +48,11 @@ struct FDynamicSpriteEmitterReplayDataBase : public FDynamicEmitterReplayDataBas
 	uint8 ScreenAlignment = 0;
 	EBlendState BlendMode = EBlendState::AlphaBlend;
 
+	virtual ~FDynamicEmitterReplayDataBase() = default;
+};
+
+struct FDynamicSpriteEmitterReplayDataBase : public FDynamicEmitterReplayDataBase
+{
 	FDynamicSpriteEmitterReplayDataBase()
 	{
 		eEmitterType = DET_Sprite;
@@ -77,16 +77,27 @@ struct FDynamicEmitterDataBase
 	int32 EmitterIndex = -1;
 	virtual ~FDynamicEmitterDataBase() = default;
 	virtual const FDynamicEmitterReplayDataBase& GetSource() const = 0;
+	virtual int32 GetDynamicVertexStride(/*ERHIFeatureLevel::Type InFeatureLevel*/) const = 0;
+	virtual void SortParticles(EParticleSortMode SortMode, const FVector& CameraOrigin, const FVector& CameraForward,
+							const FMatrix& LocalToWorld,
+							uint16* InOutIndices, int32 Count,
+							const uint8* ParticleData, int32 Stride) = 0;
 };
 
 struct FDynamicSpriteEmitterDataBase : public FDynamicEmitterDataBase
 {
-	void SortSpriteParticles(int32 SortMode, const FVector& CameraOrigin, const FVector& CameraForward,
+	void SortParticles(EParticleSortMode SortMode, const FVector& CameraOrigin, const FVector& CameraForward,
 		const FMatrix& LocalToWorld,
 		uint16* InOutIndices, int32 Count,
-		const uint8* ParticleData, int32 Stride);
+		const uint8* ParticleData, int32 Stride) override;
+};
 
-	virtual int32 GetDynamicVertexStride(/*ERHIFeatureLevel::Type InFeatureLevel*/) const = 0;
+struct FDynamicMeshEmitterDataBase : public FDynamicEmitterDataBase
+{
+	void SortParticles(EParticleSortMode SortMode, const FVector& CameraOrigin, const FVector& CameraForward,
+		const FMatrix& LocalToWorld,
+		uint16* InOutIndices, int32 Count,
+		const uint8* ParticleData, int32 Stride) override;
 };
 
 struct FDynamicSpriteEmitterData : public FDynamicSpriteEmitterDataBase
@@ -96,7 +107,7 @@ struct FDynamicSpriteEmitterData : public FDynamicSpriteEmitterDataBase
 	int32 GetDynamicVertexStride() const override { return sizeof(FParticleSpriteVertex); }
 };
 
-struct FDynamicMeshEmitterData : public FDynamicSpriteEmitterDataBase
+struct FDynamicMeshEmitterData : public FDynamicMeshEmitterDataBase
 {
 	FDynamicMeshEmitterReplayData MeshSource;
 	const FDynamicEmitterReplayDataBase& GetSource() const override { return MeshSource; }

@@ -1,4 +1,4 @@
-#include "Render/Particle/ParticleMeshSmokeTest.h"
+﻿#include "Render/Particle/ParticleMeshSmokeTest.h"
 
 #include "Component/ActorComponent.h"
 #include "Component/ParticleSystemComponent.h"
@@ -42,7 +42,7 @@ namespace
 		Src.LODLevel              = 0;
 		Src.ActiveParticleCount   = N;
 		Src.ParticleStride        = AlignParticleDataSize(static_cast<int32>(sizeof(FBaseParticle)), 16);
-		Src.SortMode              = 0;
+		Src.SortMode              = EParticleSortMode::PSORTMODE_None;
 		Src.SubImages_Horizontal  = 1;
 		Src.SubImages_Vertical    = 1;
 		Src.BlendMode             = EBlendState::AlphaBlend;
@@ -72,7 +72,7 @@ namespace
 			P->Color              = FLinearColor(1.0f,
 			                                     0.5f + 0.5f * std::cos(t),
 			                                     0.5f + 0.5f * std::sin(t),
-			                                     1.0f);
+			                                     0.8f);
 			P->BaseColor          = P->Color;
 			P->RelativeTime       = 0.0f;
 			P->OneOverMaxLifetime = 0.0f;
