@@ -53,10 +53,10 @@ private:
 
 	struct FSpriteParticlePacker
 	{
-		void ResetFrame();
+		void ResetFrame() { PackedVertices.clear(); }
 		void PackEmitter(const FFrameContext& Frame, FDynamicSpriteEmitterData& Emitter, uint32& IndexCursor);
-		bool HasPackedSprites() const;
-		void MarkGpuBuffersDirty() const;
+		bool HasPackedSprites() const { return !PackedVertices.empty() && !IndexPattern.empty(); }
+		void MarkGpuBuffersDirty() const { bGpuBuffersDirty = true; }
 		bool PrepareDrawBuffer(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FDrawCommandBuffer& Out) const;
 
 	private:

@@ -268,21 +268,6 @@ bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevic
 	return true;
 }
 
-void FParticleSystemSceneProxy::FSpriteParticlePacker::ResetFrame()
-{
-	PackedVertices.clear();
-}
-
-bool FParticleSystemSceneProxy::FSpriteParticlePacker::HasPackedSprites() const
-{
-	return !PackedVertices.empty() && !IndexPattern.empty();
-}
-
-void FParticleSystemSceneProxy::FSpriteParticlePacker::MarkGpuBuffersDirty() const
-{
-	bGpuBuffersDirty = true;
-}
-
 bool FParticleSystemSceneProxy::FSpriteParticlePacker::PrepareDrawBuffer(
 	ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FDrawCommandBuffer& Out) const
 {
