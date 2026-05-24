@@ -3,7 +3,7 @@
 #include "Common/SystemSamplers.hlsli"
 #include "Particle/ParticleCommon.hlsli"
 
-Texture2D ParticleAtlas : register(t0);
+Texture2D DiffuseTexture : register(t0);
 
 // Rotate a 2D corner offset (radians, CCW).
 float2 RotateParticleCorner(float2 Corner, float Rotation)
@@ -56,6 +56,18 @@ float4 ProjectCameraPositionBillboard(float3 WorldPosition, float2 Corner, float
     return mul(mul(float4(WorldPosition + WorldOffset, 1.0f), View), Projection);
 }
 
+float2 ComputeSubUVTexcoord(float2 LocalUV, float SubImage)
+{
+    uint Cols = max(SubUVCols, 1u);
+    uint Rows = max(SubUVRows, 1u);
+    uint FrameCount = max(Cols * Rows, 1u);
+    uint FrameIndex = (uint)clamp(floor(SubImage), 0.0f, (float)(FrameCount - 1));
+    uint FrameCol = FrameIndex % Cols;
+    uint FrameRow = FrameIndex / Cols;
+    float2 CellSize = 1.0f / float2((float)Cols, (float)Rows);
+    return (LocalUV + float2((float)FrameCol, (float)FrameRow)) * CellSize;
+}
+
 PS_Input_Particle VS(VS_Input_ParticleSprite Input)
 {
     PS_Input_Particle Out;
@@ -103,14 +115,14 @@ PS_Input_Particle VS(VS_Input_ParticleSprite Input)
         Out.position = mul(mul(WorldPos, View), Projection);
     }
 
-    Out.texcoord = float2(Input.uv.x, 1.0f - Input.uv.y);
+    Out.texcoord = ComputeSubUVTexcoord(float2(Input.uv.x, 1.0f - Input.uv.y), Input.subImage);
     Out.color    = Input.color;
     return Out;
 }
 
 float4 PS(PS_Input_Particle Input) : SV_Target
 {
-    float4 Col = ParticleAtlas.Sample(LinearClampSampler, Input.texcoord);
+    float4 Col = DiffuseTexture.Sample(LinearClampSampler, Input.texcoord);
     float AlphaBase = Col.a;
     if (AlphaSource == 1)
     {

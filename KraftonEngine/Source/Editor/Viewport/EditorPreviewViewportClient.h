@@ -20,6 +20,11 @@ public:
 	virtual FViewportRenderOptions& GetRenderOptions() = 0;
 	virtual const FViewportRenderOptions& GetRenderOptions() const = 0;
 	virtual FEditorVisualizationOptions GetEditorVisualizationOptions() const { return {}; }
+	virtual const float* GetClearColor() const
+	{
+		static const float DefaultClearColor[4] = { 0.12f, 0.12f, 0.13f, 1.0f };
+		return DefaultClearColor;
+	}
 
 	virtual void NotifyViewportResized(int32 NewWidth, int32 NewHeight) = 0;
 };

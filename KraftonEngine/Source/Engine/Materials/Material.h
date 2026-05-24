@@ -16,6 +16,13 @@ class FArchive;
 class FShader;
 class UMaterial;
 
+struct FMaterialParticleSettings
+{
+	bool bUseSubUV = false;
+	uint32 SubUVColumns = 1;
+	uint32 SubUVRows = 1;
+};
+
 // 파라미터 이름 → 상수 버퍼 내 위치 매핑
 struct FMaterialParameterInfo
 {
@@ -98,6 +105,7 @@ private:
 
 	TMap<FString, std::unique_ptr<FMaterialConstantBuffer>> ConstantBufferMap; // 인스턴스 고유
 	TMap<FString, UTexture2D*> TextureParameters;  //텍스처는 슬롯 이름으로 관리
+	FMaterialParticleSettings ParticleSettings;
 
 	FShader* TransientShader = nullptr; // CreateTransient에서 직접 지정된 셰이더 (Template 없는 경우)
 
@@ -151,10 +159,12 @@ public:
 	EBlendState GetBlendState() const { return BlendState; }
 	EDepthStencilState GetDepthStencilState() const { return DepthStencilState; }
 	ERasterizerState GetRasterizerState() const { return RasterizerState; }
+	const FMaterialParticleSettings& GetParticleSettings() const { return ParticleSettings; }
 	void SetRenderPass(ERenderPass InRenderPass) { RenderPass = InRenderPass; }
 	void SetBlendState(EBlendState InBlendState) { BlendState = InBlendState; }
 	void SetDepthStencilState(EDepthStencilState InDepthStencilState) { DepthStencilState = InDepthStencilState; }
 	void SetRasterizerState(ERasterizerState InRasterizerState) { RasterizerState = InRasterizerState; }
+	void SetParticleSettings(const FMaterialParticleSettings& InSettings) { ParticleSettings = InSettings; }
 
 	// Per-shader CB 오버라이드 — transient Material에서 Gizmo/SubUV/Decal 등이 사용
 	template<typename T>

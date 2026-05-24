@@ -27,6 +27,7 @@ public:
 private:
 	bool RenderDetailsPanel(UMaterial* Material);
 	bool RenderRenderStateControls(UMaterial* Material);
+	bool RenderParticleSettings(UMaterial* Material);
 	bool RenderShaderParameters(UMaterial* Material);
 	bool RenderTextureSlots(UMaterial* Material);
 	void RenderPreviewViewport(float DetailsWidth);

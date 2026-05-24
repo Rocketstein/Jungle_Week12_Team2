@@ -285,6 +285,7 @@ void FParticleEditorWidget::InitializePreviewWorld()
 	PreviewParticleComponent->InitializeSystem();
 
 	ViewportClient.Initialize(Device, 640, 480);
+	ViewportClient.SetClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	ViewportClient.SetPreviewWorld(WorldContext.World);
 	ViewportClient.SetPreviewActor(PreviewActor);
 	ViewportClient.SetPreviewMeshComponent(nullptr);
@@ -906,18 +907,37 @@ bool FParticleEditorWidget::RenderRequiredDetails(UParticleModuleRequired* Requi
 		bChanged = true;
 	}
 
-	int SubImagesHorizontal = (std::max)(1, Required->SubImages_Horizontal);
-	if (ImGui::DragInt("SubUV Columns", &SubImagesHorizontal, 1.0f, 1, 64))
-	{
-		Required->SubImages_Horizontal = (std::max)(1, SubImagesHorizontal);
-		bChanged = true;
-	}
+	UMaterial* RequiredMaterial = Required->Material ? Required->Material->GetMaterial() : nullptr;
+	const FMaterialParticleSettings* MaterialParticleSettings = RequiredMaterial ? &RequiredMaterial->GetParticleSettings() : nullptr;
+	const bool bMaterialControlsSubUV = MaterialParticleSettings && MaterialParticleSettings->bUseSubUV;
 
-	int SubImagesVertical = (std::max)(1, Required->SubImages_Vertical);
-	if (ImGui::DragInt("SubUV Rows", &SubImagesVertical, 1.0f, 1, 64))
+	if (bMaterialControlsSubUV)
 	{
-		Required->SubImages_Vertical = (std::max)(1, SubImagesVertical);
-		bChanged = true;
+		const uint32 Columns = (std::max)(1u, MaterialParticleSettings->SubUVColumns);
+		const uint32 Rows = (std::max)(1u, MaterialParticleSettings->SubUVRows);
+		ImGui::TextDisabled("SubUV Source: Material (%u x %u)", Columns, Rows);
+		ImGui::BeginDisabled();
+		int SubImagesHorizontal = static_cast<int>(Columns);
+		ImGui::DragInt("SubUV Columns", &SubImagesHorizontal, 1.0f, 1, 64);
+		int SubImagesVertical = static_cast<int>(Rows);
+		ImGui::DragInt("SubUV Rows", &SubImagesVertical, 1.0f, 1, 64);
+		ImGui::EndDisabled();
+	}
+	else
+	{
+		int SubImagesHorizontal = (std::max)(1, Required->SubImages_Horizontal);
+		if (ImGui::DragInt("SubUV Columns", &SubImagesHorizontal, 1.0f, 1, 64))
+		{
+			Required->SubImages_Horizontal = (std::max)(1, SubImagesHorizontal);
+			bChanged = true;
+		}
+
+		int SubImagesVertical = (std::max)(1, Required->SubImages_Vertical);
+		if (ImGui::DragInt("SubUV Rows", &SubImagesVertical, 1.0f, 1, 64))
+		{
+			Required->SubImages_Vertical = (std::max)(1, SubImagesVertical);
+			bChanged = true;
+		}
 	}
 
 	int AlphaSource = std::clamp(Required->AlphaSource, 0, static_cast<int>(IM_ARRAYSIZE(GParticleAlphaSourceNames)) - 1);

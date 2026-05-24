@@ -105,6 +105,7 @@ UMaterial* FMaterialManager::GetOrCreateMaterial(const FString& MatFilePath)
 	// 5. 파라미터 및 텍스처 적용
 	ApplyParameters(Material, JsonData);
 	ApplyTextures(Material, JsonData);
+	ApplyParticleSettings(Material, JsonData);
 	Material->RebuildCachedSRVs();
 
 	// JSON 데이터에도 현재 상태를 기록 (나중에 저장 시 유지되도록)
@@ -238,6 +239,13 @@ bool FMaterialManager::SaveMaterial(UMaterial* Material)
 	}
 	JsonData[MatKeys::Textures] = Textures;
 
+	const FMaterialParticleSettings& ParticleSettings = Material->GetParticleSettings();
+	json::JSON Particle = json::JSON::Make(json::JSON::Class::Object);
+	Particle[MatKeys::UseSubUV] = ParticleSettings.bUseSubUV;
+	Particle[MatKeys::SubUVColumns] = ParticleSettings.SubUVColumns;
+	Particle[MatKeys::SubUVRows] = ParticleSettings.SubUVRows;
+	JsonData[MatKeys::Particle] = Particle;
+
 	return SaveToJSON(JsonData, MatFilePath);
 }
 
@@ -326,6 +334,32 @@ void FMaterialManager::ApplyTextures(UMaterial* Material, json::JSON& JsonData)
 			Material->SetTextureParameter(SlotName, Texture);
 		}
 	}
+}
+
+void FMaterialManager::ApplyParticleSettings(UMaterial* Material, json::JSON& JsonData)
+{
+	if (!Material || !JsonData.hasKey(MatKeys::Particle))
+	{
+		return;
+	}
+
+	json::JSON& Particle = JsonData[MatKeys::Particle];
+	FMaterialParticleSettings Settings = Material->GetParticleSettings();
+
+	if (Particle.hasKey(MatKeys::UseSubUV))
+	{
+		Settings.bUseSubUV = Particle[MatKeys::UseSubUV].ToBool();
+	}
+	if (Particle.hasKey(MatKeys::SubUVColumns))
+	{
+		Settings.SubUVColumns = std::max(1u, static_cast<uint32>(Particle[MatKeys::SubUVColumns].ToInt()));
+	}
+	if (Particle.hasKey(MatKeys::SubUVRows))
+	{
+		Settings.SubUVRows = std::max(1u, static_cast<uint32>(Particle[MatKeys::SubUVRows].ToInt()));
+	}
+
+	Material->SetParticleSettings(Settings);
 }
 
 

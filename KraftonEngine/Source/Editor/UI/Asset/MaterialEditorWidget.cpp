@@ -397,14 +397,19 @@ bool FMaterialEditorWidget::RenderDetailsPanel(UMaterial* Material)
 		bChanged |= RenderRenderStateControls(Material);
 	}
 
-	if (ImGui::CollapsingHeader("Shader Parameters", ImGuiTreeNodeFlags_DefaultOpen))
-	{
-		bChanged |= RenderShaderParameters(Material);
-	}
-
 	if (ImGui::CollapsingHeader("Textures", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		bChanged |= RenderTextureSlots(Material);
+	}
+
+	if (ImGui::CollapsingHeader("Particle", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		bChanged |= RenderParticleSettings(Material);
+	}
+
+	if (ImGui::CollapsingHeader("Shader Parameters", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		bChanged |= RenderShaderParameters(Material);
 	}
 
 	return bChanged;
@@ -464,6 +469,45 @@ bool FMaterialEditorWidget::RenderRenderStateControls(UMaterial* Material)
 	return true;
 }
 
+bool FMaterialEditorWidget::RenderParticleSettings(UMaterial* Material)
+{
+	if (!Material)
+	{
+		return false;
+	}
+
+	bool bChanged = false;
+	FMaterialParticleSettings Settings = Material->GetParticleSettings();
+
+	bool bUseSubUV = Settings.bUseSubUV;
+	if (ImGui::Checkbox("Use SubUV Atlas", &bUseSubUV))
+	{
+		Settings.bUseSubUV = bUseSubUV;
+		bChanged = true;
+	}
+
+	int Columns = static_cast<int>(Settings.SubUVColumns < 1u ? 1u : Settings.SubUVColumns);
+	if (ImGui::DragInt("SubUV Columns", &Columns, 1.0f, 1, 64))
+	{
+		Settings.SubUVColumns = static_cast<uint32>(Columns < 1 ? 1 : Columns);
+		bChanged = true;
+	}
+
+	int Rows = static_cast<int>(Settings.SubUVRows < 1u ? 1u : Settings.SubUVRows);
+	if (ImGui::DragInt("SubUV Rows", &Rows, 1.0f, 1, 64))
+	{
+		Settings.SubUVRows = static_cast<uint32>(Rows < 1 ? 1 : Rows);
+		bChanged = true;
+	}
+
+	if (bChanged)
+	{
+		Material->SetParticleSettings(Settings);
+	}
+
+	return bChanged;
+}
+
 bool FMaterialEditorWidget::RenderShaderParameters(UMaterial* Material)
 {
 	bool bChanged = false;
@@ -479,6 +523,10 @@ bool FMaterialEditorWidget::RenderShaderParameters(UMaterial* Material)
 		const FString& ParamName = Pair.first;
 		const FMaterialParameterInfo* Info = Pair.second;
 		if (!Info)
+		{
+			continue;
+		}
+		if (ParamName == "SubUVCols" || ParamName == "SubUVRows")
 		{
 			continue;
 		}

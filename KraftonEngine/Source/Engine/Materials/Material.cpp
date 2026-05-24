@@ -383,6 +383,7 @@ UMaterial* UMaterial::CreateEditableCopy(ID3D11Device* Device) const
 	Copy->Create(PathFileName, Template, RenderPass, BlendState, DepthStencilState, RasterizerState, std::move(CopiedBuffers));
 	Copy->TransientShader = TransientShader;
 	Copy->TextureParameters = TextureParameters;
+	Copy->ParticleSettings = ParticleSettings;
 	Copy->RebuildCachedSRVs();
 	return Copy;
 }
@@ -427,6 +428,7 @@ bool UMaterial::CopyEditableStateFrom(const UMaterial* SourceMaterial)
 	}
 
 	TextureParameters = SourceMaterial->TextureParameters;
+	ParticleSettings = SourceMaterial->ParticleSettings;
 	RebuildCachedSRVs();
 	return true;
 }
