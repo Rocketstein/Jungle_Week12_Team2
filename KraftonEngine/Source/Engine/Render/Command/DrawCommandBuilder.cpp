@@ -790,3 +790,20 @@ FConstantBuffer* FDrawCommandBuilder::GetPerObjectCBForProxy(FScene* Scene, cons
 	EnsurePerObjectCBPoolCapacity(Scene, Proxy.GetProxyId() + 1);
 	return &PerSceneObjectCBPool[Scene][Proxy.GetProxyId()];
 }
+
+// ============================================================
+// Section Pass / BlendState override helper
+// ============================================================
+ERenderPass FDrawCommandBuilder::ResolveSectionPass(const FMeshSectionDraw& Section)
+{
+	if (Section.PassOverride != ERenderPass::MAX)
+		return Section.PassOverride;
+	return Section.Material ? Section.Material->GetRenderPass() : ERenderPass::Opaque;
+}
+
+EBlendState FDrawCommandBuilder::ResolveSectionBlend(const FMeshSectionDraw& Section, EBlendState Fallback)
+{
+	return Section.BlendOverride != EBlendState::MAX
+		? Section.BlendOverride
+		: Fallback;
+}
