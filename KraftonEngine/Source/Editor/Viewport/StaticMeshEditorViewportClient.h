@@ -24,6 +24,7 @@ public:
 	void SetPreviewActor(AActor* InActor) { PreviewActor = InActor; }
 	void SetPreviewMeshComponent(UStaticMeshComponent* InComp) { PreviewMeshComponent = InComp; }
 	void SetViewportRect(float X, float Y, float Width, float Height) { ViewportScreenRect = { X, Y, Width, Height }; }
+	void QueueScrollInput(float ScrollNotches) { PendingScrollNotches += ScrollNotches; }
 
 	bool IsRenderable() const override { return bIsRenderable; }
 	bool IsMouseOverViewport() const override;
@@ -64,4 +65,5 @@ private:
 	FVector LastAppliedCameraLocation;
 	bool bLastAppliedCameraLocationInitialized = false;
 	const float SmoothLocationSpeed = 10.0f;
+	float PendingScrollNotches = 0.0f;
 };

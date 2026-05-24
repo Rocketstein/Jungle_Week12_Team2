@@ -111,8 +111,17 @@ PS_Input_Particle VS(VS_Input_ParticleSprite Input)
 float4 PS(PS_Input_Particle Input) : SV_Target
 {
     float4 Col = ParticleAtlas.Sample(LinearClampSampler, Input.texcoord);
-    clip(Col.a * Input.color.a - 0.01f);
+    float AlphaBase = Col.a;
+    if (AlphaSource == 1)
+    {
+        AlphaBase = max(max(Col.r, Col.g), Col.b);
+    }
 
-    return float4(ApplyWireframe(Col.rgb) * Input.color.rgb,
-                  bIsWireframe ? 1.0f : (Col.a * Input.color.a));
+    float AlphaRange = max(1.0f - AlphaThreshold, 0.0001f);
+    float Alpha = saturate((AlphaBase - AlphaThreshold) / AlphaRange);
+    Alpha = pow(Alpha, max(AlphaPower, 0.001f)) * Input.color.a;
+    clip(Alpha - 0.01f);
+
+    return float4(ApplyWireframe(Col.rgb * ColorIntensity) * Input.color.rgb,
+                  bIsWireframe ? 1.0f : Alpha);
 }

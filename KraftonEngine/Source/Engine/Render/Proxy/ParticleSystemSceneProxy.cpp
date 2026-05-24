@@ -524,13 +524,21 @@ void FParticleSystemSceneProxy::UpdateCB(FEmitterDraw& EmitterDraw, const FDynam
 	const uint32 SubUVRows = SpriteSource ? static_cast<uint32>(SpriteSource->SubImages_Vertical) : 1;
 	const uint32 ScreenAlignment = SpriteSource ? static_cast<uint32>(SpriteSource->ScreenAlignment) : 0;
 	const FVector EmitterOrigin = SpriteSource ? SpriteSource->EmitterOrigin : FVector::ZeroVector;
+	const uint32 AlphaSource = SpriteSource ? SpriteSource->AlphaSource : 0;
+	const float AlphaThreshold = SpriteSource ? SpriteSource->AlphaThreshold : 0.0f;
+	const float AlphaPower = SpriteSource ? SpriteSource->AlphaPower : 1.0f;
+	const float ColorIntensity = SpriteSource ? SpriteSource->ColorIntensity : 1.0f;
 
 	if (EmitterDraw.ParticleParams.SubUVCols == SubUVCols &&
 		EmitterDraw.ParticleParams.SubUVRows == SubUVRows &&
 		EmitterDraw.ParticleParams.ScreenAlignment == ScreenAlignment &&
 		EmitterDraw.ParticleParams.EmitterOrigin.X == EmitterOrigin.X &&
 		EmitterDraw.ParticleParams.EmitterOrigin.Y == EmitterOrigin.Y &&
-		EmitterDraw.ParticleParams.EmitterOrigin.Z == EmitterOrigin.Z)
+		EmitterDraw.ParticleParams.EmitterOrigin.Z == EmitterOrigin.Z &&
+		EmitterDraw.ParticleParams.AlphaSource == AlphaSource &&
+		EmitterDraw.ParticleParams.AlphaThreshold == AlphaThreshold &&
+		EmitterDraw.ParticleParams.AlphaPower == AlphaPower &&
+		EmitterDraw.ParticleParams.ColorIntensity == ColorIntensity)
 	{
 		return;
 	}
@@ -539,6 +547,10 @@ void FParticleSystemSceneProxy::UpdateCB(FEmitterDraw& EmitterDraw, const FDynam
 	EmitterDraw.ParticleParams.SubUVRows = SubUVRows;
 	EmitterDraw.ParticleParams.ScreenAlignment = ScreenAlignment;
 	EmitterDraw.ParticleParams.EmitterOrigin = EmitterOrigin;
+	EmitterDraw.ParticleParams.AlphaSource = AlphaSource;
+	EmitterDraw.ParticleParams.AlphaThreshold = AlphaThreshold;
+	EmitterDraw.ParticleParams.AlphaPower = AlphaPower;
+	EmitterDraw.ParticleParams.ColorIntensity = ColorIntensity;
 	EmitterDraw.bParticleParamCBDirty = true;
 }
 

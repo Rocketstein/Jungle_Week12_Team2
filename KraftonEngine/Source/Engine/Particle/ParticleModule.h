@@ -110,6 +110,12 @@ public:
 	UMaterialInterface* Material = nullptr;
 	FVector EmitterOrigin = FVector::ZeroVector;
 	EParticleScreenAlignment ScreenAlignment = PSA_FacingCameraPosition;
+	int32 SubImages_Horizontal = 1;
+	int32 SubImages_Vertical = 1;
+	int32 AlphaSource = 0; // 0: texture alpha, 1: texture luminance
+	float AlphaThreshold = 0.0f;
+	float AlphaPower = 1.0f;
+	float ColorIntensity = 1.0f;
 	uint8 bUseLocalSpace : 1 = false;
 	uint8 bKillOnDeactivate : 1 = false;
 	uint8 bKillOnCompleted : 1 = false;

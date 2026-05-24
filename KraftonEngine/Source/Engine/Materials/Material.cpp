@@ -399,6 +399,11 @@ bool UMaterial::CopyEditableStateFrom(const UMaterial* SourceMaterial)
 		return false;
 	}
 
+	RenderPass = SourceMaterial->RenderPass;
+	BlendState = SourceMaterial->BlendState;
+	DepthStencilState = SourceMaterial->DepthStencilState;
+	RasterizerState = SourceMaterial->RasterizerState;
+
 	for (auto& Pair : ConstantBufferMap)
 	{
 		FMaterialConstantBuffer* TargetBuffer = Pair.second.get();

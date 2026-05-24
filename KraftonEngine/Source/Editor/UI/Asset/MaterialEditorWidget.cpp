@@ -27,6 +27,13 @@ namespace
 {
 	static uint32 GNextMaterialEditorInstanceId = 0;
 
+	const char* GBlendModeNames[] =
+	{
+		"Opaque",
+		"AlphaBlend",
+		"Additive"
+	};
+
 	bool IsColorTextureSlot(const FString& SlotName)
 	{
 		return SlotName == "DiffuseTexture"
@@ -385,6 +392,11 @@ bool FMaterialEditorWidget::RenderDetailsPanel(UMaterial* Material)
 	ImGui::TextUnformatted("Material Details");
 	ImGui::Separator();
 
+	if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		bChanged |= RenderRenderStateControls(Material);
+	}
+
 	if (ImGui::CollapsingHeader("Shader Parameters", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		bChanged |= RenderShaderParameters(Material);
@@ -396,6 +408,60 @@ bool FMaterialEditorWidget::RenderDetailsPanel(UMaterial* Material)
 	}
 
 	return bChanged;
+}
+
+bool FMaterialEditorWidget::RenderRenderStateControls(UMaterial* Material)
+{
+	if (!Material)
+	{
+		return false;
+	}
+
+	int BlendMode = 0;
+	switch (Material->GetBlendState())
+	{
+	case EBlendState::AlphaBlend:
+		BlendMode = 1;
+		break;
+	case EBlendState::Additive:
+		BlendMode = 2;
+		break;
+	case EBlendState::Opaque:
+	default:
+		BlendMode = 0;
+		break;
+	}
+
+	if (!ImGui::Combo("Blend Mode", &BlendMode, GBlendModeNames, IM_ARRAYSIZE(GBlendModeNames)))
+	{
+		return false;
+	}
+
+	switch (BlendMode)
+	{
+	case 1:
+		Material->SetRenderPass(ERenderPass::AlphaBlend);
+		Material->SetBlendState(EBlendState::AlphaBlend);
+		Material->SetDepthStencilState(EDepthStencilState::DepthReadOnly);
+		break;
+	case 2:
+		Material->SetRenderPass(ERenderPass::AlphaBlend);
+		Material->SetBlendState(EBlendState::Additive);
+		Material->SetDepthStencilState(EDepthStencilState::DepthReadOnly);
+		break;
+	case 0:
+	default:
+		Material->SetRenderPass(ERenderPass::Opaque);
+		Material->SetBlendState(EBlendState::Opaque);
+		Material->SetDepthStencilState(EDepthStencilState::Default);
+		break;
+	}
+
+	if (PreviewMeshComponent)
+	{
+		PreviewMeshComponent->SetMaterial(0, Material);
+	}
+	return true;
 }
 
 bool FMaterialEditorWidget::RenderShaderParameters(UMaterial* Material)

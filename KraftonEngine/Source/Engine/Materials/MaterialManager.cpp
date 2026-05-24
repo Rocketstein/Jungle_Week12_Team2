@@ -141,6 +141,10 @@ bool FMaterialManager::SaveMaterial(UMaterial* Material)
 	}
 
 	JsonData[MatKeys::PathFileName] = MatFilePath.c_str();
+	JsonData[MatKeys::RenderPass] = RenderStateStrings::ToString(RenderStateStrings::RenderPassMap, Material->GetRenderPass());
+	JsonData[MatKeys::BlendState] = RenderStateStrings::ToString(RenderStateStrings::BlendStateMap, Material->GetBlendState());
+	JsonData[MatKeys::DepthStencilState] = RenderStateStrings::ToString(RenderStateStrings::DepthStencilStateMap, Material->GetDepthStencilState());
+	JsonData[MatKeys::RasterizerState] = RenderStateStrings::ToString(RenderStateStrings::RasterizerStateMap, Material->GetRasterizerState());
 
 	json::JSON Parameters = json::JSON::Make(json::JSON::Class::Object);
 	const auto Layout = Material->GetParameterInfo();
