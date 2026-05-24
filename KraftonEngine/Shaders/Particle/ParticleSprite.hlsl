@@ -49,8 +49,8 @@ float4 ProjectCameraPositionBillboard(float3 WorldPosition, float2 Corner, float
 {
     float3 Forward = SafeNormalize3(CameraWorldPos - WorldPosition, float3(0.0f, 0.0f, 1.0f));
     float3 WorldUp = (abs(Forward.z) > 0.99f) ? float3(0.0f, 1.0f, 0.0f) : float3(0.0f, 0.0f, 1.0f);
-    float3 Right = SafeNormalize3(cross(WorldUp, Forward), float3(1.0f, 0.0f, 0.0f));
-    float3 Up = cross(Forward, Right);
+    float3 Right = SafeNormalize3(cross(Forward, WorldUp), float3(1.0f, 0.0f, 0.0f));
+    float3 Up = cross(Right, Forward);
     float2 RotatedCorner = RotateParticleCorner(Corner, Rotation);
     float3 WorldOffset = Right * (RotatedCorner.x * Size.x) + Up * (RotatedCorner.y * Size.y);
     return mul(mul(float4(WorldPosition + WorldOffset, 1.0f), View), Projection);
