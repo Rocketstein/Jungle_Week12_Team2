@@ -61,16 +61,7 @@ private:
 
 	public:
 		uint16 GetSortingPriority() const { return SortingPriority; }
-		void SetParticleBlendRoute(EBlendState Mode)
-		{
-			switch (Mode)
-			{
-			case EBlendState::Opaque:        ParticleBlendState = { ERenderPass::Opaque,     EBlendState::Opaque };   break;
-			case EBlendState::Additive:      ParticleBlendState = { ERenderPass::AlphaBlend, EBlendState::Additive }; break;
-			case EBlendState::AlphaBlend:
-			default:                         ParticleBlendState = { ERenderPass::AlphaBlend, EBlendState::AlphaBlend };
-			}
-		}
+		void SetParticleBlendRoute(EBlendState Mode);
 
 	private:
 		friend class FParticleSystemSceneProxy;

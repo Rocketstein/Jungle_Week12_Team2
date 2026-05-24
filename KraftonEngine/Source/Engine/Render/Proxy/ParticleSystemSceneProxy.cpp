@@ -541,3 +541,14 @@ void FParticleSystemSceneProxy::FSpriteParticlePacker::EnsureIndexPattern(uint32
 	IndexPatternParticleCapacity = RequiredParticleCount;
 	bIndexBufferDirty = true;
 }
+
+void FParticleSystemSceneProxy::FEmitterDraw::SetParticleBlendRoute(EBlendState Mode)
+{
+	switch (Mode)
+	{
+	case EBlendState::Opaque:        ParticleBlendState = { ERenderPass::Opaque,     EBlendState::Opaque };   break;
+	case EBlendState::Additive:      ParticleBlendState = { ERenderPass::AlphaBlend, EBlendState::Additive }; break;
+	case EBlendState::AlphaBlend:
+	default:                         ParticleBlendState = { ERenderPass::AlphaBlend, EBlendState::AlphaBlend };
+	}
+}
