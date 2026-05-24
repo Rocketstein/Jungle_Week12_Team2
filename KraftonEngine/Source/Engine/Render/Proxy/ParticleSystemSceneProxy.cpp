@@ -211,7 +211,13 @@ void FParticleSystemSceneProxy::RebuildSectionDraws()
 		}
 
 		const FEmitterDraw& Draw = EmitterDraws[DrawIndex];
-		SectionDraws.push_back({ Draw.Material, Draw.FirstIndex, Draw.IndexCount });
+		FMeshSectionDraw SectionDraw;
+		SectionDraw.Material		= Draw.Material;
+		SectionDraw.FirstIndex		= Draw.FirstIndex;
+		SectionDraw.IndexCount		= Draw.IndexCount;
+		SectionDraw.PassOverride	= Draw.ParticleBlendState.RenderPass;
+		SectionDraw.BlendOverride	= Draw.ParticleBlendState.BlendState;
+		SectionDraws.push_back(SectionDraw);
 	}
 }
 
