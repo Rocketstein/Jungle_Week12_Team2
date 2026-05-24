@@ -109,7 +109,7 @@ void FParticleSystemSceneProxy::UpdateMesh()
 			Draw.InstanceCount = ParticleCount;
 			Draw.MeshGeom = Source.StaticMesh ? Source.StaticMesh->GetLODMeshBuffer(Source.LODLevel) : nullptr;
 			Draw.IndexCount = Draw.MeshGeom ? Draw.MeshGeom->GetIndexBuffer().GetIndexCount() : 0;
-
+			Draw.SetParticleBlendRoute(Source.BlendMode);
 		}
 	}
 
