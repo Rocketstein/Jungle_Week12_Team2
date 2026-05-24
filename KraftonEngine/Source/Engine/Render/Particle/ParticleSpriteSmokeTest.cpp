@@ -9,6 +9,7 @@
 #include "Materials/Material.h"
 #include "Materials/MaterialManager.h"
 #include "Object/Object.h"
+#include "Particle/ParticleEmitter.h"
 #include "Particle/ParticleHelper.h"
 #include "Render/Particle/ParticleDynamicData.h"
 #include "Render/Proxy/ParticleSystemSceneProxy.h"
@@ -41,6 +42,7 @@ namespace
 		Src.SortMode              = EParticleSortMode::PSORTMODE_None;
 		Src.SubImages_Horizontal  = 1;
 		Src.SubImages_Vertical    = 1;
+		Src.ScreenAlignment       = static_cast<uint8>(PSA_FacingCameraPosition);
 		Src.BlendMode             = EBlendState::Additive;
 
 		Src.DataContainer.Alloc(Src.ParticleStride * N, N);
