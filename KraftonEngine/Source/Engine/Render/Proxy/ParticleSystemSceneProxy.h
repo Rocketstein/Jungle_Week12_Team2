@@ -85,6 +85,7 @@ private:
 
 	void UpdateCB(FEmitterDraw& EmitterDraw, const FDynamicEmitterReplayDataBase& Source);
 
+private:
 	TArray<FDynamicEmitterDataBase*> DynamicData;   // owned, freed on next UpdateDynamicData
 	TArray<FEmitterDraw>             EmitterDraws;
 
@@ -92,7 +93,5 @@ private:
 	FSpriteParticlePacker SpritePacker;
 	FMeshParticlePacker MeshPacker;
 
-	// In Cascade particles, the Emitter Instance(specifically FParticleEmitterInstance and its associated FParticleSystemSceneProxy)
-	// owns and manages the uniform buffers(constant buffers), not the individual particles.
-	//FConstantBuffer      ParticleParamCB;   // b2: per-emitter (alignment mode, sub-uv dims)
+	bool bInstancePacked = false;
 };

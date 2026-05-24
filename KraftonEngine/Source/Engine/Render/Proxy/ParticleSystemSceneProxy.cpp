@@ -134,7 +134,8 @@ void FParticleSystemSceneProxy::UpdatePerViewport(const FFrameContext& Frame)
 	// CPU pack: sort, quad expansion, and mesh instance payloads.
 	PackParticles(Frame);
 
-	bVisible = SpritePacker.HasPackedSprites() || MeshPacker.HasPackedInstances(EmitterDraws);
+	bVisible = bInstancePacked;
+	bInstancePacked = false;
 	if (!bVisible) return;
 
 	SpritePacker.MarkGpuBuffersDirty();
@@ -205,6 +206,8 @@ void FParticleSystemSceneProxy::PackParticles(const FFrameContext& Frame)
 			SectionDraws[i].FirstIndex = Draw.FirstIndex;
 			SectionDraws[i].IndexCount = Draw.IndexCount;
 		}
+
+		if (!Draw.PackedInstances.empty() || SpritePacker.HasPackedSprites()) { bInstancePacked = true; }
 	}
 }
 
