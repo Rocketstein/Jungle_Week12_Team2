@@ -84,7 +84,7 @@ void FParticleSystemSceneProxy::UpdateMesh()
 
 		if (Draw.Type == DET_Sprite)
 		{
-			const auto& Source = static_cast<const FDynamicSpriteEmitterReplayDataBase&>(
+			const auto& Source = static_cast<const FDynamicSpriteEmitterReplayData&>(
 				DynamicData[i]->GetSource());
 			const uint32 ParticleCount = static_cast<uint32>(Source.ActiveParticleCount);
 
@@ -326,7 +326,7 @@ bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevic
 
 void FParticleSystemSceneProxy::PackSpriteEmitter(const FFrameContext& Frame, FDynamicSpriteEmitterData& Emitter, uint32& IndexCursor)
 {
-	const FDynamicSpriteEmitterReplayDataBase& Source = Emitter.Source;
+	const FDynamicSpriteEmitterReplayData& Source = Emitter.Source;
 	const int32 Count = Source.ActiveParticleCount;
 	if (Count <= 0 ||
 		!Source.DataContainer.ParticleData ||

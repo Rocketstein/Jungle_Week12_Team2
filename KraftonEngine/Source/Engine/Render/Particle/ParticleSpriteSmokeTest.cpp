@@ -33,7 +33,7 @@ namespace
 		auto* Emitter = new FDynamicSpriteEmitterData();
 		Emitter->EmitterIndex = 0;
 
-		FDynamicSpriteEmitterReplayDataBase& Src = Emitter->Source;
+		FDynamicSpriteEmitterReplayData& Src = Emitter->Source;
 		// eEmitterType is already DET_Sprite via the FDynamicSpriteEmitterReplayDataBase ctor.
 		Src.MaterialInterface     = Material;
 		Src.ActiveParticleCount   = N;

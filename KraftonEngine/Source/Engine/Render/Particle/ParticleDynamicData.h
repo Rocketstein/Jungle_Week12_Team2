@@ -52,15 +52,15 @@ struct FDynamicEmitterReplayDataBase
 	virtual ~FDynamicEmitterReplayDataBase() = default;
 };
 
-struct FDynamicSpriteEmitterReplayDataBase : public FDynamicEmitterReplayDataBase
+struct FDynamicSpriteEmitterReplayData : public FDynamicEmitterReplayDataBase
 {
-	FDynamicSpriteEmitterReplayDataBase()
+	FDynamicSpriteEmitterReplayData()
 	{
 		eEmitterType = DET_Sprite;
 	}
 };
 
-struct FDynamicMeshEmitterReplayData : public FDynamicSpriteEmitterReplayDataBase
+struct FDynamicMeshEmitterReplayData : public FDynamicEmitterReplayDataBase
 {
 	uint8 LODLevel = 0;
 	UStaticMesh* StaticMesh = nullptr;
@@ -103,7 +103,7 @@ struct FDynamicMeshEmitterDataBase : public FDynamicEmitterDataBase
 
 struct FDynamicSpriteEmitterData : public FDynamicSpriteEmitterDataBase
 {
-	FDynamicSpriteEmitterReplayDataBase Source;
+	FDynamicSpriteEmitterReplayData Source;
 	const FDynamicEmitterReplayDataBase& GetSource() const override { return Source; }
 	int32 GetDynamicVertexStride() const override { return sizeof(FParticleSpriteVertex); }
 };
