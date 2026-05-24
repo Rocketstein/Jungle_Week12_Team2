@@ -37,6 +37,7 @@ private:
 		UMaterial* Material                = nullptr;
 		uint32 FirstIndex                  = 0;
 		uint32 IndexCount                  = 0;
+		uint16 SortingPriority			   = 0;
 
 		// mesh path
 		mutable FDynamicVertexBuffer InstanceVB;
@@ -79,6 +80,9 @@ private:
 		bool HasPackedInstances(const TArray<FEmitterDraw>& EmitterDraws) const;
 	};
 
+	// Sorts EmitterData according to its Sorting Priority, which should be a user-defined numeric value
+	void SortEmitters();
+
 	// Delegates type-specific CPU packing and refreshes per-emitter
 	// (FirstIndex, IndexCount) for DrawCommandBuilder.
 	void PackParticles(const FFrameContext& Frame);
@@ -93,5 +97,10 @@ private:
 	FSpriteParticlePacker SpritePacker;
 	FMeshParticlePacker MeshPacker;
 
-	bool bInstancePacked = false;
+	bool bInstancePacked	  = false;
+
+	// Set to true when EmitterDraws.size() changes, or is signaled that one of its element changed its Sort Priotiy.
+	// True by default as to ensure Emitter sorting upon initialization
+	bool bIsEmitterOrderDirty = true;		
+
 };

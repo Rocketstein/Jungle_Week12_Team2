@@ -42,6 +42,9 @@ struct FDynamicEmitterReplayDataBase
 
 	EParticleSortMode SortMode = EParticleSortMode::PSORTMODE_None;
 
+	// Cross-Emitter sorting priority
+	uint16 EmitterSortPriority = 0;
+
 	virtual ~FDynamicEmitterReplayDataBase() = default;
 };
 

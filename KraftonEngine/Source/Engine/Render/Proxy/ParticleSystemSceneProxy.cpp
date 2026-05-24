@@ -165,8 +165,19 @@ bool FParticleSystemSceneProxy::PrepareDrawBuffer(
 	return Out.VB != nullptr && Out.IB != nullptr;
 }
 
+void FParticleSystemSceneProxy::SortEmitters()
+{
+
+	bIsEmitterOrderDirty = false;
+}
+
 void FParticleSystemSceneProxy::PackParticles(const FFrameContext& Frame)
 {
+	// Rebuild Emitter order before packing vertices
+	if (bIsEmitterOrderDirty) {
+		SortEmitters();
+	}
+
 	uint32 IndexCursor = 0;
 	for (size_t i = 0; i < DynamicData.size(); ++i)
 	{
