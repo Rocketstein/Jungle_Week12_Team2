@@ -24,6 +24,7 @@ public:
 	GENERATED_BODY(UParticleSystemComponent)
 	~UParticleSystemComponent() override;
 
+	void PostEditProperty(const char* PropertyName) override;
 	UFXSystemAsset* GetFXSystemAsset() const override;
 	void SetTemplate(UParticleSystem* NewTemplate);
 	FPrimitiveSceneProxy* CreateSceneProxy() override;
@@ -35,6 +36,10 @@ public:
 
 	UPROPERTY(Edit, Category="Particles", DisplayName="Template", Type=SoftObject, Class=UParticleSystem)
 	UParticleSystem* Template = nullptr;
+
+	UPROPERTY(Edit, Category="Particles", DisplayName="Particle System Priority", Min=0, Max=65535, Speed=1.0f)
+	int32 SortPriority = 0;
+
 	TArray<FParticleEmitterInstance*> EmitterInstances;
 	int32 LODLevel = 0;
 };
