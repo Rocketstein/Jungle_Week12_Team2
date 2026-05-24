@@ -88,23 +88,14 @@ void FParticleSystemSceneProxy::UpdateMesh()
 {
 	UpdateMaterial();
 
-	uint32 IndexCursor = 0;
-
 	for (size_t i = 0; i < DynamicData.size(); ++i)
 	{
 		FEmitterDraw& Draw = EmitterDraws[i];
 
 		if (Draw.Type == DET_Sprite)
 		{
-			const auto& Source = static_cast<const FDynamicSpriteEmitterReplayData&>(
-				DynamicData[i]->GetSource());
-			const uint32 ParticleCount = static_cast<uint32>(Source.ActiveParticleCount);
-
-			// 6 indices per particle into the proxy's shared sprite index buffer.
-			const uint32 IdxCount = ParticleCount * 6;
-			Draw.FirstIndex = IndexCursor;
-			Draw.IndexCount = IdxCount;
-			IndexCursor += IdxCount;
+			Draw.FirstIndex = 0;
+			Draw.IndexCount = 0;
 		}
 		else if (Draw.Type == DET_Mesh)
 		{
@@ -126,7 +117,6 @@ void FParticleSystemSceneProxy::UpdateMesh()
 	{
 		SortEmitters();
 	}
-	RebuildSectionDraws();
 }
 
 // UpdatePerViewport: per-frame CPU work
