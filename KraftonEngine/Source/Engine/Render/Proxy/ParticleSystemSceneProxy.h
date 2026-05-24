@@ -51,30 +51,46 @@ private:
 		FParticleParamConstants ParticleParams;
 	};
 
-	// Fills the SpriteVert/IndexScratch member arrays and refreshes per-emitter
-	// (FirstIndex, IndexCount). Sets bGpuBuffersDirty for PrepareDrawBuffer to consume.
+	struct FSpriteParticlePacker
+	{
+		void ResetFrame();
+		void PackEmitter(const FFrameContext& Frame, FDynamicSpriteEmitterData& Emitter, uint32& IndexCursor);
+		bool HasPackedSprites() const;
+		void MarkGpuBuffersDirty() const;
+		bool PrepareDrawBuffer(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FDrawCommandBuffer& Out) const;
+
+	private:
+		void EnsureIndexPattern(uint32 RequiredParticleCount);
+
+		TArray<FParticleSpriteVertex> PackedVertices;
+		TArray<uint32>                IndexPattern;
+		uint32                        IndexPatternParticleCapacity = 0;
+
+		mutable FDynamicVertexBuffer VertexBuffer;
+		mutable FDynamicIndexBuffer  IndexBuffer;
+		mutable bool bGpuBuffersDirty = true;
+		mutable bool bIndexBufferDirty = true;
+	};
+
+	struct FMeshParticlePacker
+	{
+		void ResetFrame(TArray<FEmitterDraw>& EmitterDraws);
+		void PackEmitter(const FFrameContext& Frame, FDynamicMeshEmitterData& Emitter, FEmitterDraw& Draw);
+		bool HasPackedInstances(const TArray<FEmitterDraw>& EmitterDraws) const;
+	};
+
+	// Delegates type-specific CPU packing and refreshes per-emitter
+	// (FirstIndex, IndexCount) for DrawCommandBuilder.
 	void PackParticles(const FFrameContext& Frame);
-	void PackSpriteEmitter(const FFrameContext& Frame, FDynamicSpriteEmitterData& Emitter, uint32& IndexCursor);
-	void PackMeshEmitter(const FFrameContext& Frame, FDynamicMeshEmitterData& Emitter, uint32 SectionIndex);
 
 	void UpdateCB(FEmitterDraw& EmitterDraw, const FDynamicEmitterReplayDataBase& Source);
-	void EnsureSpriteIndexPattern(uint32 RequiredParticleCount);
 
 	TArray<FDynamicEmitterDataBase*> DynamicData;   // owned, freed on next UpdateDynamicData
 	TArray<FEmitterDraw>             EmitterDraws;
 
 	FMatrix ComponentToWorld = FMatrix::Identity;
-	TArray<FParticleSpriteVertex> PackedSpriteVertices;
-	TArray<uint32>                SpriteIndexPattern;
-	uint32                        SpriteIndexPatternParticleCapacity = 0;
-
-	// Sprite path: shared across all sprite emitters this proxy owns.
-	mutable FDynamicVertexBuffer SpriteVB;
-	mutable FDynamicIndexBuffer  SpriteIB;
-
-	// Signals PrepareDrawBuffer that scratch arrays must be re-uploaded.
-	mutable bool bGpuBuffersDirty = true;
-	mutable bool bSpriteIBDirty = true;
+	FSpriteParticlePacker SpritePacker;
+	FMeshParticlePacker MeshPacker;
 
 	// In Cascade particles, the Emitter Instance(specifically FParticleEmitterInstance and its associated FParticleSystemSceneProxy)
 	// owns and manages the uniform buffers(constant buffers), not the individual particles.
