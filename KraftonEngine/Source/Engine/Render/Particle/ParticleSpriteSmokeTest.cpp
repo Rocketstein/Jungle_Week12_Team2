@@ -43,6 +43,7 @@ namespace
 		Src.SubImages_Horizontal  = 1;
 		Src.SubImages_Vertical    = 1;
 		Src.ScreenAlignment       = static_cast<uint8>(PSA_FacingCameraPosition);
+		Src.EmitterOrigin         = WorldCenter;
 		Src.BlendMode             = EBlendState::Additive;
 
 		Src.DataContainer.Alloc(Src.ParticleStride * N, N);

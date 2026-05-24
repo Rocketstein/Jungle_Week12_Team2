@@ -492,10 +492,14 @@ void FParticleSystemSceneProxy::UpdateCB(FEmitterDraw& EmitterDraw, const FDynam
 	const uint32 SubUVCols = SpriteSource ? static_cast<uint32>(SpriteSource->SubImages_Horizontal) : 1;
 	const uint32 SubUVRows = SpriteSource ? static_cast<uint32>(SpriteSource->SubImages_Vertical) : 1;
 	const uint32 ScreenAlignment = SpriteSource ? static_cast<uint32>(SpriteSource->ScreenAlignment) : 0;
+	const FVector EmitterOrigin = SpriteSource ? SpriteSource->EmitterOrigin : FVector::ZeroVector;
 
 	if (EmitterDraw.ParticleParams.SubUVCols == SubUVCols &&
 		EmitterDraw.ParticleParams.SubUVRows == SubUVRows &&
-		EmitterDraw.ParticleParams.ScreenAlignment == ScreenAlignment)
+		EmitterDraw.ParticleParams.ScreenAlignment == ScreenAlignment &&
+		EmitterDraw.ParticleParams.EmitterOrigin.X == EmitterOrigin.X &&
+		EmitterDraw.ParticleParams.EmitterOrigin.Y == EmitterOrigin.Y &&
+		EmitterDraw.ParticleParams.EmitterOrigin.Z == EmitterOrigin.Z)
 	{
 		return;
 	}
@@ -503,6 +507,7 @@ void FParticleSystemSceneProxy::UpdateCB(FEmitterDraw& EmitterDraw, const FDynam
 	EmitterDraw.ParticleParams.SubUVCols = SubUVCols;
 	EmitterDraw.ParticleParams.SubUVRows = SubUVRows;
 	EmitterDraw.ParticleParams.ScreenAlignment = ScreenAlignment;
+	EmitterDraw.ParticleParams.EmitterOrigin = EmitterOrigin;
 	EmitterDraw.bParticleParamCBDirty = true;
 }
 

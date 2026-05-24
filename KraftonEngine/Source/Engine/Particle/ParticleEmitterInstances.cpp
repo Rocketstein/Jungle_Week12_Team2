@@ -308,6 +308,7 @@ bool FParticleEmitterInstance::FillReplayData(FDynamicEmitterReplayDataBase& Out
 		if (FDynamicSpriteEmitterReplayData* SpriteData = dynamic_cast<FDynamicSpriteEmitterReplayData*>(&OutData))
 		{
 			SpriteData->ScreenAlignment = static_cast<uint8>(CurrentLODLevel->RequiredModule->ScreenAlignment);
+			SpriteData->EmitterOrigin = Location + CurrentLODLevel->RequiredModule->EmitterOrigin;
 		}
 	}
 

@@ -8,6 +8,8 @@ cbuffer ParticleParamBuffer : register(b2)
     uint SubUVRows;
     uint ScreenAlignment;
     float _Pad;
+    float3 EmitterOrigin;
+    float _Pad1;
 }
 
 static const uint PARTICLE_SCREEN_ALIGNMENT_SQUARE = 0;
