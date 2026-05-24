@@ -1,11 +1,435 @@
 #include "Particle/ParticleSystemManager.h"
 
 #include "Asset/AssetPackage.h"
+#include "Materials/Material.h"
+#include "Materials/MaterialManager.h"
 #include "Object/ObjectFactory.h"
+#include "Particle/ParticleEmitter.h"
+#include "Particle/ParticleLODLevel.h"
+#include "Particle/ParticleModule.h"
+#include "Particle/ParticleSpriteEmitter.h"
 #include "Particle/ParticleSystem.h"
 #include "Platform/Paths.h"
+#include "SimpleJSON/json.hpp"
 
+#include <algorithm>
 #include <filesystem>
+
+namespace
+{
+namespace ParticleKeys
+{
+	static constexpr const char* Version = "Version";
+	static constexpr const char* Emitters = "Emitters";
+	static constexpr const char* Name = "Name";
+	static constexpr const char* InitialAllocationCount = "InitialAllocationCount";
+	static constexpr const char* PeakActiveParticles = "PeakActiveParticles";
+	static constexpr const char* LODLevels = "LODLevels";
+	static constexpr const char* Level = "Level";
+	static constexpr const char* bEnabled = "bEnabled";
+	static constexpr const char* Required = "Required";
+	static constexpr const char* Spawn = "Spawn";
+	static constexpr const char* Modules = "Modules";
+	static constexpr const char* Type = "Type";
+	static constexpr const char* Material = "Material";
+	static constexpr const char* EmitterOrigin = "EmitterOrigin";
+	static constexpr const char* ScreenAlignment = "ScreenAlignment";
+	static constexpr const char* SubImagesHorizontal = "SubImages_Horizontal";
+	static constexpr const char* SubImagesVertical = "SubImages_Vertical";
+	static constexpr const char* AlphaSource = "AlphaSource";
+	static constexpr const char* AlphaThreshold = "AlphaThreshold";
+	static constexpr const char* AlphaPower = "AlphaPower";
+	static constexpr const char* ColorIntensity = "ColorIntensity";
+	static constexpr const char* SortMode = "SortMode";
+	static constexpr const char* EmitterDuration = "EmitterDuration";
+	static constexpr const char* MaxDrawCount = "MaxDrawCount";
+	static constexpr const char* bUseLocalSpace = "bUseLocalSpace";
+	static constexpr const char* bKillOnDeactivate = "bKillOnDeactivate";
+	static constexpr const char* bKillOnCompleted = "bKillOnCompleted";
+	static constexpr const char* Rate = "Rate";
+	static constexpr const char* Lifetime = "Lifetime";
+	static constexpr const char* StartLocation = "StartLocation";
+	static constexpr const char* StartVelocity = "StartVelocity";
+	static constexpr const char* StartColor = "StartColor";
+	static constexpr const char* StartAlpha = "StartAlpha";
+	static constexpr const char* StartSize = "StartSize";
+}
+
+json::JSON MakeVectorJSON(const FVector& Value)
+{
+	return json::Array(Value.X, Value.Y, Value.Z);
+}
+
+FVector ReadVectorJSON(json::JSON& Object, const char* Key, const FVector& DefaultValue)
+{
+	if (!Object.hasKey(Key))
+	{
+		return DefaultValue;
+	}
+
+	json::JSON& Value = Object[Key];
+	if (Value.JSONType() != json::JSON::Class::Array || Value.length() < 3)
+	{
+		return DefaultValue;
+	}
+
+	return FVector(
+		static_cast<float>(Value[0].ToFloat()),
+		static_cast<float>(Value[1].ToFloat()),
+		static_cast<float>(Value[2].ToFloat()));
+}
+
+FString GetParticleMaterialPath(UMaterialInterface* MaterialInterface)
+{
+	UMaterial* Material = MaterialInterface ? MaterialInterface->GetMaterial() : nullptr;
+	return Material ? FPaths::MakeProjectRelative(Material->GetAssetPathFileName()) : FString();
+}
+
+json::JSON SerializeRequiredModule(UParticleModuleRequired* Required)
+{
+	json::JSON Object = json::JSON::Make(json::JSON::Class::Object);
+	if (!Required)
+	{
+		return Object;
+	}
+
+	Object[ParticleKeys::Material] = GetParticleMaterialPath(Required->Material);
+	Object[ParticleKeys::EmitterOrigin] = MakeVectorJSON(Required->EmitterOrigin);
+	Object[ParticleKeys::ScreenAlignment] = static_cast<int32>(Required->ScreenAlignment);
+	Object[ParticleKeys::SubImagesHorizontal] = Required->SubImages_Horizontal;
+	Object[ParticleKeys::SubImagesVertical] = Required->SubImages_Vertical;
+	Object[ParticleKeys::AlphaSource] = Required->AlphaSource;
+	Object[ParticleKeys::AlphaThreshold] = Required->AlphaThreshold;
+	Object[ParticleKeys::AlphaPower] = Required->AlphaPower;
+	Object[ParticleKeys::ColorIntensity] = Required->ColorIntensity;
+	Object[ParticleKeys::SortMode] = static_cast<int32>(Required->SortMode);
+	Object[ParticleKeys::EmitterDuration] = Required->EmitterDuration;
+	Object[ParticleKeys::MaxDrawCount] = Required->MaxDrawCount;
+	Object[ParticleKeys::bUseLocalSpace] = Required->bUseLocalSpace != 0;
+	Object[ParticleKeys::bKillOnDeactivate] = Required->bKillOnDeactivate != 0;
+	Object[ParticleKeys::bKillOnCompleted] = Required->bKillOnCompleted != 0;
+	return Object;
+}
+
+json::JSON SerializeSpawnModule(UParticleModuleSpawn* Spawn)
+{
+	json::JSON Object = json::JSON::Make(json::JSON::Class::Object);
+	if (Spawn)
+	{
+		Object[ParticleKeys::Rate] = Spawn->Rate;
+	}
+	return Object;
+}
+
+const char* GetSerializableModuleType(UParticleModule* Module)
+{
+	if (Module->IsA<UParticleModuleLifetime>()) return "Lifetime";
+	if (Module->IsA<UParticleModuleLocation>()) return "InitialLocation";
+	if (Module->IsA<UParticleModuleVelocity>()) return "InitialVelocity";
+	if (Module->IsA<UParticleModuleColor>()) return "InitialColor";
+	if (Module->IsA<UParticleModuleSize>()) return "InitialSize";
+	return nullptr;
+}
+
+json::JSON SerializeModule(UParticleModule* Module)
+{
+	json::JSON Object = json::JSON::Make(json::JSON::Class::Object);
+	if (!Module)
+	{
+		return Object;
+	}
+
+	const char* Type = GetSerializableModuleType(Module);
+	if (!Type)
+	{
+		return Object;
+	}
+
+	Object[ParticleKeys::Type] = Type;
+	Object[ParticleKeys::bEnabled] = Module->bEnabled != 0;
+
+	if (UParticleModuleLifetime* Lifetime = Cast<UParticleModuleLifetime>(Module))
+	{
+		Object[ParticleKeys::Lifetime] = Lifetime->Lifetime;
+	}
+	else if (UParticleModuleLocation* Location = Cast<UParticleModuleLocation>(Module))
+	{
+		Object[ParticleKeys::StartLocation] = MakeVectorJSON(Location->StartLocation);
+	}
+	else if (UParticleModuleVelocity* Velocity = Cast<UParticleModuleVelocity>(Module))
+	{
+		Object[ParticleKeys::StartVelocity] = MakeVectorJSON(Velocity->StartVelocity);
+	}
+	else if (UParticleModuleColor* Color = Cast<UParticleModuleColor>(Module))
+	{
+		Object[ParticleKeys::StartColor] = MakeVectorJSON(Color->StartColor);
+		Object[ParticleKeys::StartAlpha] = Color->StartAlpha;
+	}
+	else if (UParticleModuleSize* Size = Cast<UParticleModuleSize>(Module))
+	{
+		Object[ParticleKeys::StartSize] = MakeVectorJSON(Size->StartSize);
+	}
+
+	return Object;
+}
+
+json::JSON SerializeLODLevel(UParticleLODLevel* LOD)
+{
+	json::JSON Object = json::JSON::Make(json::JSON::Class::Object);
+	if (!LOD)
+	{
+		return Object;
+	}
+
+	Object[ParticleKeys::Level] = LOD->Level;
+	Object[ParticleKeys::bEnabled] = LOD->bEnabled != 0;
+	Object[ParticleKeys::Required] = SerializeRequiredModule(LOD->RequiredModule);
+	Object[ParticleKeys::Spawn] = SerializeSpawnModule(LOD->SpawnModule);
+
+	json::JSON Modules = json::Array();
+	for (UParticleModule* Module : LOD->Modules)
+	{
+		json::JSON ModuleObject = SerializeModule(Module);
+		if (ModuleObject.hasKey(ParticleKeys::Type))
+		{
+			Modules.append(ModuleObject);
+		}
+	}
+	Object[ParticleKeys::Modules] = Modules;
+	return Object;
+}
+
+json::JSON SerializeEmitter(UParticleEmitter* Emitter)
+{
+	json::JSON Object = json::JSON::Make(json::JSON::Class::Object);
+	if (!Emitter)
+	{
+		return Object;
+	}
+
+	Object[ParticleKeys::Name] = Emitter->GetEmitterName().ToString();
+	Object[ParticleKeys::InitialAllocationCount] = Emitter->InitialAllocationCount;
+	Object[ParticleKeys::PeakActiveParticles] = Emitter->PeakActiveParticles;
+
+	json::JSON LODLevels = json::Array();
+	for (UParticleLODLevel* LOD : Emitter->LODLevels)
+	{
+		LODLevels.append(SerializeLODLevel(LOD));
+	}
+	Object[ParticleKeys::LODLevels] = LODLevels;
+	return Object;
+}
+
+json::JSON SerializeParticleSystem(UParticleSystem* ParticleSystem)
+{
+	json::JSON Root = json::JSON::Make(json::JSON::Class::Object);
+	Root[ParticleKeys::Version] = 1;
+
+	json::JSON Emitters = json::Array();
+	if (ParticleSystem)
+	{
+		for (UParticleEmitter* Emitter : ParticleSystem->Emitters)
+		{
+			Emitters.append(SerializeEmitter(Emitter));
+		}
+	}
+	Root[ParticleKeys::Emitters] = Emitters;
+	return Root;
+}
+
+UParticleModuleRequired* DeserializeRequiredModule(json::JSON& Object, UParticleLODLevel* Outer)
+{
+	UParticleModuleRequired* Required = GUObjectArray.CreateObject<UParticleModuleRequired>(Outer);
+	if (Object.hasKey(ParticleKeys::Material))
+	{
+		const FString MaterialPath = Object[ParticleKeys::Material].ToString();
+		if (!MaterialPath.empty())
+		{
+			Required->Material = FMaterialManager::Get().GetOrCreateMaterial(MaterialPath);
+		}
+	}
+	Required->EmitterOrigin = ReadVectorJSON(Object, ParticleKeys::EmitterOrigin, Required->EmitterOrigin);
+	if (Object.hasKey(ParticleKeys::ScreenAlignment))
+	{
+		const int32 Value = static_cast<int32>(Object[ParticleKeys::ScreenAlignment].ToInt());
+		Required->ScreenAlignment = static_cast<EParticleScreenAlignment>(std::clamp(Value, 0, static_cast<int32>(PSA_MAX) - 1));
+	}
+	if (Object.hasKey(ParticleKeys::SubImagesHorizontal)) Required->SubImages_Horizontal = std::max(1, static_cast<int32>(Object[ParticleKeys::SubImagesHorizontal].ToInt()));
+	if (Object.hasKey(ParticleKeys::SubImagesVertical)) Required->SubImages_Vertical = std::max(1, static_cast<int32>(Object[ParticleKeys::SubImagesVertical].ToInt()));
+	if (Object.hasKey(ParticleKeys::AlphaSource)) Required->AlphaSource = std::clamp(static_cast<int32>(Object[ParticleKeys::AlphaSource].ToInt()), 0, 1);
+	if (Object.hasKey(ParticleKeys::AlphaThreshold)) Required->AlphaThreshold = std::clamp(static_cast<float>(Object[ParticleKeys::AlphaThreshold].ToFloat()), 0.0f, 1.0f);
+	if (Object.hasKey(ParticleKeys::AlphaPower)) Required->AlphaPower = std::max(0.001f, static_cast<float>(Object[ParticleKeys::AlphaPower].ToFloat()));
+	if (Object.hasKey(ParticleKeys::ColorIntensity)) Required->ColorIntensity = std::max(0.0f, static_cast<float>(Object[ParticleKeys::ColorIntensity].ToFloat()));
+	if (Object.hasKey(ParticleKeys::SortMode))
+	{
+		const int32 Value = static_cast<int32>(Object[ParticleKeys::SortMode].ToInt());
+		Required->SortMode = static_cast<EParticleSortMode>(std::clamp(Value, 0, static_cast<int32>(PSORTMODE_MAX) - 1));
+	}
+	if (Object.hasKey(ParticleKeys::EmitterDuration)) Required->EmitterDuration = std::max(0.0f, static_cast<float>(Object[ParticleKeys::EmitterDuration].ToFloat()));
+	if (Object.hasKey(ParticleKeys::MaxDrawCount)) Required->MaxDrawCount = std::max(0, static_cast<int32>(Object[ParticleKeys::MaxDrawCount].ToInt()));
+	if (Object.hasKey(ParticleKeys::bUseLocalSpace)) Required->bUseLocalSpace = Object[ParticleKeys::bUseLocalSpace].ToBool();
+	if (Object.hasKey(ParticleKeys::bKillOnDeactivate)) Required->bKillOnDeactivate = Object[ParticleKeys::bKillOnDeactivate].ToBool();
+	if (Object.hasKey(ParticleKeys::bKillOnCompleted)) Required->bKillOnCompleted = Object[ParticleKeys::bKillOnCompleted].ToBool();
+	return Required;
+}
+
+UParticleModuleSpawn* DeserializeSpawnModule(json::JSON& Object, UParticleLODLevel* Outer)
+{
+	UParticleModuleSpawn* Spawn = GUObjectArray.CreateObject<UParticleModuleSpawn>(Outer);
+	if (Object.hasKey(ParticleKeys::Rate))
+	{
+		Spawn->Rate = std::max(0.0f, static_cast<float>(Object[ParticleKeys::Rate].ToFloat()));
+	}
+	return Spawn;
+}
+
+UParticleModule* DeserializeModule(json::JSON& Object, UParticleLODLevel* Outer)
+{
+	if (!Object.hasKey(ParticleKeys::Type))
+	{
+		return nullptr;
+	}
+
+	const FString Type = Object[ParticleKeys::Type].ToString();
+	UParticleModule* Module = nullptr;
+
+	if (Type == "Lifetime")
+	{
+		UParticleModuleLifetime* Lifetime = GUObjectArray.CreateObject<UParticleModuleLifetime>(Outer);
+		if (Object.hasKey(ParticleKeys::Lifetime))
+		{
+			Lifetime->Lifetime = std::max(0.0f, static_cast<float>(Object[ParticleKeys::Lifetime].ToFloat()));
+		}
+		Module = Lifetime;
+	}
+	else if (Type == "InitialLocation")
+	{
+		UParticleModuleLocation* Location = GUObjectArray.CreateObject<UParticleModuleLocation>(Outer);
+		Location->StartLocation = ReadVectorJSON(Object, ParticleKeys::StartLocation, Location->StartLocation);
+		Module = Location;
+	}
+	else if (Type == "InitialVelocity")
+	{
+		UParticleModuleVelocity* Velocity = GUObjectArray.CreateObject<UParticleModuleVelocity>(Outer);
+		Velocity->StartVelocity = ReadVectorJSON(Object, ParticleKeys::StartVelocity, Velocity->StartVelocity);
+		Module = Velocity;
+	}
+	else if (Type == "InitialColor")
+	{
+		UParticleModuleColor* Color = GUObjectArray.CreateObject<UParticleModuleColor>(Outer);
+		Color->StartColor = ReadVectorJSON(Object, ParticleKeys::StartColor, Color->StartColor);
+		if (Object.hasKey(ParticleKeys::StartAlpha))
+		{
+			Color->StartAlpha = std::clamp(static_cast<float>(Object[ParticleKeys::StartAlpha].ToFloat()), 0.0f, 1.0f);
+		}
+		Module = Color;
+	}
+	else if (Type == "InitialSize")
+	{
+		UParticleModuleSize* Size = GUObjectArray.CreateObject<UParticleModuleSize>(Outer);
+		Size->StartSize = ReadVectorJSON(Object, ParticleKeys::StartSize, Size->StartSize);
+		Module = Size;
+	}
+
+	if (Module && Object.hasKey(ParticleKeys::bEnabled))
+	{
+		Module->bEnabled = Object[ParticleKeys::bEnabled].ToBool();
+	}
+	return Module;
+}
+
+UParticleLODLevel* DeserializeLODLevel(json::JSON& Object, UParticleEmitter* Outer)
+{
+	UParticleLODLevel* LOD = GUObjectArray.CreateObject<UParticleLODLevel>(Outer);
+	LOD->SetLevelIndex(Object.hasKey(ParticleKeys::Level) ? static_cast<int32>(Object[ParticleKeys::Level].ToInt()) : 0);
+	LOD->bEnabled = Object.hasKey(ParticleKeys::bEnabled) ? Object[ParticleKeys::bEnabled].ToBool() : true;
+
+	if (Object.hasKey(ParticleKeys::Required))
+	{
+		LOD->RequiredModule = DeserializeRequiredModule(Object[ParticleKeys::Required], LOD);
+	}
+	else
+	{
+		LOD->RequiredModule = GUObjectArray.CreateObject<UParticleModuleRequired>(LOD);
+	}
+
+	if (Object.hasKey(ParticleKeys::Spawn))
+	{
+		LOD->SpawnModule = DeserializeSpawnModule(Object[ParticleKeys::Spawn], LOD);
+	}
+	else
+	{
+		LOD->SpawnModule = GUObjectArray.CreateObject<UParticleModuleSpawn>(LOD);
+	}
+
+	if (Object.hasKey(ParticleKeys::Modules))
+	{
+		for (auto& ModuleObject : Object[ParticleKeys::Modules].ArrayRange())
+		{
+			if (UParticleModule* Module = DeserializeModule(ModuleObject, LOD))
+			{
+				LOD->Modules.push_back(Module);
+			}
+		}
+	}
+
+	LOD->UpdateModuleLists();
+	return LOD;
+}
+
+UParticleEmitter* DeserializeEmitter(json::JSON& Object, UParticleSystem* Outer)
+{
+	UParticleSpriteEmitter* Emitter = GUObjectArray.CreateObject<UParticleSpriteEmitter>(Outer);
+	Emitter->SetEmitterName(FName(Object.hasKey(ParticleKeys::Name) ? Object[ParticleKeys::Name].ToString() : FString("Particle Emitter")));
+	if (Object.hasKey(ParticleKeys::InitialAllocationCount))
+	{
+		Emitter->InitialAllocationCount = std::max(0, static_cast<int32>(Object[ParticleKeys::InitialAllocationCount].ToInt()));
+	}
+	if (Object.hasKey(ParticleKeys::PeakActiveParticles))
+	{
+		Emitter->PeakActiveParticles = std::max(0, static_cast<int32>(Object[ParticleKeys::PeakActiveParticles].ToInt()));
+	}
+
+	if (Object.hasKey(ParticleKeys::LODLevels))
+	{
+		for (auto& LODObject : Object[ParticleKeys::LODLevels].ArrayRange())
+		{
+			Emitter->LODLevels.push_back(DeserializeLODLevel(LODObject, Emitter));
+		}
+	}
+
+	if (Emitter->LODLevels.empty())
+	{
+		json::JSON DefaultLOD = json::Object();
+		Emitter->LODLevels.push_back(DeserializeLODLevel(DefaultLOD, Emitter));
+	}
+
+	Emitter->UpdateModuleLists();
+	return Emitter;
+}
+
+void DeserializeParticleSystem(UParticleSystem* ParticleSystem, const FString& Payload)
+{
+	if (!ParticleSystem || Payload.empty())
+	{
+		return;
+	}
+
+	json::JSON Root = json::JSON::Load(Payload);
+	if (Root.JSONType() != json::JSON::Class::Object || !Root.hasKey(ParticleKeys::Emitters))
+	{
+		return;
+	}
+
+	for (auto& EmitterObject : Root[ParticleKeys::Emitters].ArrayRange())
+	{
+		if (UParticleEmitter* Emitter = DeserializeEmitter(EmitterObject, ParticleSystem))
+		{
+			ParticleSystem->Emitters.push_back(Emitter);
+		}
+	}
+}
+}
 
 UParticleSystem* FParticleSystemManager::Load(const FString& Path)
 {
@@ -32,6 +456,7 @@ UParticleSystem* FParticleSystemManager::Load(const FString& Path)
 	UParticleSystem* ParticleSystem = GUObjectArray.CreateObject<UParticleSystem>();
 	ParticleSystem->SetAssetPathFileName(NormalizedPath);
 	ParticleSystem->SetFName(FName(FPaths::ToUtf8(std::filesystem::path(FPaths::ToWide(NormalizedPath)).stem().wstring())));
+	DeserializeParticleSystem(ParticleSystem, Payload);
 
 	LoadedParticleSystems.emplace(NormalizedPath, ParticleSystem);
 	return ParticleSystem;
@@ -58,5 +483,6 @@ bool FParticleSystemManager::Save(UParticleSystem* ParticleSystem)
 	}
 
 	FAssetImportMetadata Metadata;
-	return FAssetPackage::SaveStringPayload(Path, EAssetPackageType::ParticleSystem, Metadata, "{}");
+	json::JSON Root = SerializeParticleSystem(ParticleSystem);
+	return FAssetPackage::SaveStringPayload(Path, EAssetPackageType::ParticleSystem, Metadata, Root.dump());
 }

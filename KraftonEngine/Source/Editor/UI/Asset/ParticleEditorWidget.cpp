@@ -13,6 +13,7 @@
 #include "Particle/ParticleModule.h"
 #include "Particle/ParticleSpriteEmitter.h"
 #include "Particle/ParticleSystem.h"
+#include "Particle/ParticleSystemManager.h"
 #include "Runtime/Engine.h"
 #include "Settings/EditorSettings.h"
 #include "Slate/SlateApplication.h"
@@ -549,6 +550,14 @@ void FParticleEditorWidget::RenderEditorLayout()
 
 void FParticleEditorWidget::RenderToolbar()
 {
+	if (ImGui::Button("Save"))
+	{
+		if (FParticleSystemManager::Get().Save(EditingParticleSystem))
+		{
+			ClearDirty();
+		}
+	}
+	ImGui::SameLine();
 	if (ImGui::Button(bSimulating ? "Pause" : "Play"))
 	{
 		bSimulating = !bSimulating;
