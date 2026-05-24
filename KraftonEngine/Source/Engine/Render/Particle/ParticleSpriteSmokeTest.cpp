@@ -33,12 +33,12 @@ namespace
 		auto* Emitter = new FDynamicSpriteEmitterData();
 		Emitter->EmitterIndex = 0;
 
-		FDynamicSpriteEmitterReplayDataBase& Src = Emitter->Source;
+		FDynamicSpriteEmitterReplayData& Src = Emitter->Source;
 		// eEmitterType is already DET_Sprite via the FDynamicSpriteEmitterReplayDataBase ctor.
 		Src.MaterialInterface     = Material;
 		Src.ActiveParticleCount   = N;
 		Src.ParticleStride        = AlignParticleDataSize(static_cast<int32>(sizeof(FBaseParticle)), 16);
-		Src.SortMode              = 0;
+		Src.SortMode              = EParticleSortMode::PSORTMODE_None;
 		Src.SubImages_Horizontal  = 1;
 		Src.SubImages_Vertical    = 1;
 		Src.BlendMode             = EBlendState::Additive;

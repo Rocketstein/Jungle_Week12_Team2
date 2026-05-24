@@ -1,4 +1,4 @@
-#include "Component/ParticleSystemComponent.h"
+﻿#include "Component/ParticleSystemComponent.h"
 
 #include "Particle/ParticleEmitter.h"
 #include "Particle/ParticleEmitterInstances.h"
@@ -20,14 +20,26 @@ void MoveReplayDataBase(FDynamicEmitterReplayDataBase& Dest, FDynamicEmitterRepl
 	Dest.SortMode = Source.SortMode;
 }
 
-void MoveSpriteReplayData(FDynamicSpriteEmitterReplayDataBase& Dest, FDynamicSpriteEmitterReplayDataBase& Source)
+void MoveRenderableReplayData(FDynamicRenderableEmitterReplayDataBase& Dest, FDynamicRenderableEmitterReplayDataBase& Source)
 {
 	MoveReplayDataBase(Dest, Source);
 	Dest.MaterialInterface = Source.MaterialInterface;
+	Dest.BlendMode = Source.BlendMode;
+}
+
+void MoveSpriteReplayData(FDynamicSpriteEmitterReplayData& Dest, FDynamicSpriteEmitterReplayData& Source)
+{
+	MoveRenderableReplayData(Dest, Source);
 	Dest.SubImages_Horizontal = Source.SubImages_Horizontal;
 	Dest.SubImages_Vertical = Source.SubImages_Vertical;
 	Dest.ScreenAlignment = Source.ScreenAlignment;
-	Dest.BlendMode = Source.BlendMode;
+}
+
+void MoveMeshReplayData(FDynamicMeshEmitterReplayData& Dest, FDynamicMeshEmitterReplayData& Source)
+{
+	MoveRenderableReplayData(Dest, Source);
+	Dest.LODLevel = Source.LODLevel;
+	Dest.StaticMesh = Source.StaticMesh;
 }
 
 FDynamicEmitterDataBase* CreateDynamicEmitterData(int32 EmitterIndex, FDynamicEmitterReplayDataBase* ReplayData)
@@ -37,21 +49,23 @@ FDynamicEmitterDataBase* CreateDynamicEmitterData(int32 EmitterIndex, FDynamicEm
 		return nullptr;
 	}
 
+	FDynamicEmitterDataBase* DynamicData = nullptr;
+
 	if (ReplayData->eEmitterType == DET_Mesh)
 	{
-		FDynamicMeshEmitterData* DynamicData = new FDynamicMeshEmitterData();
-		FDynamicMeshEmitterReplayData* MeshReplayData = static_cast<FDynamicMeshEmitterReplayData*>(ReplayData);
-		DynamicData->EmitterIndex = EmitterIndex;
-		MoveSpriteReplayData(DynamicData->MeshSource, *MeshReplayData);
-		DynamicData->MeshSource.StaticMesh = MeshReplayData->StaticMesh;
-		DynamicData->MeshSource.LODLevel = MeshReplayData->LODLevel;
-		delete ReplayData;
-		return DynamicData;
+		FDynamicMeshEmitterData* MeshDynamicData = new FDynamicMeshEmitterData();
+		MeshDynamicData->EmitterIndex = EmitterIndex;
+		MoveMeshReplayData(MeshDynamicData->MeshSource, *static_cast<FDynamicMeshEmitterReplayData*>(ReplayData));
+		DynamicData = MeshDynamicData;
+	}
+	else
+	{
+		FDynamicSpriteEmitterData* SpriteDynamicData = new FDynamicSpriteEmitterData();
+		SpriteDynamicData->EmitterIndex = EmitterIndex;
+		MoveSpriteReplayData(SpriteDynamicData->Source, *static_cast<FDynamicSpriteEmitterReplayData*>(ReplayData));
+		DynamicData = SpriteDynamicData;
 	}
 
-	FDynamicSpriteEmitterData* DynamicData = new FDynamicSpriteEmitterData();
-	DynamicData->EmitterIndex = EmitterIndex;
-	MoveSpriteReplayData(DynamicData->Source, *static_cast<FDynamicSpriteEmitterReplayDataBase*>(ReplayData));
 	delete ReplayData;
 	return DynamicData;
 }

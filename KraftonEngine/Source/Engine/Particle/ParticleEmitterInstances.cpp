@@ -274,7 +274,7 @@ FDynamicEmitterReplayDataBase* FParticleEmitterInstance::GetReplayData()
 	}
 	else
 	{
-		NewEmitterReplayData = new FDynamicSpriteEmitterReplayDataBase();
+		NewEmitterReplayData = new FDynamicSpriteEmitterReplayData();
 	}
 
 	if (!FillReplayData(*NewEmitterReplayData))
@@ -296,14 +296,17 @@ bool FParticleEmitterInstance::FillReplayData(FDynamicEmitterReplayDataBase& Out
 	OutData.ActiveParticleCount = ActiveParticles;
 	OutData.ParticleStride = ParticleStride;
 	OutData.Scale = FVector::OneVector;
-	OutData.SortMode = 0;
+	OutData.SortMode = EParticleSortMode::PSORTMODE_None;
 
 	if (CurrentLODLevel && CurrentLODLevel->RequiredModule)
 	{
-		OutData.SortMode = static_cast<int32>(CurrentLODLevel->RequiredModule->SortMode);
-		if (FDynamicSpriteEmitterReplayDataBase* SpriteData = dynamic_cast<FDynamicSpriteEmitterReplayDataBase*>(&OutData))
+		OutData.SortMode = CurrentLODLevel->RequiredModule->SortMode;
+		if (FDynamicRenderableEmitterReplayDataBase* RenderableData = dynamic_cast<FDynamicRenderableEmitterReplayDataBase*>(&OutData))
 		{
-			SpriteData->MaterialInterface = CurrentLODLevel->RequiredModule->Material;
+			RenderableData->MaterialInterface = CurrentLODLevel->RequiredModule->Material;
+		}
+		if (FDynamicSpriteEmitterReplayData* SpriteData = dynamic_cast<FDynamicSpriteEmitterReplayData*>(&OutData))
+		{
 			SpriteData->ScreenAlignment = static_cast<uint8>(CurrentLODLevel->RequiredModule->ScreenAlignment);
 		}
 	}

@@ -2,6 +2,7 @@
 #include "Particle/ParticleHelper.h"
 #include "Render/Types/FrameContext.h"
 #include "Render/Command/DrawCommand.h"
+#include "Render/Particle/ParticleDynamicData.h"
 #include "Component/ParticleSystemComponent.h"
 #include "Materials/Material.h"
 #include "Mesh/StaticMesh.h"
@@ -55,9 +56,13 @@ void FParticleSystemSceneProxy::UpdateMaterial()
 {
 	for (uint32 i = 0; i < DynamicData.size(); i++)
 	{
-		const FDynamicSpriteEmitterReplayDataBase& Source =
-			static_cast<const FDynamicSpriteEmitterReplayDataBase&>(DynamicData[i]->GetSource());
-		EmitterDraws[i].Material = Source.MaterialInterface ? Source.MaterialInterface->GetMaterial() : nullptr;
+		const FDynamicEmitterReplayDataBase& Source = DynamicData[i]->GetSource();
+		const FDynamicRenderableEmitterReplayDataBase* RenderableSource =
+			dynamic_cast<const FDynamicRenderableEmitterReplayDataBase*>(&Source);
+
+		EmitterDraws[i].Material = RenderableSource && RenderableSource->MaterialInterface
+			? RenderableSource->MaterialInterface->GetMaterial()
+			: nullptr;
 		EmitterDraws[i].Type	 = Source.eEmitterType;
 		EmitterDraws[i].EmitterIndex = DynamicData[i]->EmitterIndex;
 
@@ -84,7 +89,7 @@ void FParticleSystemSceneProxy::UpdateMesh()
 
 		if (Draw.Type == DET_Sprite)
 		{
-			const auto& Source = static_cast<const FDynamicSpriteEmitterReplayDataBase&>(
+			const auto& Source = static_cast<const FDynamicSpriteEmitterReplayData&>(
 				DynamicData[i]->GetSource());
 			const uint32 ParticleCount = static_cast<uint32>(Source.ActiveParticleCount);
 
@@ -326,7 +331,7 @@ bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevic
 
 void FParticleSystemSceneProxy::PackSpriteEmitter(const FFrameContext& Frame, FDynamicSpriteEmitterData& Emitter, uint32& IndexCursor)
 {
-	const FDynamicSpriteEmitterReplayDataBase& Source = Emitter.Source;
+	const FDynamicSpriteEmitterReplayData& Source = Emitter.Source;
 	const int32 Count = Source.ActiveParticleCount;
 	if (Count <= 0 ||
 		!Source.DataContainer.ParticleData ||
@@ -336,9 +341,9 @@ void FParticleSystemSceneProxy::PackSpriteEmitter(const FFrameContext& Frame, FD
 		return;
 	}
 
-	// Sort
-	Emitter.SortSpriteParticles(Source.SortMode, Frame.CameraPosition, Frame.CameraForward, FMatrix::Identity, Source.DataContainer.ParticleIndices,
-								Count, Source.DataContainer.ParticleData, Source.ParticleStride);
+	TArray<uint16> SortedParticleIndices(Source.DataContainer.ParticleIndices, Source.DataContainer.ParticleIndices + Count);
+	Emitter.SortParticles(Source.SortMode, Frame.CameraPosition, Frame.CameraForward, FMatrix::Identity,
+		SortedParticleIndices.data(), Count, Source.DataContainer.ParticleData, Source.ParticleStride);
 
 	const uint32 ParticleCount = static_cast<uint32>(Count);
 	const uint32 FirstParticle = IndexCursor / 6;
@@ -347,7 +352,7 @@ void FParticleSystemSceneProxy::PackSpriteEmitter(const FFrameContext& Frame, FD
 	PackedSpriteVertices.reserve(PackedSpriteVertices.size() + Count * 4);
 	for (int32 i = 0; i < Count; ++i)
 	{
-		const uint16 Idx = Source.DataContainer.ParticleIndices[i];
+		const uint16 Idx = SortedParticleIndices[i];
 		const uint8* Bytes = Source.DataContainer.ParticleData + Idx * Source.ParticleStride;
 		const FBaseParticle& P = *reinterpret_cast<const FBaseParticle*>(Bytes);
 
@@ -390,9 +395,13 @@ void FParticleSystemSceneProxy::PackMeshEmitter(const FFrameContext& Frame,
 	Draw.PackedInstances.clear();
 	Draw.PackedInstances.reserve(Count);
 
+	TArray<uint16> SortedParticleIndices(Source.DataContainer.ParticleIndices, Source.DataContainer.ParticleIndices + Count);
+	Emitter.SortParticles(Source.SortMode, Frame.CameraPosition, Frame.CameraForward, FMatrix::Identity,
+		SortedParticleIndices.data(), Count, Source.DataContainer.ParticleData, Source.ParticleStride);
+
 	for (int32 i = 0; i < Count; ++i)
 	{
-		const uint16 Idx = Source.DataContainer.ParticleIndices[i];
+		const uint16 Idx = SortedParticleIndices[i];
 		const uint8* Bytes = Source.DataContainer.ParticleData + Idx * Source.ParticleStride;
 		const FBaseParticle& P = *reinterpret_cast<const FBaseParticle*>(Bytes);
 
@@ -410,11 +419,12 @@ void FParticleSystemSceneProxy::PackMeshEmitter(const FFrameContext& Frame,
 	Draw.bInstanceVBDirty = true;
 }
 
-void FParticleSystemSceneProxy::UpdateCB(FEmitterDraw& EmitterDraw, const FDynamicSpriteEmitterReplayDataBase& Source)
+void FParticleSystemSceneProxy::UpdateCB(FEmitterDraw& EmitterDraw, const FDynamicEmitterReplayDataBase& Source)
 {
-	const uint32 SubUVCols = static_cast<uint32>(Source.SubImages_Horizontal);
-	const uint32 SubUVRows = static_cast<uint32>(Source.SubImages_Vertical);
-	const uint32 ScreenAlignment = static_cast<uint32>(Source.ScreenAlignment);
+	const FDynamicSpriteEmitterReplayData* SpriteSource = dynamic_cast<const FDynamicSpriteEmitterReplayData*>(&Source);
+	const uint32 SubUVCols = SpriteSource ? static_cast<uint32>(SpriteSource->SubImages_Horizontal) : 1;
+	const uint32 SubUVRows = SpriteSource ? static_cast<uint32>(SpriteSource->SubImages_Vertical) : 1;
+	const uint32 ScreenAlignment = SpriteSource ? static_cast<uint32>(SpriteSource->ScreenAlignment) : 0;
 
 	if (EmitterDraw.ParticleParams.SubUVCols == SubUVCols &&
 		EmitterDraw.ParticleParams.SubUVRows == SubUVRows &&

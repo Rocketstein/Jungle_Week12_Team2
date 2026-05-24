@@ -57,7 +57,7 @@ private:
 	void PackSpriteEmitter(const FFrameContext& Frame, FDynamicSpriteEmitterData& Emitter, uint32& IndexCursor);
 	void PackMeshEmitter(const FFrameContext& Frame, FDynamicMeshEmitterData& Emitter, uint32 SectionIndex);
 
-	void UpdateCB(FEmitterDraw& EmitterDraw, const FDynamicSpriteEmitterReplayDataBase& Source);
+	void UpdateCB(FEmitterDraw& EmitterDraw, const FDynamicEmitterReplayDataBase& Source);
 	void EnsureSpriteIndexPattern(uint32 RequiredParticleCount);
 
 	TArray<FDynamicEmitterDataBase*> DynamicData;   // owned, freed on next UpdateDynamicData
