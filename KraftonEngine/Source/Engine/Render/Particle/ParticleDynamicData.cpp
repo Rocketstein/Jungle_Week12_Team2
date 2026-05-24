@@ -3,6 +3,68 @@
 
 #include <algorithm>
 
+namespace
+{
+void SortParticleIndices(EParticleSortMode SortMode, const FVector& CameraOrigin, const FVector& CameraForward,
+	const FMatrix& LocalToWorld,
+	uint16* InOutIndices, int32 Count,
+	const uint8* ParticleData, int32 Stride)
+{
+	if (SortMode == PSORTMODE_None || Count <= 1 || !InOutIndices || !ParticleData || Stride < static_cast<int32>(sizeof(FBaseParticle)))
+	{
+		return;
+	}
+
+	struct FParticleSortKey
+	{
+		float SortValue = 0.0f;
+		uint16 ParticleIndex = 0;
+	};
+
+	TArray<FParticleSortKey> SortKeys;
+	SortKeys.reserve(Count);
+
+	for (int32 i = 0; i < Count; ++i)
+	{
+		const uint16 ParticleIndex = InOutIndices[i];
+		const uint8* ParticleBytes = ParticleData + static_cast<size_t>(ParticleIndex) * Stride;
+		const FBaseParticle& Particle = *reinterpret_cast<const FBaseParticle*>(ParticleBytes);
+		const FVector WorldLocation = LocalToWorld.TransformPositionWithW(Particle.Location);
+
+		float SortValue = 0.0f;
+		switch (SortMode)
+		{
+		case PSORTMODE_ViewProjDepth:
+			SortValue = (WorldLocation - CameraOrigin).Dot(CameraForward);
+			break;
+		case PSORTMODE_DistanceToView:
+			SortValue = FVector::DistSquared(WorldLocation, CameraOrigin);
+			break;
+		case PSORTMODE_Age_OldestFirst:
+		case PSORTMODE_Age_NewestFirst:
+			SortValue = Particle.RelativeTime;
+			break;
+		default:
+			return;
+		}
+
+		SortKeys.push_back({ SortValue, ParticleIndex });
+	}
+
+	const bool bAscending = SortMode == PSORTMODE_Age_NewestFirst;
+	std::stable_sort(SortKeys.begin(), SortKeys.end(),
+		[bAscending](const FParticleSortKey& A, const FParticleSortKey& B)
+		{
+			return bAscending ? A.SortValue < B.SortValue : A.SortValue > B.SortValue;
+		});
+
+	for (int32 i = 0; i < Count; ++i)
+	{
+		InOutIndices[i] = SortKeys[i].ParticleIndex;
+	}
+}
+}
+
 FParticleDataContainer::~FParticleDataContainer()
 {
 	Free();
@@ -64,47 +126,28 @@ void FParticleDataContainer::Free()
 	ParticleIndices = nullptr;
 }
 
+void FDynamicEmitterDataBase::SortParticles(EParticleSortMode SortMode, const FVector& CameraOrigin, const FVector& CameraForward,
+	const FMatrix& LocalToWorld,
+	uint16* InOutIndices, int32 Count,
+	const uint8* ParticleData, int32 Stride)
+{
+	(void)SortMode;
+	(void)CameraOrigin;
+	(void)CameraForward;
+	(void)LocalToWorld;
+	(void)InOutIndices;
+	(void)Count;
+	(void)ParticleData;
+	(void)Stride;
+}
+
 // Sprite particle sorting logic
 void FDynamicSpriteEmitterDataBase::SortParticles(EParticleSortMode SortMode, const FVector& CameraOrigin, const FVector& CameraForward,
 	const FMatrix& LocalToWorld,
 	uint16* InOutIndices, int32 Count,
 	const uint8* ParticleData, int32 Stride)
 {
-	if (SortMode == 0 || Count <= 1 || !InOutIndices || !ParticleData || Stride < sizeof(FVector))
-	{
-		return;
-	}
-
-	struct FParticleSortKey
-	{
-		float Depth = 0.0f;
-		uint16 ParticleIndex = 0;
-	};
-
-	TArray<FParticleSortKey> SortKeys;
-	SortKeys.reserve(Count);   
-
-	for (int32 i = 0; i < Count; ++i)
-	{
-		const uint16 ParticleIndex = InOutIndices[i];
-		const uint8* ParticleBytes = ParticleData + static_cast<size_t>(ParticleIndex) * Stride;
-		const FBaseParticle& Particle = *reinterpret_cast<const FBaseParticle*>(ParticleBytes);
-		const FVector WorldLocation = LocalToWorld.TransformPositionWithW(Particle.Location);
-		const float Depth = (WorldLocation - CameraOrigin).Dot(CameraForward);
-
-		SortKeys.push_back({ Depth, ParticleIndex });
-	}
-
-	std::stable_sort(SortKeys.begin(), SortKeys.end(),
-		[](const FParticleSortKey& A, const FParticleSortKey& B)
-		{
-			return A.Depth > B.Depth;
-		});
-
-	for (int32 i = 0; i < Count; ++i)
-	{
-		InOutIndices[i] = SortKeys[i].ParticleIndex;
-	}
+	SortParticleIndices(SortMode, CameraOrigin, CameraForward, LocalToWorld, InOutIndices, Count, ParticleData, Stride);
 }
 
 // Mesh Particle sorting logic
@@ -113,5 +156,5 @@ void FDynamicMeshEmitterDataBase::SortParticles(EParticleSortMode SortMode, cons
 	uint16* InOutIndices, int32 Count,
 	const uint8* ParticleData, int32 Stride)
 {
-	
+	SortParticleIndices(SortMode, CameraOrigin, CameraForward, LocalToWorld, InOutIndices, Count, ParticleData, Stride);
 }

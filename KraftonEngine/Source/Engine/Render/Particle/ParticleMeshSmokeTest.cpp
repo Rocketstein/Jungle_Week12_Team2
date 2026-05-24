@@ -43,8 +43,6 @@ namespace
 		Src.ActiveParticleCount   = N;
 		Src.ParticleStride        = AlignParticleDataSize(static_cast<int32>(sizeof(FBaseParticle)), 16);
 		Src.SortMode              = EParticleSortMode::PSORTMODE_None;
-		Src.SubImages_Horizontal  = 1;
-		Src.SubImages_Vertical    = 1;
 		Src.BlendMode             = EBlendState::AlphaBlend;
 
 		Src.DataContainer.Alloc(Src.ParticleStride * N, N);

@@ -42,25 +42,29 @@ struct FDynamicEmitterReplayDataBase
 
 	EParticleSortMode SortMode = EParticleSortMode::PSORTMODE_None;
 
-	UMaterialInterface* MaterialInterface = nullptr;
-
-	int32 SubImages_Horizontal = 1;
-	int32 SubImages_Vertical = 1;
-	uint8 ScreenAlignment = 0;
-	EBlendState BlendMode = EBlendState::AlphaBlend;
-
 	virtual ~FDynamicEmitterReplayDataBase() = default;
 };
 
-struct FDynamicSpriteEmitterReplayData : public FDynamicEmitterReplayDataBase
+struct FDynamicRenderableEmitterReplayDataBase : public FDynamicEmitterReplayDataBase
 {
+	UMaterialInterface* MaterialInterface = nullptr;
+
+	EBlendState BlendMode = EBlendState::AlphaBlend;
+};
+
+struct FDynamicSpriteEmitterReplayData : public FDynamicRenderableEmitterReplayDataBase
+{
+	int32 SubImages_Horizontal = 1;
+	int32 SubImages_Vertical = 1;
+	uint8 ScreenAlignment = 0;
+
 	FDynamicSpriteEmitterReplayData()
 	{
 		eEmitterType = DET_Sprite;
 	}
 };
 
-struct FDynamicMeshEmitterReplayData : public FDynamicEmitterReplayDataBase
+struct FDynamicMeshEmitterReplayData : public FDynamicRenderableEmitterReplayDataBase
 {
 	uint8 LODLevel = 0;
 	UStaticMesh* StaticMesh = nullptr;
@@ -82,7 +86,7 @@ struct FDynamicEmitterDataBase
 	virtual void SortParticles(EParticleSortMode SortMode, const FVector& CameraOrigin, const FVector& CameraForward,
 							const FMatrix& LocalToWorld,
 							uint16* InOutIndices, int32 Count,
-							const uint8* ParticleData, int32 Stride) = 0;
+							const uint8* ParticleData, int32 Stride);
 };
 
 struct FDynamicSpriteEmitterDataBase : public FDynamicEmitterDataBase

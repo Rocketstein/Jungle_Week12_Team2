@@ -301,9 +301,12 @@ bool FParticleEmitterInstance::FillReplayData(FDynamicEmitterReplayDataBase& Out
 	if (CurrentLODLevel && CurrentLODLevel->RequiredModule)
 	{
 		OutData.SortMode = CurrentLODLevel->RequiredModule->SortMode;
+		if (FDynamicRenderableEmitterReplayDataBase* RenderableData = dynamic_cast<FDynamicRenderableEmitterReplayDataBase*>(&OutData))
+		{
+			RenderableData->MaterialInterface = CurrentLODLevel->RequiredModule->Material;
+		}
 		if (FDynamicSpriteEmitterReplayData* SpriteData = dynamic_cast<FDynamicSpriteEmitterReplayData*>(&OutData))
 		{
-			SpriteData->MaterialInterface = CurrentLODLevel->RequiredModule->Material;
 			SpriteData->ScreenAlignment = static_cast<uint8>(CurrentLODLevel->RequiredModule->ScreenAlignment);
 		}
 	}

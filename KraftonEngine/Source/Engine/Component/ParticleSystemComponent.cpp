@@ -18,16 +18,26 @@ void MoveReplayDataBase(FDynamicEmitterReplayDataBase& Dest, FDynamicEmitterRepl
 	Dest.DataContainer = std::move(Source.DataContainer);
 	Dest.Scale = Source.Scale;
 	Dest.SortMode = Source.SortMode;
+}
+
+void MoveRenderableReplayData(FDynamicRenderableEmitterReplayDataBase& Dest, FDynamicRenderableEmitterReplayDataBase& Source)
+{
+	MoveReplayDataBase(Dest, Source);
 	Dest.MaterialInterface = Source.MaterialInterface;
+	Dest.BlendMode = Source.BlendMode;
+}
+
+void MoveSpriteReplayData(FDynamicSpriteEmitterReplayData& Dest, FDynamicSpriteEmitterReplayData& Source)
+{
+	MoveRenderableReplayData(Dest, Source);
 	Dest.SubImages_Horizontal = Source.SubImages_Horizontal;
 	Dest.SubImages_Vertical = Source.SubImages_Vertical;
 	Dest.ScreenAlignment = Source.ScreenAlignment;
-	Dest.BlendMode = Source.BlendMode;
 }
 
 void MoveMeshReplayData(FDynamicMeshEmitterReplayData& Dest, FDynamicMeshEmitterReplayData& Source)
 {
-	MoveReplayDataBase(Dest, Source);
+	MoveRenderableReplayData(Dest, Source);
 	Dest.LODLevel = Source.LODLevel;
 	Dest.StaticMesh = Source.StaticMesh;
 }
@@ -52,7 +62,7 @@ FDynamicEmitterDataBase* CreateDynamicEmitterData(int32 EmitterIndex, FDynamicEm
 	{
 		FDynamicSpriteEmitterData* SpriteDynamicData = new FDynamicSpriteEmitterData();
 		SpriteDynamicData->EmitterIndex = EmitterIndex;
-		MoveReplayDataBase(SpriteDynamicData->Source, *ReplayData);
+		MoveSpriteReplayData(SpriteDynamicData->Source, *static_cast<FDynamicSpriteEmitterReplayData*>(ReplayData));
 		DynamicData = SpriteDynamicData;
 	}
 
