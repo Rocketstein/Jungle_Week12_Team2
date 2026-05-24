@@ -202,10 +202,10 @@ void FParticleSystemSceneProxy::PackParticles(const FFrameContext& Frame)
 	}
 
 	uint32 IndexCursor = 0;
-	for (size_t i = 0; i < DynamicData.size(); ++i)
+	for (size_t i = 0; i < SectionToEmitterDrawIndex.size(); ++i)
 	{
 		if (i >= EmitterDraws.size()) break;
-		FEmitterDraw& Draw = EmitterDraws[i];
+		FEmitterDraw& Draw = EmitterDraws[SectionToEmitterDrawIndex[i]];
 
 		switch (Draw.Type)
 		{
