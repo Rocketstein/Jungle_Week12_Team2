@@ -236,7 +236,7 @@ void FParticleSystemSceneProxy::PackParticles(const FFrameContext& Frame)
 	for (size_t i = 0; i < SectionToEmitterDrawIndex.size(); ++i)
 	{
 		const uint16 DrawIndex = SectionToEmitterDrawIndex[i];
-		if (DrawIndex >= EmitterDraws.size() || DrawIndex >= DynamicData.size()) break;
+		if (DrawIndex >= EmitterDraws.size() || DrawIndex >= DynamicData.size()) continue;
 		FEmitterDraw& Draw = EmitterDraws[DrawIndex];
 
 		switch (Draw.Type)
