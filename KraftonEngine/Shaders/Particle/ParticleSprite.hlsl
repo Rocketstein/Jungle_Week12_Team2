@@ -24,7 +24,7 @@ PS_Input_Particle VS(VS_Input_ParticleSprite Input)
 
     if (Alignment == PARTICLE_SCREEN_ALIGNMENT_SQUARE)
     {
-        float UniformSize = max(Input.size.x, Input.size.y);
+        float UniformSize = Input.size.x;
         float2 ViewCorner = RotateParticleCorner(Corner, Input.rotation) * UniformSize;
         ViewPos.xy += ViewCorner;
         Out.position = mul(ViewPos, Projection);
