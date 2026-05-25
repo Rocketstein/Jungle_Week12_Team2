@@ -109,7 +109,7 @@ struct FDynamicBeamEmitterReplayData : public FDynamicRenderableEmitterReplayDat
 
 	FDynamicBeamEmitterReplayData()
 	{
-		eEmitterType =DET_Beam2;
+		eEmitterType = DET_Beam2;
 	}
 };
 
