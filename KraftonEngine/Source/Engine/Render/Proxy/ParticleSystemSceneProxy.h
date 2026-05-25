@@ -96,6 +96,23 @@ private:
 		bool HasPackedInstances(const TArray<FEmitterDraw>& EmitterDraws) const;
 	};
 
+	// Beam is a consecutive strip of quads (often referred to as a Quad Strip) where the orientation is dynamically calculated to face the camera.
+	struct FBeamParticlePacker
+	{
+		void ResetFrame();
+		void PackEmitter(const FFrameContext& Frame, FDynamicBeamEmitterData& Emitter, FEmitterDraw& Draw);
+		bool HasPackedBeams() const;
+		void MarkGpuBuffersDirty() const;
+		bool PrepareDrawBuffer(ID3D11Device*, ID3D11DeviceContext*, FDrawCommandBuffer&) const;
+
+	private:
+		TArray<FBeamParticleInstanceVertex> PackedVertices;
+		TArray<uint32>						PackedIndices;
+		mutable FDynamicVertexBuffer		VertexBuffer;
+		mutable FDynamicIndexBuffer			IndexBuffer;
+		mutable bool						bGpuBuffersDirty = true;
+	};
+
 	// Sorts EmitterData according to its Sorting Priority, which should be a user-defined numeric value
 	// Does NOT reorder the physical array of EmitterDraws. Fills SectionToEmitterDrawIndex instead.
 	void SortEmitters();
