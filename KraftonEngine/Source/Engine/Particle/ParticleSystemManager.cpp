@@ -10,6 +10,7 @@
 #include "Particle/ParticleSpriteEmitter.h"
 #include "Particle/ParticleSystem.h"
 #include "Particle/TypeData/ParticleModuleTypeDataBeam2.h"
+#include "Particle/TypeData/ParticleModuleTypeDataRibbon.h"
 #include "Platform/Paths.h"
 #include "SimpleJSON/json.hpp"
 
@@ -92,6 +93,25 @@ namespace ParticleKeys
 	static constexpr const char* TargetData = "TargetData";
 	static constexpr const char* TargetName = "TargetName";
 	static constexpr const char* TargetPercentage = "TargetPercentage";
+	static constexpr const char* Ribbon = "Ribbon";
+	static constexpr const char* MaxTessellationBetweenParticles = "MaxTessellationBetweenParticles";
+	static constexpr const char* SheetsPerTrail = "SheetsPerTrail";
+	static constexpr const char* MaxTrailCount = "MaxTrailCount";
+	static constexpr const char* MaxParticleInTrailCount = "MaxParticleInTrailCount";
+	static constexpr const char* bDeadTrailsOnDeactivate = "bDeadTrailsOnDeactivate";
+	static constexpr const char* bDeadTrailsOnSourceLoss = "bDeadTrailsOnSourceLoss";
+	static constexpr const char* bClipSourceSegment = "bClipSourceSegment";
+	static constexpr const char* bEnablePreviousTangentRecalculation = "bEnablePreviousTangentRecalculation";
+	static constexpr const char* bTangentRecalculationEveryFrame = "bTangentRecalculationEveryFrame";
+	static constexpr const char* bSpawnInitialParticle = "bSpawnInitialParticle";
+	static constexpr const char* RenderAxis = "RenderAxis";
+	static constexpr const char* TangentSpawningScalar = "TangentSpawningScalar";
+	static constexpr const char* bRenderSpawnPoints = "bRenderSpawnPoints";
+	static constexpr const char* bRenderTangents = "bRenderTangents";
+	static constexpr const char* TilingDistance = "TilingDistance";
+	static constexpr const char* DistanceTessellationStepSize = "DistanceTessellationStepSize";
+	static constexpr const char* bEnableTangentDiffInterpScale = "bEnableTangentDiffInterpScale";
+	static constexpr const char* TangentTessellationScalar = "TangentTessellationScalar";
 }
 
 json::JSON MakeVectorJSON(const FVector& Value)
@@ -226,6 +246,33 @@ json::JSON SerializeTypeDataModule(UParticleModuleTypeDataBase* TypeData)
 			Targets.append(TargetObject);
 		}
 		Object[ParticleKeys::TargetData] = Targets;
+	}
+	else if (UParticleModuleTypeDataRibbon* Ribbon = Cast<UParticleModuleTypeDataRibbon>(TypeData))
+	{
+		Object[ParticleKeys::Type] = ParticleKeys::Ribbon;
+		Object[ParticleKeys::MaxTessellationBetweenParticles] = Ribbon->MaxTessellationBetweenParticles;
+		Object[ParticleKeys::SheetsPerTrail] = Ribbon->SheetsPerTrail;
+		Object[ParticleKeys::MaxTrailCount] = Ribbon->MaxTrailCount;
+		Object[ParticleKeys::MaxParticleInTrailCount] = Ribbon->MaxParticleInTrailCount;
+		Object[ParticleKeys::bDeadTrailsOnDeactivate] = Ribbon->bDeadTrailsOnDeactivate;
+		Object[ParticleKeys::bDeadTrailsOnSourceLoss] = Ribbon->bDeadTrailsOnSourceLoss;
+		Object[ParticleKeys::bClipSourceSegment] = Ribbon->bClipSourceSegment;
+		Object[ParticleKeys::bEnablePreviousTangentRecalculation] = Ribbon->bEnablePreviousTangentRecalculation;
+		Object[ParticleKeys::bTangentRecalculationEveryFrame] = Ribbon->bTangentRecalculationEveryFrame;
+		Object[ParticleKeys::bSpawnInitialParticle] = Ribbon->bSpawnInitialParticle;
+		Object[ParticleKeys::RenderAxis] = static_cast<int32>(Ribbon->RenderAxis);
+		Object[ParticleKeys::TangentSpawningScalar] = Ribbon->TangentSpawningScalar;
+		Object[ParticleKeys::bRenderGeometry] = Ribbon->bRenderGeometry;
+		Object[ParticleKeys::bRenderSpawnPoints] = Ribbon->bRenderSpawnPoints;
+		Object[ParticleKeys::bRenderTangents] = Ribbon->bRenderTangents;
+		Object[ParticleKeys::bRenderTessellation] = Ribbon->bRenderTessellation;
+		Object[ParticleKeys::TilingDistance] = Ribbon->TilingDistance;
+		Object[ParticleKeys::DistanceTessellationStepSize] = Ribbon->DistanceTessellationStepSize;
+		Object[ParticleKeys::bEnableTangentDiffInterpScale] = Ribbon->bEnableTangentDiffInterpScale;
+		Object[ParticleKeys::TangentTessellationScalar] = Ribbon->TangentTessellationScalar;
+		Object[ParticleKeys::Width] = Ribbon->Width;
+		Object[ParticleKeys::Color] = MakeVectorJSON(Ribbon->Color);
+		Object[ParticleKeys::Alpha] = Ribbon->Alpha;
 	}
 
 	return Object;
@@ -416,62 +463,95 @@ UParticleModuleTypeDataBase* DeserializeTypeDataModule(json::JSON& Object, UPart
 	}
 
 	const FString Type = Object[ParticleKeys::Type].ToString();
-	if (Type != ParticleKeys::Beam2)
+	if (Type == ParticleKeys::Beam2)
 	{
-		return nullptr;
-	}
-
-	UParticleModuleTypeDataBeam2* Beam = GUObjectArray.CreateObject<UParticleModuleTypeDataBeam2>(Outer);
-	if (Object.hasKey(ParticleKeys::BeamMethod))
-	{
-		const int32 Value = static_cast<int32>(Object[ParticleKeys::BeamMethod].ToInt());
-		Beam->BeamMethod = static_cast<EBeam2Method>(std::clamp(Value, 0, static_cast<int32>(PEB2M_MAX) - 1));
-	}
-	if (Object.hasKey(ParticleKeys::InterpolationPoints)) Beam->InterpolationPoints = std::max(1, static_cast<int32>(Object[ParticleKeys::InterpolationPoints].ToInt()));
-	if (Object.hasKey(ParticleKeys::Sheets)) Beam->Sheets = std::max(1, static_cast<int32>(Object[ParticleKeys::Sheets].ToInt()));
-	if (Object.hasKey(ParticleKeys::MaxBeamCount)) Beam->MaxBeamCount = std::max(1, static_cast<int32>(Object[ParticleKeys::MaxBeamCount].ToInt()));
-	if (Object.hasKey(ParticleKeys::Speed)) Beam->Speed = std::max(0.0f, static_cast<float>(Object[ParticleKeys::Speed].ToFloat()));
-	if (Object.hasKey(ParticleKeys::bAlwaysOn)) Beam->bAlwaysOn = Object[ParticleKeys::bAlwaysOn].ToBool();
-	if (Object.hasKey(ParticleKeys::UpVectorStepSize)) Beam->UpVectorStepSize = std::max(0, static_cast<int32>(Object[ParticleKeys::UpVectorStepSize].ToInt()));
-	if (Object.hasKey(ParticleKeys::Distance)) Beam->Distance = std::max(0.0f, static_cast<float>(Object[ParticleKeys::Distance].ToFloat()));
-	Beam->SourcePoint = ReadVectorJSON(Object, ParticleKeys::SourcePoint, Beam->SourcePoint);
-	Beam->TargetPoint = ReadVectorJSON(Object, ParticleKeys::TargetPoint, Beam->TargetPoint);
-	if (Object.hasKey(ParticleKeys::Width)) Beam->Width = std::max(0.0f, static_cast<float>(Object[ParticleKeys::Width].ToFloat()));
-	if (Object.hasKey(ParticleKeys::TextureTile)) Beam->TextureTile = std::max(1, static_cast<int32>(Object[ParticleKeys::TextureTile].ToInt()));
-	if (Object.hasKey(ParticleKeys::TextureTileDistance)) Beam->TextureTileDistance = std::max(0.0f, static_cast<float>(Object[ParticleKeys::TextureTileDistance].ToFloat()));
-	Beam->Color = ReadVectorJSON(Object, ParticleKeys::Color, Beam->Color);
-	if (Object.hasKey(ParticleKeys::Alpha)) Beam->Alpha = std::clamp(static_cast<float>(Object[ParticleKeys::Alpha].ToFloat()), 0.0f, 1.0f);
-	if (Object.hasKey(ParticleKeys::BranchParentName)) Beam->BranchParentName = FName(Object[ParticleKeys::BranchParentName].ToString());
-	if (Object.hasKey(ParticleKeys::TaperMethod))
-	{
-		const int32 Value = static_cast<int32>(Object[ParticleKeys::TaperMethod].ToInt());
-		Beam->TaperMethod = static_cast<EBeamTaperMethod>(std::clamp(Value, 0, static_cast<int32>(PEBTM_MAX) - 1));
-	}
-	if (Object.hasKey(ParticleKeys::TaperFactor)) Beam->TaperFactor = std::max(0.0f, static_cast<float>(Object[ParticleKeys::TaperFactor].ToFloat()));
-	if (Object.hasKey(ParticleKeys::TaperScale)) Beam->TaperScale = std::max(0.0f, static_cast<float>(Object[ParticleKeys::TaperScale].ToFloat()));
-	if (Object.hasKey(ParticleKeys::bRenderGeometry)) Beam->bRenderGeometry = Object[ParticleKeys::bRenderGeometry].ToBool();
-	if (Object.hasKey(ParticleKeys::bRenderDirectLine)) Beam->bRenderDirectLine = Object[ParticleKeys::bRenderDirectLine].ToBool();
-	if (Object.hasKey(ParticleKeys::bRenderLines)) Beam->bRenderLines = Object[ParticleKeys::bRenderLines].ToBool();
-	if (Object.hasKey(ParticleKeys::bRenderTessellation)) Beam->bRenderTessellation = Object[ParticleKeys::bRenderTessellation].ToBool();
-
-	if (Object.hasKey(ParticleKeys::TargetData))
-	{
-		for (auto& TargetObject : Object[ParticleKeys::TargetData].ArrayRange())
+		UParticleModuleTypeDataBeam2* Beam = GUObjectArray.CreateObject<UParticleModuleTypeDataBeam2>(Outer);
+		if (Object.hasKey(ParticleKeys::BeamMethod))
 		{
-			FBeamTargetData Target;
-			if (TargetObject.hasKey(ParticleKeys::TargetName))
-			{
-				Target.TargetName = FName(TargetObject[ParticleKeys::TargetName].ToString());
-			}
-			if (TargetObject.hasKey(ParticleKeys::TargetPercentage))
-			{
-				Target.TargetPercentage = std::clamp(static_cast<float>(TargetObject[ParticleKeys::TargetPercentage].ToFloat()), 0.0f, 100.0f);
-			}
-			Beam->TargetData.push_back(Target);
+			const int32 Value = static_cast<int32>(Object[ParticleKeys::BeamMethod].ToInt());
+			Beam->BeamMethod = static_cast<EBeam2Method>(std::clamp(Value, 0, static_cast<int32>(PEB2M_MAX) - 1));
 		}
+		if (Object.hasKey(ParticleKeys::InterpolationPoints)) Beam->InterpolationPoints = std::max(1, static_cast<int32>(Object[ParticleKeys::InterpolationPoints].ToInt()));
+		if (Object.hasKey(ParticleKeys::Sheets)) Beam->Sheets = std::max(1, static_cast<int32>(Object[ParticleKeys::Sheets].ToInt()));
+		if (Object.hasKey(ParticleKeys::MaxBeamCount)) Beam->MaxBeamCount = std::max(1, static_cast<int32>(Object[ParticleKeys::MaxBeamCount].ToInt()));
+		if (Object.hasKey(ParticleKeys::Speed)) Beam->Speed = std::max(0.0f, static_cast<float>(Object[ParticleKeys::Speed].ToFloat()));
+		if (Object.hasKey(ParticleKeys::bAlwaysOn)) Beam->bAlwaysOn = Object[ParticleKeys::bAlwaysOn].ToBool();
+		if (Object.hasKey(ParticleKeys::UpVectorStepSize)) Beam->UpVectorStepSize = std::max(0, static_cast<int32>(Object[ParticleKeys::UpVectorStepSize].ToInt()));
+		if (Object.hasKey(ParticleKeys::Distance)) Beam->Distance = std::max(0.0f, static_cast<float>(Object[ParticleKeys::Distance].ToFloat()));
+		Beam->SourcePoint = ReadVectorJSON(Object, ParticleKeys::SourcePoint, Beam->SourcePoint);
+		Beam->TargetPoint = ReadVectorJSON(Object, ParticleKeys::TargetPoint, Beam->TargetPoint);
+		if (Object.hasKey(ParticleKeys::Width)) Beam->Width = std::max(0.0f, static_cast<float>(Object[ParticleKeys::Width].ToFloat()));
+		if (Object.hasKey(ParticleKeys::TextureTile)) Beam->TextureTile = std::max(1, static_cast<int32>(Object[ParticleKeys::TextureTile].ToInt()));
+		if (Object.hasKey(ParticleKeys::TextureTileDistance)) Beam->TextureTileDistance = std::max(0.0f, static_cast<float>(Object[ParticleKeys::TextureTileDistance].ToFloat()));
+		Beam->Color = ReadVectorJSON(Object, ParticleKeys::Color, Beam->Color);
+		if (Object.hasKey(ParticleKeys::Alpha)) Beam->Alpha = std::clamp(static_cast<float>(Object[ParticleKeys::Alpha].ToFloat()), 0.0f, 1.0f);
+		if (Object.hasKey(ParticleKeys::BranchParentName)) Beam->BranchParentName = FName(Object[ParticleKeys::BranchParentName].ToString());
+		if (Object.hasKey(ParticleKeys::TaperMethod))
+		{
+			const int32 Value = static_cast<int32>(Object[ParticleKeys::TaperMethod].ToInt());
+			Beam->TaperMethod = static_cast<EBeamTaperMethod>(std::clamp(Value, 0, static_cast<int32>(PEBTM_MAX) - 1));
+		}
+		if (Object.hasKey(ParticleKeys::TaperFactor)) Beam->TaperFactor = std::max(0.0f, static_cast<float>(Object[ParticleKeys::TaperFactor].ToFloat()));
+		if (Object.hasKey(ParticleKeys::TaperScale)) Beam->TaperScale = std::max(0.0f, static_cast<float>(Object[ParticleKeys::TaperScale].ToFloat()));
+		if (Object.hasKey(ParticleKeys::bRenderGeometry)) Beam->bRenderGeometry = Object[ParticleKeys::bRenderGeometry].ToBool();
+		if (Object.hasKey(ParticleKeys::bRenderDirectLine)) Beam->bRenderDirectLine = Object[ParticleKeys::bRenderDirectLine].ToBool();
+		if (Object.hasKey(ParticleKeys::bRenderLines)) Beam->bRenderLines = Object[ParticleKeys::bRenderLines].ToBool();
+		if (Object.hasKey(ParticleKeys::bRenderTessellation)) Beam->bRenderTessellation = Object[ParticleKeys::bRenderTessellation].ToBool();
+
+		if (Object.hasKey(ParticleKeys::TargetData))
+		{
+			for (auto& TargetObject : Object[ParticleKeys::TargetData].ArrayRange())
+			{
+				FBeamTargetData Target;
+				if (TargetObject.hasKey(ParticleKeys::TargetName))
+				{
+					Target.TargetName = FName(TargetObject[ParticleKeys::TargetName].ToString());
+				}
+				if (TargetObject.hasKey(ParticleKeys::TargetPercentage))
+				{
+					Target.TargetPercentage = std::clamp(static_cast<float>(TargetObject[ParticleKeys::TargetPercentage].ToFloat()), 0.0f, 100.0f);
+				}
+				Beam->TargetData.push_back(Target);
+			}
+		}
+
+		return Beam;
 	}
 
-	return Beam;
+	if (Type == ParticleKeys::Ribbon)
+	{
+		UParticleModuleTypeDataRibbon* Ribbon = GUObjectArray.CreateObject<UParticleModuleTypeDataRibbon>(Outer);
+		if (Object.hasKey(ParticleKeys::MaxTessellationBetweenParticles)) Ribbon->MaxTessellationBetweenParticles = std::clamp(static_cast<int32>(Object[ParticleKeys::MaxTessellationBetweenParticles].ToInt()), 0, 32);
+		if (Object.hasKey(ParticleKeys::SheetsPerTrail)) Ribbon->SheetsPerTrail = std::clamp(static_cast<int32>(Object[ParticleKeys::SheetsPerTrail].ToInt()), 1, 16);
+		if (Object.hasKey(ParticleKeys::MaxTrailCount)) Ribbon->MaxTrailCount = std::clamp(static_cast<int32>(Object[ParticleKeys::MaxTrailCount].ToInt()), 1, 64);
+		if (Object.hasKey(ParticleKeys::MaxParticleInTrailCount)) Ribbon->MaxParticleInTrailCount = std::clamp(static_cast<int32>(Object[ParticleKeys::MaxParticleInTrailCount].ToInt()), 2, 1024);
+		if (Object.hasKey(ParticleKeys::bDeadTrailsOnDeactivate)) Ribbon->bDeadTrailsOnDeactivate = Object[ParticleKeys::bDeadTrailsOnDeactivate].ToBool();
+		if (Object.hasKey(ParticleKeys::bDeadTrailsOnSourceLoss)) Ribbon->bDeadTrailsOnSourceLoss = Object[ParticleKeys::bDeadTrailsOnSourceLoss].ToBool();
+		if (Object.hasKey(ParticleKeys::bClipSourceSegment)) Ribbon->bClipSourceSegment = Object[ParticleKeys::bClipSourceSegment].ToBool();
+		if (Object.hasKey(ParticleKeys::bEnablePreviousTangentRecalculation)) Ribbon->bEnablePreviousTangentRecalculation = Object[ParticleKeys::bEnablePreviousTangentRecalculation].ToBool();
+		if (Object.hasKey(ParticleKeys::bTangentRecalculationEveryFrame)) Ribbon->bTangentRecalculationEveryFrame = Object[ParticleKeys::bTangentRecalculationEveryFrame].ToBool();
+		if (Object.hasKey(ParticleKeys::bSpawnInitialParticle)) Ribbon->bSpawnInitialParticle = Object[ParticleKeys::bSpawnInitialParticle].ToBool();
+		if (Object.hasKey(ParticleKeys::RenderAxis))
+		{
+			const int32 Value = static_cast<int32>(Object[ParticleKeys::RenderAxis].ToInt());
+			Ribbon->RenderAxis = static_cast<ETrailsRenderAxisOption>(std::clamp(Value, 0, static_cast<int32>(Trails_MAX) - 1));
+		}
+		if (Object.hasKey(ParticleKeys::TangentSpawningScalar)) Ribbon->TangentSpawningScalar = std::max(0.0f, static_cast<float>(Object[ParticleKeys::TangentSpawningScalar].ToFloat()));
+		if (Object.hasKey(ParticleKeys::bRenderGeometry)) Ribbon->bRenderGeometry = Object[ParticleKeys::bRenderGeometry].ToBool();
+		if (Object.hasKey(ParticleKeys::bRenderSpawnPoints)) Ribbon->bRenderSpawnPoints = Object[ParticleKeys::bRenderSpawnPoints].ToBool();
+		if (Object.hasKey(ParticleKeys::bRenderTangents)) Ribbon->bRenderTangents = Object[ParticleKeys::bRenderTangents].ToBool();
+		if (Object.hasKey(ParticleKeys::bRenderTessellation)) Ribbon->bRenderTessellation = Object[ParticleKeys::bRenderTessellation].ToBool();
+		if (Object.hasKey(ParticleKeys::TilingDistance)) Ribbon->TilingDistance = std::max(0.0f, static_cast<float>(Object[ParticleKeys::TilingDistance].ToFloat()));
+		if (Object.hasKey(ParticleKeys::DistanceTessellationStepSize)) Ribbon->DistanceTessellationStepSize = std::max(0.0f, static_cast<float>(Object[ParticleKeys::DistanceTessellationStepSize].ToFloat()));
+		if (Object.hasKey(ParticleKeys::bEnableTangentDiffInterpScale)) Ribbon->bEnableTangentDiffInterpScale = Object[ParticleKeys::bEnableTangentDiffInterpScale].ToBool();
+		if (Object.hasKey(ParticleKeys::TangentTessellationScalar)) Ribbon->TangentTessellationScalar = std::max(0.0f, static_cast<float>(Object[ParticleKeys::TangentTessellationScalar].ToFloat()));
+		if (Object.hasKey(ParticleKeys::Width)) Ribbon->Width = std::max(0.0f, static_cast<float>(Object[ParticleKeys::Width].ToFloat()));
+		Ribbon->Color = ReadVectorJSON(Object, ParticleKeys::Color, Ribbon->Color);
+		if (Object.hasKey(ParticleKeys::Alpha)) Ribbon->Alpha = std::clamp(static_cast<float>(Object[ParticleKeys::Alpha].ToFloat()), 0.0f, 1.0f);
+		return Ribbon;
+	}
+
+	return nullptr;
 }
 
 UParticleModule* DeserializeModule(json::JSON& Object, UParticleLODLevel* Outer)
