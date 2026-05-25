@@ -625,6 +625,7 @@ void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(FDynamicBeamEmi
 	P.TextureTile         = static_cast<uint32>(std::max(1, Source.TextureTile));
 	P.TextureTileDistance = std::max(0.0f, Source.TextureTileDistance);
 	P.SheetCount          = static_cast<uint32>(SheetCount);
+	P.BeamProgress        = std::clamp(Source.BeamProgress, 0.0f, 1.0f);
 	Draw.bBeamParamCBDirty = true;
 
 	Draw.IndexCount = static_cast<uint32>(SegmentCount) * 6 * static_cast<uint32>(SheetCount);

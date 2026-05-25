@@ -67,7 +67,7 @@ void MoveBeamReplayData(FDynamicBeamEmitterReplayData& Dest, FDynamicBeamEmitter
 	Dest.Sheets = Source.Sheets;
 	Dest.LogicalBeamCount = Source.LogicalBeamCount;
 	Dest.MaxBeamCount = Source.MaxBeamCount;
-	Dest.Speed = Source.Speed;
+	Dest.BeamProgress = Source.BeamProgress;
 	Dest.UpVectorStepSize = Source.UpVectorStepSize;
 	Dest.TextureTile = Source.TextureTile;
 	Dest.TextureTileDistance = Source.TextureTileDistance;

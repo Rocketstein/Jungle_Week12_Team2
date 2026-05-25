@@ -11,6 +11,7 @@
 void FBeam2EmitterInstance::Tick(float DeltaTime, int32 LODLevel, bool bSuppressSpawning)
 {
 	FParticleEmitterInstance::Tick(DeltaTime, LODLevel, bSuppressSpawning);
+	BeamTravelTime += DeltaTime;
 }
 
 FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
@@ -50,6 +51,11 @@ FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
 	const int32 LogicalBeamCount = BeamModule->bAlwaysOn
 		? std::clamp(std::max(1, ActiveParticles), 1, MaxBeamCount)
 		: std::clamp(ActiveParticles, 0, MaxBeamCount);
+	const float FullBeamLength = (ComponentToWorld.TransformPositionWithW(LocalTarget)
+		- ComponentToWorld.TransformPositionWithW(LocalSource)).Length();
+	const float BeamProgress = (BeamModule->Speed > 0.0f && FullBeamLength > 1e-6f)
+		? std::clamp((BeamTravelTime * BeamModule->Speed) / FullBeamLength, 0.0f, 1.0f)
+		: 1.0f;
 
 	FDynamicBeamEmitterReplayData* NewEmitterReplayData = new FDynamicBeamEmitterReplayData();
 	NewEmitterReplayData->Source = ComponentToWorld.TransformPositionWithW(LocalSource);
@@ -63,7 +69,6 @@ FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
 	NewEmitterReplayData->InterpolationPoints = std::max(0, BeamModule->InterpolationPoints);
 	NewEmitterReplayData->Sheets = SheetCount;
 	NewEmitterReplayData->MaxBeamCount = MaxBeamCount;
-	NewEmitterReplayData->Speed = std::max(0.0f, BeamModule->Speed);
 	NewEmitterReplayData->UpVectorStepSize = std::max(0, BeamModule->UpVectorStepSize);
 	NewEmitterReplayData->TaperFactor = BeamModule->TaperFactor;
 	NewEmitterReplayData->TaperMethod = BeamModule->TaperMethod;
@@ -79,6 +84,7 @@ FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
 	// Cascade reports active beam particles as logical beams multiplied by
 	// crossed sheets. The current renderer still expands one resolved beam path.
 	NewEmitterReplayData->ActiveParticleCount = LogicalBeamCount * SheetCount;
+	NewEmitterReplayData->BeamProgress = BeamProgress;
 
 	if (CurrentLODLevel->RequiredModule)
 	{

@@ -95,7 +95,6 @@ struct FDynamicBeamEmitterReplayData : public FDynamicRenderableEmitterReplayDat
 	int32 InterpolationPoints = 8;			// Number of subdivisions along the beam for curve interpolation
 	int32 Sheets = 1;						// Number of crossed quad sheets used to render the beam
 	int32 MaxBeamCount = 1;					// Max beam instances requested by type data
-	float Speed = 0.0f;						// Beam interpolation speed requested by type data
 	int32 UpVectorStepSize = 0;				// UE-compatible up-vector step hint
 
 	int32 TextureTile = 1;					// Number of times the texture tiles along the beam length
@@ -115,6 +114,8 @@ struct FDynamicBeamEmitterReplayData : public FDynamicRenderableEmitterReplayDat
 	// Number of logical beam instances. ActiveParticleCount mirrors Cascade's
 	// accounting convention: LogicalBeamCount * Sheets.
 	int32 LogicalBeamCount = 1;
+
+	float BeamProgress = 1.0f;				// 0 = at source, 1 = full target
 
 	FDynamicBeamEmitterReplayData()
 	{

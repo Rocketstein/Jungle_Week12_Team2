@@ -236,7 +236,8 @@ struct FBeamParamConstants
 	uint32  TextureTile = 1;
 	float   TextureTileDistance = 0.0f;
 	uint32  SheetCount = 1;
-	float   _Pad[2] = {};
+	float   BeamProgress = 1.0f;
+	float   _Pad = 0.0f;
 };
 static_assert(sizeof(FBeamParamConstants) == 80);
 

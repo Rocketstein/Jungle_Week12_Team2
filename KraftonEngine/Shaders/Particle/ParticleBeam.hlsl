@@ -43,9 +43,12 @@ PS_Input_Particle VS(uint vid : SV_VertexID)
 
     float3 BeamDelta = BeamTarget - BeamSource;
     float  BeamLen   = length(BeamDelta);
+    float  Progress  = saturate(BeamProgress);
+    float  VisibleLen = BeamLen * Progress;
+    float3 VisibleDelta = BeamDelta * Progress;
     float3 BeamDir   = (BeamLen > 1e-6f) ? BeamDelta / BeamLen : float3(1, 0, 0);
 
-    float3 Center    = BeamSource + BeamDelta * T;
+    float3 Center    = BeamSource + VisibleDelta * T;
     float  Taper     = ApplyBeamTaper(BeamTaperMethod, BeamTaperFactor, BeamTaperScale, T);
     float  HalfWidth = max(0.0f, BeamWidth * Taper) * 0.5f;
     float  SideSign  = (side == 0) ? -1.0f : 1.0f;
@@ -61,7 +64,7 @@ PS_Input_Particle VS(uint vid : SV_VertexID)
     float3 WorldPos  = Center + SideAxis * (HalfWidth * SideSign);
 
     float U = (BeamTextureTileDistance > 0.0f)
-        ? (BeamLen * T) / BeamTextureTileDistance
+        ? (VisibleLen * T) / BeamTextureTileDistance
         : T * (float)max(BeamTextureTile, 1u);
 
     PS_Input_Particle Out;
