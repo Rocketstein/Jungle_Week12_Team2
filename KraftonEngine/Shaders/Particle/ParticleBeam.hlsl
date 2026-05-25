@@ -10,18 +10,10 @@ Texture2D DiffuseTexture : register(t0);
 // VS:
 PS_Input_Particle VS(VS_Input_BeamParticle Input)
 {
-    float4x4 InstanceModel = float4x4(
-        Input.instanceTransform0,
-        Input.instanceTransform1,
-        Input.instanceTransform2,
-        Input.instanceTransform3);
-
     PS_Input_Particle Out;
-    float4 WorldPos = mul(float4(Input.position, 1.0f), InstanceModel);
-    float4 ViewPos = mul(WorldPos, View);
-    Out.position = mul(ViewPos, Projection);
-    Out.color = Input.color * Input.instanceColor;
-    Out.texcoord = Input.texcoord;
+    Out.position = ApplyMVP(Input.position);
+    Out.texcoord = Input.uv;
+    Out.color = Input.color;
     return Out;
 }
 
