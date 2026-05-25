@@ -8,14 +8,14 @@ void UParticleLODLevel::UpdateModuleLists()
 	SpawnModules.clear();
 	UpdateModules.clear();
 
-	if (SpawnModule)
+	if (SpawnModule && SpawnModule->bEnabled)
 	{
 		SpawningModules.push_back(SpawnModule);
 	}
 
 	for (UParticleModule* Module : Modules)
 	{
-		if (!Module)
+		if (!Module || !Module->bEnabled)
 		{
 			continue;
 		}
