@@ -96,7 +96,7 @@ struct FDynamicBeamEmitterReplayData : public FDynamicRenderableEmitterReplayDat
 	int32 Sheets = 1;
 
 	int32 TextureTile = 1;
-	float TExtureTileDistance = 0.0f;
+	float TextureTileDistance = 0.0f;
 
 	EBeamTaperMethod TaperMethod = PEBTM_None;
 	float TaperFactor = 1.0f;

@@ -43,13 +43,25 @@ FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
 	}
 	}
 
-	FDynamicEmitterReplayDataBase* NewEmitterReplayData = new FDynamicBeamEmitterReplayData();
+	FDynamicBeamEmitterReplayData* NewEmitterReplayData = new FDynamicBeamEmitterReplayData();
 
 	if (!FillReplayData(*NewEmitterReplayData))
 	{
 		delete NewEmitterReplayData;
 		return nullptr;
 	}
+
+	NewEmitterReplayData->Width = BeamModule->Width;
+	NewEmitterReplayData->Color = BeamModule->Color;
+	NewEmitterReplayData->TaperFactor = BeamModule->TaperFactor;
+	NewEmitterReplayData->TaperMethod = BeamModule->TaperMethod;
+	NewEmitterReplayData->TaperScale = BeamModule->TaperScale;
+	NewEmitterReplayData->TextureTile = BeamModule->TextureTile;
+	NewEmitterReplayData->TextureTileDistance = BeamModule->TextureTileDistance;
+	NewEmitterReplayData->bRenderDirectLine = BeamModule->bRenderDirectLine;
+	NewEmitterReplayData->bRenderGeometry = BeamModule->bRenderGeometry;
+	NewEmitterReplayData->bRenderLines = BeamModule->bRenderLines;
+	NewEmitterReplayData->bRenderTessellation = BeamModule->bRenderTessellation;
 
 	return NewEmitterReplayData;
 }
