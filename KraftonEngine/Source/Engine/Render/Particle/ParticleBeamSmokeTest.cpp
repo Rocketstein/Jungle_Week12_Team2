@@ -65,8 +65,8 @@ namespace
 		Src.Sheets               = 1;
 		Src.BeamCount            = 1;
 		Src.ActiveParticleCount  = static_cast<int32>(Src.BeamCount) * Src.Sheets;
-		Src.TextureTile          = 5;
-		Src.TextureTileDistance  = 3.0f;
+		Src.TextureTile          = 20;
+		Src.TextureTileDistance  = 0.0f;
 
 		// Exercise the taper path on half the beams; leave the rest straight so a
 		// regression in width math is easy to spot.

@@ -162,18 +162,20 @@ void FDynamicMeshEmitterDataBase::SortParticles(EParticleSortMode SortMode, cons
 	SortParticleIndices(SortMode, CameraOrigin, CameraForward, LocalToWorld, InOutIndices, Count, ParticleData, Stride);
 }
 
+// There is no per-instance / per-segment sorting in striped particles. SortMode is silenced.
 void FDynamicBeamEmitterDataBase::SortParticles(EParticleSortMode SortMode, const FVector& CameraOrigin, const FVector& CameraForward,
 	const FMatrix& LocalToWorld,
 	uint16* InOutIndices, int32 Count,
 	const uint8* ParticleData, int32 Stride)
 {
-	FDynamicEmitterDataBase::SortParticles(SortMode, CameraOrigin, CameraForward, LocalToWorld, InOutIndices, Count, ParticleData, Stride);
+	return;
+	// FDynamicEmitterDataBase::SortParticles(SortMode, CameraOrigin, CameraForward, LocalToWorld, InOutIndices, Count, ParticleData, Stride);
 }
-
 void FDynamicRibbonEmitterDataBase::SortParticles(EParticleSortMode SortMode, const FVector& CameraOrigin, const FVector& CameraForward,
 	const FMatrix& LocalToWorld,
 	uint16* InOutIndices, int32 Count,
 	const uint8* ParticleData, int32 Stride)
 {
-	FDynamicEmitterDataBase::SortParticles(SortMode, CameraOrigin, CameraForward, LocalToWorld, InOutIndices, Count, ParticleData, Stride);
+	return;
+	//FDynamicEmitterDataBase::SortParticles(SortMode, CameraOrigin, CameraForward, LocalToWorld, InOutIndices, Count, ParticleData, Stride);
 }
