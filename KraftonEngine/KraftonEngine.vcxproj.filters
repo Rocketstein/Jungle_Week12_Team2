@@ -1148,6 +1148,9 @@
     <ClCompile Include="Source\Engine\Render\Geometry\LineGeometry.cpp">
       <Filter>Source\Engine\Render\Geometry</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Render\Particle\ParticleBeamSmokeTest.cpp">
+      <Filter>Source\Engine\Render\Particle</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Render\Particle\ParticleDynamicData.cpp">
       <Filter>Source\Engine\Render\Particle</Filter>
     </ClCompile>
@@ -2191,6 +2194,9 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Geometry\LineGeometry.h">
       <Filter>Source\Engine\Render\Geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Render\Particle\ParticleBeamSmokeTest.h">
+      <Filter>Source\Engine\Render\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Render\Particle\ParticleDynamicData.h">
       <Filter>Source\Engine\Render\Particle</Filter>

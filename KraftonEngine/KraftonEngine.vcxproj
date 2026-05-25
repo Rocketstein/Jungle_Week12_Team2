@@ -544,6 +544,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Engine\Render\Device\D3DDevice.cpp" />
     <ClCompile Include="Source\Engine\Render\Geometry\FontGeometry.cpp" />
     <ClCompile Include="Source\Engine\Render\Geometry\LineGeometry.cpp" />
+    <ClCompile Include="Source\Engine\Render\Particle\ParticleBeamSmokeTest.cpp" />
     <ClCompile Include="Source\Engine\Render\Particle\ParticleDynamicData.cpp" />
     <ClCompile Include="Source\Engine\Render\Particle\ParticleMeshSmokeTest.cpp" />
     <ClCompile Include="Source\Engine\Render\Particle\ParticleSpriteSmokeTest.cpp" />
@@ -894,6 +895,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\Render\Device\D3DDevice.h" />
     <ClInclude Include="Source\Engine\Render\Geometry\FontGeometry.h" />
     <ClInclude Include="Source\Engine\Render\Geometry\LineGeometry.h" />
+    <ClInclude Include="Source\Engine\Render\Particle\ParticleBeamSmokeTest.h" />
     <ClInclude Include="Source\Engine\Render\Particle\ParticleDynamicData.h" />
     <ClInclude Include="Source\Engine\Render\Particle\ParticleMeshSmokeTest.h" />
     <ClInclude Include="Source\Engine\Render\Particle\ParticleSpriteSmokeTest.h" />
