@@ -97,8 +97,23 @@ private:
 	};
 
 	// Beam: CPU expands the camera-facing quad strip into dynamic geometry.
-	// All beams in this proxy share one dynamic VB/IB; each emitter draw stores
-	// its section range into that shared index stream.
+	//
+	// The VB/IB are owned per-proxy and shared across emitters: every beam
+	// emitter packed this frame appends its (vertices, indices) into the same
+	// two arrays and records its slice via FEmitterDraw::{FirstIndex,IndexCount}.
+	// That is what "shared" means here — a per-proxy upload, not a per-beam
+	// shape pool. Each emitter's slice carries fully independent CPU-tessellated
+	// geometry (its own Source, Target, Width, Color, Sheets, taper, …); slices
+	// do not share or reuse one another's vertices.
+	//
+	// Within a single emitter, PackEmitter currently expands one Source→Target
+	// beam (with N camera-facing Sheets). The FDynamicBeamEmitterReplayData
+	// schema carries only one Source/Target pair, so a multi-beam "flurry" is
+	// expressed today by adding multiple emitters — not by looping inside one.
+	// A proper instanced/per-beam path (per-beam Source/Target/Color, single
+	// DrawIndexedInstanced) would require extending the replay data with a
+	// per-beam array and either packing each instance's full geometry or
+	// switching to a per-instance VB stream feeding a unit-beam base mesh.
 	struct FBeamParticlePacker
 	{
 		static constexpr uint32 MaxSegmentsPerBeam = 256;
