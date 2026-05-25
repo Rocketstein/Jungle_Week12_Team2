@@ -59,6 +59,13 @@ struct VS_Input_MeshParticle
     float4 dynamicParam : INSTANCE_DYNAMICPARAM;
 };
 
+struct VS_Input_BeamParticle
+{
+    float3 position : POSITION;
+    float2 uv : TEXCOORD0;
+    float4 color : COLOR;
+};
+
 // FVertexPNCTBW (Position + Normal + Color + TexCoord + Tangent + BoneIndex + BoneWeight)
 // 사용: SkeletalMesh
 struct VS_Input_PNCTBW

@@ -34,6 +34,8 @@ public:
 	FParticleSystemSceneProxy* GetSceneProxy() const;
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 	int32 DecideLODLevel(const FParticleLODContext& Context) const;
+	void SetForcedLODLevel(int32 InLODLevel);
+	void ClearForcedLODLevel();
 	virtual void InitParticles();
 	void ResetParticles(bool bEmptyInstances = false);
 	void InitializeSystem();
@@ -46,5 +48,6 @@ public:
 
 	TArray<FParticleEmitterInstance*> EmitterInstances;
 	int32 LODLevel = 0;
+	int32 ForcedLODLevel = -1;
 	TArray<float> LODDistances;
 };

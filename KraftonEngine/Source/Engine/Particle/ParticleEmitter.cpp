@@ -87,7 +87,7 @@ void UParticleEmitter::SyncLODLevelsToSystemCount(int32 LODCount)
 
 	while (LODLevels.size() < LODCount)
 	{
-		const int32 NewLODIndex = LODLevels.size();
+		const int32 NewLODIndex = static_cast<int32>(LODLevels.size());
 		UParticleLODLevel* SourceLOD = GetBestLODLevel(NewLODIndex - 1);
 		LODLevels.push_back(DuplicateLODLevelForEmitter(SourceLOD, NewLODIndex));
 	}

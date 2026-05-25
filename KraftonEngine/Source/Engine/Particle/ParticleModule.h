@@ -53,7 +53,7 @@ public:
 	uint8 bSpawnModule : 1 = false;
 	uint8 bUpdateModule : 1 = false;
 	uint8 bFinalUpdateModule : 1 = false;
-	uint8 bEnabled : 1 = false;
+	uint8 bEnabled : 1 = true;
 	uint8 bEditable : 1 = false;
 	uint8 LODValidity = 0xff;
 
@@ -287,7 +287,14 @@ public:
 	float StartAlphaMin = 1.0f;
 	float StartAlphaMax = 1.0f;
 
+	UPROPERTY(Edit, Category="Color", DisplayName="End Color")
+	FVector EndColor = FVector::OneVector;
+
+	UPROPERTY(Edit, Category="Color", DisplayName="End Alpha", Min=0.0f, Max=1.0f, Speed=0.01f)
+	float EndAlpha = 0.0f;
+
 	void Spawn(const FSpawnContext& Context) override;
+	void Update(const FUpdateContext& Context) override;
 	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
 };
 
@@ -326,6 +333,7 @@ public:
 	virtual bool RequiresBuild() const { return false; }
 	virtual bool SupportsSpecificScreenAlignmentFlags() const { return false; }
 	virtual bool IsAMeshEmitter() const { return false; }
+	virtual bool IsABeamEmitter() const { return false; }
 };
 
 UCLASS()

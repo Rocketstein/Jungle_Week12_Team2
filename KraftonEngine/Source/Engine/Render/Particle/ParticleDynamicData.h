@@ -4,6 +4,7 @@
 #include "Math/Matrix.h"
 #include "Particle/ParticleHelper.h"
 #include "Particle/ParticleModule.h"
+#include "Particle/TypeData/ParticleModuleTypeDataBeam2.h"
 #include "Render/Types/VertexTypes.h"
 
 struct FParticleDataContainer
@@ -83,6 +84,45 @@ struct FDynamicMeshEmitterReplayData : public FDynamicRenderableEmitterReplayDat
 	}
 };
 
+struct FDynamicBeamEmitterReplayData : public FDynamicRenderableEmitterReplayDataBase
+{
+	FVector Source = FVector::ZeroVector;	// World-space start point of the beam
+	FVector Target = FVector::ZeroVector;	// World-space end point of the beam
+	FVector Color = FVector::OneVector;		// Base RGB tint applied to the beam
+	float Alpha = 1.0f;						// Opacity multiplier for the beam
+	float Width = 8.0f;						// Beam thickness in world units
+
+	int32 InterpolationPoints = 8;			// Number of subdivisions along the beam for curve interpolation
+	int32 Sheets = 1;						// Number of crossed quad sheets used to render the beam
+	int32 MaxBeamCount = 1;					// Max beam instances requested by type data
+	float Speed = 0.0f;						// Beam interpolation speed requested by type data
+	int32 UpVectorStepSize = 0;				// UE-compatible up-vector step hint
+
+	int32 TextureTile = 1;					// Number of times the texture tiles along the beam length
+	float TextureTileDistance = 0.0f;		// Distance per texture tile (overrides TextureTile when non-zero)
+
+	EBeamTaperMethod TaperMethod = PEBTM_None;	// Width taper mode along the beam (none/start/end/full)
+	float TaperFactor = 1.0f;				// Strength of the taper effect
+	float TaperScale = 1.0f;				// Additional scale applied on top of the taper
+
+	bool bRenderGeometry = true;			// Whether to render the solid beam geometry
+	bool bRenderDirectLine = false;			// Whether to render a debug straight line from Source to Target
+	bool bRenderLines = false;				// Whether to render debug lines along the interpolated path
+	bool bRenderTessellation = false;		// Whether to render debug tessellation wireframe
+	FName BranchParentName;					// Parent emitter requested by branch beams
+	TArray<FBeamTargetData> TargetData;		// Imported branch target metadata
+
+	FDynamicBeamEmitterReplayData()
+	{
+		eEmitterType = DET_Beam2;
+	}
+};
+
+struct FDynamicRibbonEmitterReplayData : public FDynamicRenderableEmitterReplayDataBase
+{
+	
+};
+
 
 // Render-side wrapper
 struct FDynamicEmitterDataBase
@@ -113,6 +153,22 @@ struct FDynamicMeshEmitterDataBase : public FDynamicEmitterDataBase
 		const uint8* ParticleData, int32 Stride) override;
 };
 
+struct FDynamicBeamEmitterDataBase : public FDynamicEmitterDataBase
+{
+	void SortParticles(EParticleSortMode SortMode, const FVector& CameraOrigin, const FVector& CameraForward,
+		const FMatrix& LocalToWorld,
+		uint16* InOutIndices, int32 Count,
+		const uint8* ParticleData, int32 Stride) override;
+};
+
+struct FDynamicRibbonEmitterDataBase : public FDynamicEmitterDataBase
+{
+	void SortParticles(EParticleSortMode SortMode, const FVector& CameraOrigin, const FVector& CameraForward,
+		const FMatrix& LocalToWorld,
+		uint16* InOutIndices, int32 Count,
+		const uint8* ParticleData, int32 Stride) override;
+};
+
 struct FDynamicSpriteEmitterData : public FDynamicSpriteEmitterDataBase
 {
 	FDynamicSpriteEmitterReplayData Source;
@@ -125,4 +181,18 @@ struct FDynamicMeshEmitterData : public FDynamicMeshEmitterDataBase
 	FDynamicMeshEmitterReplayData MeshSource;
 	const FDynamicEmitterReplayDataBase& GetSource() const override { return MeshSource; }
 	int32 GetDynamicVertexStride() const override { return sizeof(FMeshParticleInstanceVertex); }
+};
+
+struct FDynamicBeamEmitterData : public FDynamicBeamEmitterDataBase
+{
+	FDynamicBeamEmitterReplayData BeamSource;
+	const FDynamicEmitterReplayDataBase& GetSource() const override { return BeamSource; }
+	int32 GetDynamicVertexStride() const override { return sizeof(FBeamParticleInstanceVertex); }
+};
+
+struct FDynamicRibbonEmitterData : public FDynamicRibbonEmitterDataBase 
+{
+	FDynamicRibbonEmitterReplayData RibbonSource;
+	const FDynamicEmitterReplayDataBase& GetSource() const override { return RibbonSource; }
+	int32 GetDynamicVertexStride() const override { return sizeof(FRibbonParticleInstanceVertex); }
 };

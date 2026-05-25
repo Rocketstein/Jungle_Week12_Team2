@@ -28,4 +28,47 @@ uint GetParticleScreenAlignment()
     return ScreenAlignment;
 }
 
+// b3 (PerShader1): per-beam parameters. Matches FBeamParamConstants in RenderConstants.h.
+cbuffer BeamParamBuffer : register(b3)
+{
+    float3 BeamSource;
+    float  BeamWidth;
+    float3 BeamTarget;
+    float  BeamAlpha;
+    float3 BeamColor;
+    float  BeamTaperFactor;
+    float  BeamTaperScale;
+    uint   BeamTaperMethod;
+    uint   BeamPointCount;
+    uint   BeamTextureTile;
+    float  BeamTextureTileDistance;
+    uint   BeamSheetCount;
+    float2 _BeamPad;
+}
+
+static const uint BEAM_TAPER_NONE    = 0;
+static const uint BEAM_TAPER_FULL    = 1;
+static const uint BEAM_TAPER_PARTIAL = 2;
+
+float ApplyBeamTaper(uint TaperMethod, float TaperFactor, float TaperScale, float Alpha)
+{
+    Alpha = saturate(Alpha);
+    TaperScale = max(0.0f, TaperScale);
+
+    if (TaperMethod == BEAM_TAPER_FULL)
+    {
+        return (1.0f - Alpha * (1.0f - TaperFactor)) * TaperScale;
+    }
+    if (TaperMethod == BEAM_TAPER_PARTIAL)
+    {
+        if (Alpha <= TaperFactor)
+        {
+            return TaperScale;
+        }
+        float Denom = max(1.0f - TaperFactor, 1e-6f);
+        return (1.0f - (Alpha - TaperFactor) / Denom) * TaperScale;
+    }
+    return 1.0f;
+}
+
 #endif

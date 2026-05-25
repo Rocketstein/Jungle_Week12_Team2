@@ -15,14 +15,16 @@ class UEditorEngine;
 //   - this file pair
 //   - Render/Particle/ParticleSpriteSmokeTest.{h,cpp}
 //   - Render/Particle/ParticleMeshSmokeTest.{h,cpp}
+//   - Render/Particle/ParticleBeamSmokeTest.{h,cpp}
 //   - Asset/Materials/Editor/DefaultParticleSprite.mat
 //   - Asset/Materials/Editor/DefaultParticleMesh.mat
+//   - Asset/Materials/Editor/DefaultParticleBeam.mat
 // ...and remove the one-line FParticleSmokeTestPanel::Render(Editor) call
 // from EditorPlayToolbarWidget.cpp.
 // ---------------------------------------------------------------------------
 namespace FParticleSmokeTestPanel
 {
-	// Draws a small floating ImGui window with Sprite/Mesh inject buttons.
+	// Draws a small floating ImGui window with Sprite/Mesh/Beam inject buttons.
 	// Safe to call with a null Editor (no-ops).
 	void Render(UEditorEngine* Editor);
 }

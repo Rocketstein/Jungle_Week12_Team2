@@ -59,6 +59,11 @@ private:
 		mutable bool bParticleParamCBDirty = true;
 		FParticleParamConstants ParticleParams;
 
+		// Beam path: per-emitter b3 CB driving VS-side procedural geometry.
+		mutable FConstantBuffer BeamParamCB;
+		mutable bool bBeamParamCBDirty = true;
+		FBeamParamConstants BeamParams;
+
 	public:
 		uint16 GetSortingPriority() const { return SortingPriority; }
 		void SetParticleBlendRoute(EBlendState Mode);
@@ -96,6 +101,26 @@ private:
 		bool HasPackedInstances(const TArray<FEmitterDraw>& EmitterDraws) const;
 	};
 
+	// Beam: VS generates the camera-facing quad strip from a per-emitter CB.
+	// All beams in this proxy share a single static IB containing 0..MaxIndexCount-1
+	// so SV_VertexID under DrawIndexed yields the per-vertex index the VS expects.
+	struct FBeamParticlePacker
+	{
+		static constexpr uint32 MaxSegmentsPerBeam = 256;
+		static constexpr uint32 MaxSheetsPerBeam   = 16;
+		static constexpr uint32 MaxIndexCount      = MaxSegmentsPerBeam * 6 * MaxSheetsPerBeam;
+
+		void ResetFrame() { bAnyBeamReady = false; }
+		void PackEmitter(FDynamicBeamEmitterData& Emitter, FEmitterDraw& Draw);
+		bool HasReadyBeams() const { return bAnyBeamReady; }
+		bool EnsureStaticIndexBuffer(ID3D11Device* InDevice) const;
+		ID3D11Buffer* GetStaticIndexBuffer() const { return StaticIB.GetBuffer(); }
+
+	private:
+		mutable FIndexBuffer StaticIB;
+		bool bAnyBeamReady = false;
+	};
+
 	// Sorts EmitterData according to its Sorting Priority, which should be a user-defined numeric value
 	// Does NOT reorder the physical array of EmitterDraws. Fills SectionToEmitterDrawIndex instead.
 	void SortEmitters();
@@ -115,6 +140,7 @@ private:
 	FMatrix ComponentToWorld = FMatrix::Identity;
 	FSpriteParticlePacker SpritePacker;
 	FMeshParticlePacker MeshPacker;
+	FBeamParticlePacker BeamPacker;
 
 	bool bInstancePacked	  = false;
 
