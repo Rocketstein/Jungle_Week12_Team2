@@ -99,7 +99,7 @@ private:
 	// Beam is a consecutive strip of quads (often referred to as a Quad Strip) where the orientation is dynamically calculated to face the camera.
 	struct FBeamParticlePacker
 	{
-		void ResetFrame();
+		void ResetFrame() { PackedVertices.clear(); }
 		void PackEmitter(const FFrameContext& Frame, FDynamicBeamEmitterData& Emitter, FEmitterDraw& Draw);
 		bool HasPackedBeams() const;
 		void MarkGpuBuffersDirty() const;

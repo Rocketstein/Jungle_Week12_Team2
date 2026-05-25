@@ -354,6 +354,9 @@ bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevic
 	return true;
 }
 
+//============================================================================
+//	Sprite Packer
+//============================================================================
 bool FParticleSystemSceneProxy::FSpriteParticlePacker::PrepareDrawBuffer(
 	ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FDrawCommandBuffer& Out) const
 {
@@ -459,6 +462,9 @@ void FParticleSystemSceneProxy::FSpriteParticlePacker::PackEmitter(const FFrameC
 	IndexCursor += ParticleCount * 6;
 }
 
+//============================================================================
+//	Mesh Packer
+//============================================================================
 void FParticleSystemSceneProxy::FMeshParticlePacker::ResetFrame(TArray<FEmitterDraw>& EmitterDraws)
 {
 	for (FEmitterDraw& Draw : EmitterDraws)
@@ -527,6 +533,33 @@ void FParticleSystemSceneProxy::FMeshParticlePacker::PackEmitter(const FFrameCon
 	Draw.bInstanceVBDirty = true;
 }
 
+
+//============================================================================
+//	Beam Packer
+//============================================================================
+void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(const FFrameContext& Frame, FDynamicBeamEmitterData& Emitter, FEmitterDraw& Draw)
+{
+	
+}
+
+bool FParticleSystemSceneProxy::FBeamParticlePacker::HasPackedBeams() const
+{
+
+}
+
+void FParticleSystemSceneProxy::FBeamParticlePacker::MarkGpuBuffersDirty() const
+{
+
+}
+
+bool FParticleSystemSceneProxy::FBeamParticlePacker::PrepareDrawBuffer(ID3D11Device*, ID3D11DeviceContext*, FDrawCommandBuffer&) const
+{
+	
+}
+
+//============================================================================
+//	CB
+//============================================================================
 void FParticleSystemSceneProxy::UpdateCB(FEmitterDraw& EmitterDraw, const FDynamicEmitterReplayDataBase& Source)
 {
 	const FDynamicSpriteEmitterReplayData* SpriteSource = dynamic_cast<const FDynamicSpriteEmitterReplayData*>(&Source);
