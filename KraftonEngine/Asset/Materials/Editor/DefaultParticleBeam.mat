@@ -1,5 +1,5 @@
 {
-  "BlendState" : "AlphaBlend",
+  "BlendState" : "Additive",
   "DepthStencilState" : "DepthReadOnly",
   "Origin" : "Editor",
   "Parameters" : {

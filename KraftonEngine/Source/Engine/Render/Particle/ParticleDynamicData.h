@@ -117,12 +117,17 @@ struct FDynamicBeamEmitterReplayData : public FDynamicRenderableEmitterReplayDat
 	FDynamicBeamEmitterReplayData()
 	{
 		eEmitterType = DET_Beam2;
+		SortMode = PSORTMODE_None;
 	}
 };
 
 struct FDynamicRibbonEmitterReplayData : public FDynamicRenderableEmitterReplayDataBase
 {
-	
+	FDynamicRibbonEmitterReplayData()
+	{
+		eEmitterType = DET_Ribbon;
+		SortMode = PSORTMODE_None;
+	}
 };
 
 
