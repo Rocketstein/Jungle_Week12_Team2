@@ -27,6 +27,13 @@ namespace
 {
 	static uint32 GNextMaterialEditorInstanceId = 0;
 
+	const char* GBlendModeNames[] =
+	{
+		"Opaque",
+		"AlphaBlend",
+		"Additive"
+	};
+
 	bool IsColorTextureSlot(const FString& SlotName)
 	{
 		return SlotName == "DiffuseTexture"
@@ -385,14 +392,117 @@ bool FMaterialEditorWidget::RenderDetailsPanel(UMaterial* Material)
 	ImGui::TextUnformatted("Material Details");
 	ImGui::Separator();
 
-	if (ImGui::CollapsingHeader("Shader Parameters", ImGuiTreeNodeFlags_DefaultOpen))
+	if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		bChanged |= RenderShaderParameters(Material);
+		bChanged |= RenderRenderStateControls(Material);
 	}
 
 	if (ImGui::CollapsingHeader("Textures", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		bChanged |= RenderTextureSlots(Material);
+	}
+
+	if (ImGui::CollapsingHeader("Particle", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		bChanged |= RenderParticleSettings(Material);
+	}
+
+	if (ImGui::CollapsingHeader("Shader Parameters", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		bChanged |= RenderShaderParameters(Material);
+	}
+
+	return bChanged;
+}
+
+bool FMaterialEditorWidget::RenderRenderStateControls(UMaterial* Material)
+{
+	if (!Material)
+	{
+		return false;
+	}
+
+	int BlendMode = 0;
+	switch (Material->GetBlendState())
+	{
+	case EBlendState::AlphaBlend:
+		BlendMode = 1;
+		break;
+	case EBlendState::Additive:
+		BlendMode = 2;
+		break;
+	case EBlendState::Opaque:
+	default:
+		BlendMode = 0;
+		break;
+	}
+
+	if (!ImGui::Combo("Blend Mode", &BlendMode, GBlendModeNames, IM_ARRAYSIZE(GBlendModeNames)))
+	{
+		return false;
+	}
+
+	switch (BlendMode)
+	{
+	case 1:
+		Material->SetRenderPass(ERenderPass::AlphaBlend);
+		Material->SetBlendState(EBlendState::AlphaBlend);
+		Material->SetDepthStencilState(EDepthStencilState::DepthReadOnly);
+		break;
+	case 2:
+		Material->SetRenderPass(ERenderPass::AlphaBlend);
+		Material->SetBlendState(EBlendState::Additive);
+		Material->SetDepthStencilState(EDepthStencilState::DepthReadOnly);
+		break;
+	case 0:
+	default:
+		Material->SetRenderPass(ERenderPass::Opaque);
+		Material->SetBlendState(EBlendState::Opaque);
+		Material->SetDepthStencilState(EDepthStencilState::Default);
+		break;
+	}
+
+	if (PreviewMeshComponent)
+	{
+		PreviewMeshComponent->SetMaterial(0, Material);
+	}
+	return true;
+}
+
+bool FMaterialEditorWidget::RenderParticleSettings(UMaterial* Material)
+{
+	if (!Material)
+	{
+		return false;
+	}
+
+	bool bChanged = false;
+	FMaterialParticleSettings Settings = Material->GetParticleSettings();
+
+	bool bUseSubUV = Settings.bUseSubUV;
+	if (ImGui::Checkbox("Use SubUV Atlas", &bUseSubUV))
+	{
+		Settings.bUseSubUV = bUseSubUV;
+		bChanged = true;
+	}
+
+	int Columns = static_cast<int>(Settings.SubUVColumns < 1u ? 1u : Settings.SubUVColumns);
+	if (ImGui::DragInt("SubUV Columns", &Columns, 1.0f, 1, 64))
+	{
+		Settings.SubUVColumns = static_cast<uint32>(Columns < 1 ? 1 : Columns);
+		bChanged = true;
+	}
+
+	int Rows = static_cast<int>(Settings.SubUVRows < 1u ? 1u : Settings.SubUVRows);
+	if (ImGui::DragInt("SubUV Rows", &Rows, 1.0f, 1, 64))
+	{
+		Settings.SubUVRows = static_cast<uint32>(Rows < 1 ? 1 : Rows);
+		bChanged = true;
+	}
+
+	if (bChanged)
+	{
+		Material->SetParticleSettings(Settings);
 	}
 
 	return bChanged;
@@ -413,6 +523,10 @@ bool FMaterialEditorWidget::RenderShaderParameters(UMaterial* Material)
 		const FString& ParamName = Pair.first;
 		const FMaterialParameterInfo* Info = Pair.second;
 		if (!Info)
+		{
+			continue;
+		}
+		if (ParamName == "SubUVCols" || ParamName == "SubUVRows")
 		{
 			continue;
 		}

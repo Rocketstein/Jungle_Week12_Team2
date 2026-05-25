@@ -215,8 +215,12 @@ struct FParticleParamConstants
 	float _Pad = 0.0f;
 	FVector EmitterOrigin = FVector::ZeroVector;
 	float _Pad1 = 0.0f;
+	uint32 AlphaSource = 0;
+	float AlphaThreshold = 0.0f;
+	float AlphaPower = 1.0f;
+	float ColorIntensity = 1.0f;
 };
-static_assert(sizeof(FParticleParamConstants) == 32);
+static_assert(sizeof(FParticleParamConstants) == 48);
 
 struct FGizmoConstants
 {

@@ -18,5 +18,11 @@ class UParticleSystem : public UFXSystemAsset
 public:
 	GENERATED_BODY(UParticleSystem)
 
+	const FString& GetAssetPathFileName() const override { return AssetPathFileName; }
+	void SetAssetPathFileName(const FString& InPath) { AssetPathFileName = InPath; }
+
 	TArray<UParticleEmitter*> Emitters;
+
+private:
+	FString AssetPathFileName;
 };

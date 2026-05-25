@@ -10,6 +10,10 @@ cbuffer ParticleParamBuffer : register(b2)
     float _Pad;
     float3 EmitterOrigin;
     float _Pad1;
+    uint AlphaSource;
+    float AlphaThreshold;
+    float AlphaPower;
+    float ColorIntensity;
 }
 
 static const uint PARTICLE_SCREEN_ALIGNMENT_SQUARE = 0;

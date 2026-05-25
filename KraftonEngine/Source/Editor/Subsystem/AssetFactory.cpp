@@ -7,6 +7,8 @@
 #include "FloatCurve/FloatCurveManager.h"
 #include "FloatCurve/FloatCurveAsset.h"
 #include "Object/ObjectFactory.h"
+#include "Particle/ParticleSystem.h"
+#include "Particle/ParticleSystemManager.h"
 #include "Platform/Paths.h"
 
 #include <filesystem>
@@ -128,6 +130,32 @@ bool FAssetFactory::CreateAnimInstanceAsset(const FString& DirectoryPath, const 
 	Graph.Nodes.push_back(OutputNode);
 
 	bool bSaved = FAnimInstanceAssetManager::Get().Save(NewAsset);
+	GUObjectArray.DestroyObject(NewAsset);
+
+	if (!bSaved)
+	{
+		return false;
+	}
+
+	OutCreatedPath = FPaths::ToUtf8(AssetPath.wstring());
+	return true;
+}
+
+bool FAssetFactory::CreateParticleSystem(const FString& DirectoryPath, const FString& AssetName, FString& OutCreatedPath)
+{
+	const std::filesystem::path Directory(FPaths::ToWide(DirectoryPath));
+	if (!std::filesystem::exists(Directory) || !std::filesystem::is_directory(Directory))
+	{
+		return false;
+	}
+
+	const FString DefaultName = AssetName.empty() ? FString("NewParticleSystem") : AssetName;
+	const std::filesystem::path AssetPath = BuildUniqueAssetPath(Directory, DefaultName, L".uasset");
+
+	UParticleSystem* NewAsset = GUObjectArray.CreateObject<UParticleSystem>();
+	NewAsset->SetAssetPathFileName(FPaths::ToUtf8(AssetPath.wstring()));
+
+	bool bSaved = FParticleSystemManager::Get().Save(NewAsset);
 	GUObjectArray.DestroyObject(NewAsset);
 
 	if (!bSaved)

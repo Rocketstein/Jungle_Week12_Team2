@@ -24,6 +24,14 @@ public:
 	void SetPreviewActor(AActor* InActor) { PreviewActor = InActor; }
 	void SetPreviewMeshComponent(UStaticMeshComponent* InComp) { PreviewMeshComponent = InComp; }
 	void SetViewportRect(float X, float Y, float Width, float Height) { ViewportScreenRect = { X, Y, Width, Height }; }
+	void SetClearColor(float R, float G, float B, float A = 1.0f)
+	{
+		ClearColor[0] = R;
+		ClearColor[1] = G;
+		ClearColor[2] = B;
+		ClearColor[3] = A;
+	}
+	void QueueScrollInput(float ScrollNotches) { PendingScrollNotches += ScrollNotches; }
 
 	bool IsRenderable() const override { return bIsRenderable; }
 	bool IsMouseOverViewport() const override;
@@ -33,6 +41,7 @@ public:
 
 	FViewportRenderOptions& GetRenderOptions() override { return RenderOptions; }
 	const FViewportRenderOptions& GetRenderOptions() const override { return RenderOptions; }
+	const float* GetClearColor() const override { return ClearColor; }
 
 	void NotifyViewportResized(int32 NewWidth, int32 NewHeight) override;
 	bool GetCameraView(FMinimalViewInfo& OutPOV) const override;
@@ -49,6 +58,7 @@ private:
 	FViewport* Viewport = nullptr;
 	FWindowsWindow* Window = nullptr;
 	FViewportRenderOptions RenderOptions;
+	float ClearColor[4] = { 0.12f, 0.12f, 0.13f, 1.0f };
 
 	UWorld* PreviewWorld = nullptr;
 	AActor* PreviewActor = nullptr;
@@ -64,4 +74,5 @@ private:
 	FVector LastAppliedCameraLocation;
 	bool bLastAppliedCameraLocationInitialized = false;
 	const float SmoothLocationSpeed = 10.0f;
+	float PendingScrollNotches = 0.0f;
 };

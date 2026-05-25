@@ -602,6 +602,9 @@
     <ClCompile Include="Source\Editor\UI\Asset\MeshEditorWidget.cpp">
       <Filter>Source\Editor\UI\Asset</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\UI\Asset\ParticleEditorWidget.cpp">
+      <Filter>Source\Editor\UI\Asset</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Editor\UI\Asset\StaticMeshEditorWidget.cpp">
       <Filter>Source\Editor\UI\Asset</Filter>
     </ClCompile>
@@ -1073,6 +1076,9 @@
     <ClCompile Include="Source\Engine\Particle\ParticleSystem.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleSystemManager.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Physics\NativePhysicsScene.cpp">
       <Filter>Source\Engine\Physics</Filter>
     </ClCompile>
@@ -1503,6 +1509,9 @@
       <Filter>Source\Editor\UI\Asset</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\Asset\MeshEditorWidget.h">
+      <Filter>Source\Editor\UI\Asset</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\UI\Asset\ParticleEditorWidget.h">
       <Filter>Source\Editor\UI\Asset</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\UI\Asset\StaticMeshEditorWidget.h">
@@ -2088,6 +2097,9 @@
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleSystem.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleSystemManager.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Physics\IPhysicsScene.h">

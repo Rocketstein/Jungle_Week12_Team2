@@ -18,6 +18,10 @@ namespace MatKeys
 	static constexpr const char* RasterizerState = "RasterizerState";
 	static constexpr const char* Parameters = "Parameters";
 	static constexpr const char* Textures = "Textures";
+	static constexpr const char* Particle = "Particle";
+	static constexpr const char* UseSubUV = "UseSubUV";
+	static constexpr const char* SubUVColumns = "SubUVColumns";
+	static constexpr const char* SubUVRows = "SubUVRows";
 }
 
 class FMaterialTemplate;
@@ -66,6 +70,7 @@ private:
 
 	void ApplyParameters(UMaterial* Material, json::JSON& JsonData);
 	void ApplyTextures(UMaterial* Material, json::JSON& JsonData);
+	void ApplyParticleSettings(UMaterial* Material, json::JSON& JsonData);
 
 	ERenderPass StringToRenderPass(const FString& Str) const;
 	EBlendState StringToBlendState(const FString& Str, ERenderPass Pass) const;
