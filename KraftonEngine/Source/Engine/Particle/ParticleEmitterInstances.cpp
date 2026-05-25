@@ -205,6 +205,8 @@ void FParticleEmitterInstance::Tick_ModuleUpdate(float DeltaTime, UParticleLODLe
 	}
 
 	UParticleLODLevel* HighestLODLevel = SpriteTemplate ? SpriteTemplate->GetLODLevel(0) : nullptr;
+	
+	// Update modules are processed in order, and the same module in different LOD levels shares the same instance data offset.
 	for (int32 ModuleIndex = 0; ModuleIndex < static_cast<int32>(InCurrentLODLevel->UpdateModules.size()); ++ModuleIndex)
 	{
 		UParticleModule* Module = InCurrentLODLevel->UpdateModules[ModuleIndex];
@@ -277,27 +279,70 @@ float FParticleEmitterInstance::Tick_SpawnParticles(float DeltaTime, UParticleLO
 
 float FParticleEmitterInstance::Spawn(float DeltaTime)
 {
-	if (!CurrentLODLevel || !CurrentLODLevel->SpawnModule)
+	if (!CurrentLODLevel)
 	{
 		return SpawnFraction;
 	}
 
-	const float SpawnRate = std::max(0.0f, CurrentLODLevel->SpawnModule->Rate);
-	if (SpawnRate <= 0.0f)
-	{
-		return SpawnFraction;
-	}
-
+	float SpawnRate = 0.0f;
+	int32 SpawnCount = 0;
+	int32 BurstCount = 0;
 	const float OldLeftover = SpawnFraction;
+	bool bProcessSpawnRate = true;
+	bool bProcessBurstList = true;
+	UParticleLODLevel* HighestLODLevel = SpriteTemplate ? SpriteTemplate->GetLODLevel(0) : nullptr;
+
+	for (int32 SpawnModIndex = 0; SpawnModIndex < static_cast<int32>(CurrentLODLevel->SpawningModules.size()); ++SpawnModIndex)
+	{
+		UParticleModuleSpawnBase* SpawnModule = CurrentLODLevel->SpawningModules[SpawnModIndex];
+		if (!SpawnModule || !SpawnModule->bEnabled)
+		{
+			continue;
+		}
+
+		UParticleModule* OffsetModule = (HighestLODLevel && SpawnModIndex < static_cast<int32>(HighestLODLevel->SpawningModules.size()))
+			? HighestLODLevel->SpawningModules[SpawnModIndex]
+			: SpawnModule;
+		const uint32 Offset = GetModuleDataOffset(OffsetModule);
+
+		int32 Number = 0;
+		float Rate = 0.0f;
+		if (!SpawnModule->GetSpawnAmount({ *this }, static_cast<int32>(Offset), OldLeftover, DeltaTime, Number, Rate))
+		{
+			bProcessSpawnRate = false;
+		}
+
+		SpawnCount += std::max(0, Number);
+		SpawnRate += std::max(0.0f, Rate);
+
+		int32 BurstNumber = 0;
+		if (!SpawnModule->GetBurstCount(this, static_cast<int32>(Offset), OldLeftover, DeltaTime, BurstNumber))
+		{
+			bProcessBurstList = false;
+		}
+		BurstCount += std::max(0, BurstNumber);
+	}
+
+	(void)bProcessSpawnRate;
+	(void)bProcessBurstList;
+
+	if (SpawnRate <= 0.0f && SpawnCount <= 0 && BurstCount <= 0)
+	{
+		return SpawnFraction;
+	}
+
 	float NewLeftover = OldLeftover + std::max(0.0f, DeltaTime) * SpawnRate;
-	const int32 Number = static_cast<int32>(std::floor(NewLeftover));
+	int32 Number = static_cast<int32>(std::floor(NewLeftover));
 	const float Increment = SpawnRate > 0.0f ? 1.0f / SpawnRate : 0.0f;
 	const float StartTime = DeltaTime + OldLeftover * Increment - Increment;
 	NewLeftover = NewLeftover - static_cast<float>(Number);
+	Number += SpawnCount;
 
-	if (Number > 0)
+	if (Number > 0 || BurstCount > 0)
 	{
 		SpawnParticles(Number, StartTime, Increment, Location, FVector::ZeroVector, nullptr);
+		SpawnParticles(BurstCount, 0.0f, BurstCount > 0 ? DeltaTime / static_cast<float>(BurstCount) : 0.0f,
+			Location, FVector::ZeroVector, nullptr);
 	}
 
 	return NewLeftover;
