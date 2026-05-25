@@ -4,6 +4,7 @@
 #include "Math/Matrix.h"
 #include "Particle/ParticleHelper.h"
 #include "Particle/ParticleModule.h"
+#include "Particle/TypeData/ParticleModuleTypeDataBeam2.h"
 #include "Render/Types/VertexTypes.h"
 
 struct FParticleDataContainer
@@ -85,7 +86,31 @@ struct FDynamicMeshEmitterReplayData : public FDynamicRenderableEmitterReplayDat
 
 struct FDynamicBeamEmitterReplayData : public FDynamicRenderableEmitterReplayDataBase
 {
-	
+	FVector Source;
+	FVector Target;
+	FVector Color;
+	float Alpha = 1.0f;
+	float Width = 8.0f;
+
+	int32 InterpolationPoints = 8;
+	int32 Sheets = 1;
+
+	int32 TextureTile = 1;
+	float TExtureTileDistance = 0.0f;
+
+	EBeamTaperMethod TaperMethod = PEBTM_None;
+	float TaperFactor = 1.0f;
+	float TaperScale = 1.0f;
+
+	bool bRenderGeometry = true;
+	bool bRenderDirectLine = false;
+	bool bRenderLines = false;
+	bool bRenderTessellation = false;
+
+	FDynamicBeamEmitterReplayData()
+	{
+		eEmitterType =DET_Beam2;
+	}
 };
 
 struct FDynamicRibbonEmitterReplayData : public FDynamicRenderableEmitterReplayDataBase
