@@ -150,12 +150,18 @@ struct FDynamicMeshEmitterDataBase : public FDynamicEmitterDataBase
 
 struct FDynamicBeamEmitterDataBase : public FDynamicEmitterDataBase
 {
-
+	void SortParticles(EParticleSortMode SortMode, const FVector& CameraOrigin, const FVector& CameraForward,
+		const FMatrix& LocalToWorld,
+		uint16* InOutIndices, int32 Count,
+		const uint8* ParticleData, int32 Stride) override;
 };
 
 struct FDynamicRibbonEmitterDataBase : public FDynamicEmitterDataBase
 {
-
+	void SortParticles(EParticleSortMode SortMode, const FVector& CameraOrigin, const FVector& CameraForward,
+		const FMatrix& LocalToWorld,
+		uint16* InOutIndices, int32 Count,
+		const uint8* ParticleData, int32 Stride) override;
 };
 
 struct FDynamicSpriteEmitterData : public FDynamicSpriteEmitterDataBase
