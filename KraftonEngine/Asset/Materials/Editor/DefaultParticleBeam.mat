@@ -1,5 +1,5 @@
 {
-  "BlendState" : "Additive",
+  "BlendState" : "AlphaBlend",
   "DepthStencilState" : "DepthReadOnly",
   "Origin" : "Editor",
   "Parameters" : {
@@ -22,6 +22,6 @@
   "RenderPass" : "AlphaBlend",
   "ShaderPath" : "Shaders/Particle/ParticleBeam.hlsl",
   "Textures" : {
-    "DiffuseTexture" : "Asset/Particle/Textures/T_Flare_A.PNG"
+    "DiffuseTexture" : "Asset/Particle/Textures/beacon_beam.png"
   }
 }
