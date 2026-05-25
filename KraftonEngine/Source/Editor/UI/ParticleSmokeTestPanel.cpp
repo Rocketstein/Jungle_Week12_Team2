@@ -3,6 +3,7 @@
 #include "Editor/EditorEngine.h"
 #include "Render/Particle/ParticleSpriteSmokeTest.h"
 #include "Render/Particle/ParticleMeshSmokeTest.h"
+#include "Render/Particle/ParticleBeamSmokeTest.h"
 #include "Render/Pipeline/Renderer.h"
 #include "Render/Device/D3DDevice.h"
 
@@ -36,6 +37,14 @@ void FParticleSmokeTestPanel::Render(UEditorEngine* Editor)
 			UMaterial*   Mat  = ParticleMeshSmokeTest::GetDefaultMaterial();
 			UStaticMesh* Mesh = ParticleMeshSmokeTest::GetDefaultMesh(Device);
 			ParticleMeshSmokeTest::InjectIntoWorld(World, Mat, Mesh);
+		}
+
+		ImGui::SameLine();
+
+		if (ImGui::Button("Beam Starburst"))
+		{
+			UMaterial* Mat = ParticleBeamSmokeTest::GetDefaultMaterial();
+			ParticleBeamSmokeTest::InjectIntoWorld(World, Mat);
 		}
 	}
 	ImGui::End();

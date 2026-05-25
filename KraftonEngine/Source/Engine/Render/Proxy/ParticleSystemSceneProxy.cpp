@@ -113,12 +113,21 @@ void FParticleSystemSceneProxy::UpdateMesh()
 	{
 		FEmitterDraw& Draw = EmitterDraws[i];
 
-		if (Draw.Type == DET_Sprite)
+		switch(Draw.Type)
+		{
+		case (DET_Sprite):
 		{
 			Draw.FirstIndex = 0;
 			Draw.IndexCount = 0;
+			break;
 		}
-		else if (Draw.Type == DET_Mesh)
+		case (DET_Beam2):
+		{
+			Draw.FirstIndex = 0;
+			Draw.IndexCount = 0;
+			break;
+		}
+		case (DET_Mesh):
 		{
 			const auto& Source = static_cast<const FDynamicMeshEmitterReplayData&>(
 				DynamicData[i]->GetSource());
@@ -130,6 +139,8 @@ void FParticleSystemSceneProxy::UpdateMesh()
 			Draw.InstanceCount = ParticleCount;
 			Draw.MeshGeom = Source.StaticMesh ? Source.StaticMesh->GetLODMeshBuffer(Source.LODLevel) : nullptr;
 			Draw.IndexCount = Draw.MeshGeom ? Draw.MeshGeom->GetIndexBuffer().GetIndexCount() : 0;
+			break;
+		}
 		}
 	}
 
@@ -146,6 +157,7 @@ void FParticleSystemSceneProxy::UpdatePerViewport(const FFrameContext& Frame)
 	// Reset scratch arrays. Sprite scratch is shared, mesh scratch is per-emitter.
 	SpritePacker.ResetFrame();
 	MeshPacker.ResetFrame(EmitterDraws);
+	BeamPacker.ResetFrame();
 
 	if (DynamicData.empty())
 	{
@@ -170,6 +182,15 @@ bool FParticleSystemSceneProxy::PrepareDrawBuffer(
 	if (SpritePacker.HasPackedSprites())
 	{
 		return SpritePacker.PrepareDrawBuffer(InDevice, InDeviceContext, Out);
+	}
+
+	if (BeamPacker.HasReadyBeams() && BeamPacker.EnsureStaticIndexBuffer(InDevice))
+	{
+		Out.VB         = nullptr;
+		Out.VBStride   = 0;
+		Out.IB         = BeamPacker.GetStaticIndexBuffer();
+		Out.BaseVertex = 0;
+		return Out.IB != nullptr;
 	}
 
 	for (const FEmitterDraw& Draw : EmitterDraws)
@@ -278,11 +299,19 @@ void FParticleSystemSceneProxy::PackParticles(const FFrameContext& Frame)
 			// is fixed; InstanceCount is the per-frame variable).
 			break;
 		}
+		case DET_Beam2:
+		{
+			BeamPacker.PackEmitter(static_cast<FDynamicBeamEmitterData&>(*DynamicData[DrawIndex]), Draw);
+			break;
+		}
 		default:
 			break;
 		}
 
-		if (!Draw.PackedInstances.empty() || SpritePacker.HasPackedSprites()) { bInstancePacked = true; }
+		if (!Draw.PackedInstances.empty() || SpritePacker.HasPackedSprites() || (Draw.Type == DET_Beam2 && Draw.IndexCount > 0))
+		{
+			bInstancePacked = true;
+		}
 	}
 
 	RebuildSectionDraws();
@@ -351,9 +380,37 @@ bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevic
 		Cmd.Buffer.InstancedCount    = Hit.InstanceCount;
 		Cmd.Buffer.InstanceStart     = 0;
 	}
+	else if (Hit.Type == DET_Beam2 && Hit.IndexCount > 0)
+	{
+		if (!BeamPacker.EnsureStaticIndexBuffer(InDevice))
+		{
+			return false;
+		}
+
+		if (Hit.bBeamParamCBDirty)
+		{
+			if (!Hit.BeamParamCB.GetBuffer())
+			{
+				Hit.BeamParamCB.Create(InDevice, sizeof(FBeamParamConstants), "BeamParamCB");
+			}
+			Hit.BeamParamCB.Update(InDeviceContext, &Hit.BeamParams, sizeof(FBeamParamConstants));
+			Hit.bBeamParamCBDirty = false;
+		}
+		Cmd.Bindings.PerShaderCB[1] = &Hit.BeamParamCB;
+
+		Cmd.Buffer.VB         = nullptr;
+		Cmd.Buffer.VBStride   = 0;
+		Cmd.Buffer.IB         = BeamPacker.GetStaticIndexBuffer();
+		Cmd.Buffer.FirstIndex = 0;
+		Cmd.Buffer.IndexCount = Hit.IndexCount;
+		Cmd.Buffer.BaseVertex = 0;
+	}
 	return true;
 }
 
+//============================================================================
+//	Sprite Packer
+//============================================================================
 bool FParticleSystemSceneProxy::FSpriteParticlePacker::PrepareDrawBuffer(
 	ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FDrawCommandBuffer& Out) const
 {
@@ -459,6 +516,9 @@ void FParticleSystemSceneProxy::FSpriteParticlePacker::PackEmitter(const FFrameC
 	IndexCursor += ParticleCount * 6;
 }
 
+//============================================================================
+//	Mesh Packer
+//============================================================================
 void FParticleSystemSceneProxy::FMeshParticlePacker::ResetFrame(TArray<FEmitterDraw>& EmitterDraws)
 {
 	for (FEmitterDraw& Draw : EmitterDraws)
@@ -527,6 +587,67 @@ void FParticleSystemSceneProxy::FMeshParticlePacker::PackEmitter(const FFrameCon
 	Draw.bInstanceVBDirty = true;
 }
 
+
+//============================================================================
+//	Beam Packer — VS-driven: only fills the per-emitter CB + section index range.
+//============================================================================
+void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(FDynamicBeamEmitterData& Emitter, FEmitterDraw& Draw)
+{
+	const FDynamicBeamEmitterReplayData& Source = Emitter.BeamSource;
+	Draw.FirstIndex = 0;
+	Draw.IndexCount = 0;
+
+	if (!Source.bRenderGeometry)
+		return;
+
+	const FVector BeamDelta = Source.Target - Source.Source;
+	if (BeamDelta.Length() <= 1e-6f)
+		return;
+
+	const int32 SegmentCount = std::clamp(Source.InterpolationPoints + 1,
+		1, static_cast<int32>(MaxSegmentsPerBeam));
+	const int32 PointCount = SegmentCount + 1;
+	const int32 SheetCount = std::clamp(Source.Sheets,
+		1, static_cast<int32>(MaxSheetsPerBeam));
+
+	FBeamParamConstants& P = Draw.BeamParams;
+	P.Source              = Source.Source;
+	P.Target              = Source.Target;
+	P.Width               = Source.Width;
+	P.Color               = Source.Color;
+	P.Alpha               = std::clamp(Source.Alpha, 0.0f, 1.0f);
+	P.TaperFactor         = Source.TaperFactor;
+	P.TaperScale          = Source.TaperScale;
+	P.TaperMethod         = static_cast<uint32>(Source.TaperMethod);
+	P.PointCount          = static_cast<uint32>(PointCount);
+	P.TextureTile         = static_cast<uint32>(std::max(1, Source.TextureTile));
+	P.TextureTileDistance = std::max(0.0f, Source.TextureTileDistance);
+	P.SheetCount          = static_cast<uint32>(SheetCount);
+	Draw.bBeamParamCBDirty = true;
+
+	Draw.IndexCount = static_cast<uint32>(SegmentCount) * 6 * static_cast<uint32>(SheetCount);
+	bAnyBeamReady = true;
+}
+
+bool FParticleSystemSceneProxy::FBeamParticlePacker::EnsureStaticIndexBuffer(ID3D11Device* InDevice) const
+{
+	if (StaticIB.GetBuffer())
+		return true;
+
+	TArray<uint32> Indices;
+	Indices.resize(MaxIndexCount);
+	for (uint32 i = 0; i < MaxIndexCount; ++i)
+	{
+		Indices[i] = i;
+	}
+
+	StaticIB.Create(InDevice, Indices.data(), MaxIndexCount, MaxIndexCount * sizeof(uint32));
+	return StaticIB.GetBuffer() != nullptr;
+}
+
+//============================================================================
+//	CB
+//============================================================================
 void FParticleSystemSceneProxy::UpdateCB(FEmitterDraw& EmitterDraw, const FDynamicEmitterReplayDataBase& Source)
 {
 	const FDynamicSpriteEmitterReplayData* SpriteSource = dynamic_cast<const FDynamicSpriteEmitterReplayData*>(&Source);

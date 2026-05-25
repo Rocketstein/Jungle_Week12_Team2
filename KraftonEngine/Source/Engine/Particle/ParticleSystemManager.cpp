@@ -9,6 +9,7 @@
 #include "Particle/ParticleModule.h"
 #include "Particle/ParticleSpriteEmitter.h"
 #include "Particle/ParticleSystem.h"
+#include "Particle/TypeData/ParticleModuleTypeDataBeam2.h"
 #include "Platform/Paths.h"
 #include "SimpleJSON/json.hpp"
 
@@ -29,6 +30,7 @@ namespace ParticleKeys
 	static constexpr const char* bEnabled = "bEnabled";
 	static constexpr const char* Required = "Required";
 	static constexpr const char* Spawn = "Spawn";
+	static constexpr const char* TypeData = "TypeData";
 	static constexpr const char* Modules = "Modules";
 	static constexpr const char* Type = "Type";
 	static constexpr const char* Material = "Material";
@@ -63,6 +65,33 @@ namespace ParticleKeys
 	static constexpr const char* StartSize = "StartSize";
 	static constexpr const char* StartSizeMin = "StartSizeMin";
 	static constexpr const char* StartSizeMax = "StartSizeMax";
+	static constexpr const char* Beam2 = "Beam2";
+	static constexpr const char* BeamMethod = "BeamMethod";
+	static constexpr const char* InterpolationPoints = "InterpolationPoints";
+	static constexpr const char* Sheets = "Sheets";
+	static constexpr const char* MaxBeamCount = "MaxBeamCount";
+	static constexpr const char* Speed = "Speed";
+	static constexpr const char* bAlwaysOn = "bAlwaysOn";
+	static constexpr const char* UpVectorStepSize = "UpVectorStepSize";
+	static constexpr const char* Distance = "Distance";
+	static constexpr const char* SourcePoint = "SourcePoint";
+	static constexpr const char* TargetPoint = "TargetPoint";
+	static constexpr const char* Width = "Width";
+	static constexpr const char* TextureTile = "TextureTile";
+	static constexpr const char* TextureTileDistance = "TextureTileDistance";
+	static constexpr const char* Color = "Color";
+	static constexpr const char* Alpha = "Alpha";
+	static constexpr const char* BranchParentName = "BranchParentName";
+	static constexpr const char* TaperMethod = "TaperMethod";
+	static constexpr const char* TaperFactor = "TaperFactor";
+	static constexpr const char* TaperScale = "TaperScale";
+	static constexpr const char* bRenderGeometry = "bRenderGeometry";
+	static constexpr const char* bRenderDirectLine = "bRenderDirectLine";
+	static constexpr const char* bRenderLines = "bRenderLines";
+	static constexpr const char* bRenderTessellation = "bRenderTessellation";
+	static constexpr const char* TargetData = "TargetData";
+	static constexpr const char* TargetName = "TargetName";
+	static constexpr const char* TargetPercentage = "TargetPercentage";
 }
 
 json::JSON MakeVectorJSON(const FVector& Value)
@@ -93,6 +122,28 @@ FString GetParticleMaterialPath(UMaterialInterface* MaterialInterface)
 {
 	UMaterial* Material = MaterialInterface ? MaterialInterface->GetMaterial() : nullptr;
 	return Material ? FPaths::MakeProjectRelative(Material->GetAssetPathFileName()) : FString();
+}
+
+UParticleModuleTypeDataBase* FindLODTypeDataModule(UParticleLODLevel* LOD)
+{
+	if (!LOD)
+	{
+		return nullptr;
+	}
+
+	if (LOD->TypeDataModule)
+	{
+		return LOD->TypeDataModule;
+	}
+
+	for (UParticleModule* Module : LOD->Modules)
+	{
+		if (UParticleModuleTypeDataBase* TypeData = Cast<UParticleModuleTypeDataBase>(Module))
+		{
+			return TypeData;
+		}
+	}
+	return nullptr;
 }
 
 json::JSON SerializeRequiredModule(UParticleModuleRequired* Required)
@@ -128,6 +179,55 @@ json::JSON SerializeSpawnModule(UParticleModuleSpawn* Spawn)
 	{
 		Object[ParticleKeys::Rate] = Spawn->Rate;
 	}
+	return Object;
+}
+
+json::JSON SerializeTypeDataModule(UParticleModuleTypeDataBase* TypeData)
+{
+	json::JSON Object = json::JSON::Make(json::JSON::Class::Object);
+	if (!TypeData)
+	{
+		return Object;
+	}
+
+	if (UParticleModuleTypeDataBeam2* Beam = Cast<UParticleModuleTypeDataBeam2>(TypeData))
+	{
+		Object[ParticleKeys::Type] = ParticleKeys::Beam2;
+		Object[ParticleKeys::BeamMethod] = static_cast<int32>(Beam->BeamMethod);
+		Object[ParticleKeys::InterpolationPoints] = Beam->InterpolationPoints;
+		Object[ParticleKeys::Sheets] = Beam->Sheets;
+		Object[ParticleKeys::MaxBeamCount] = Beam->MaxBeamCount;
+		Object[ParticleKeys::Speed] = Beam->Speed;
+		Object[ParticleKeys::bAlwaysOn] = Beam->bAlwaysOn;
+		Object[ParticleKeys::UpVectorStepSize] = Beam->UpVectorStepSize;
+		Object[ParticleKeys::Distance] = Beam->Distance;
+		Object[ParticleKeys::SourcePoint] = MakeVectorJSON(Beam->SourcePoint);
+		Object[ParticleKeys::TargetPoint] = MakeVectorJSON(Beam->TargetPoint);
+		Object[ParticleKeys::Width] = Beam->Width;
+		Object[ParticleKeys::TextureTile] = Beam->TextureTile;
+		Object[ParticleKeys::TextureTileDistance] = Beam->TextureTileDistance;
+		Object[ParticleKeys::Color] = MakeVectorJSON(Beam->Color);
+		Object[ParticleKeys::Alpha] = Beam->Alpha;
+		Object[ParticleKeys::BranchParentName] = Beam->BranchParentName.ToString();
+		Object[ParticleKeys::TaperMethod] = static_cast<int32>(Beam->TaperMethod);
+		Object[ParticleKeys::TaperFactor] = Beam->TaperFactor;
+		Object[ParticleKeys::TaperScale] = Beam->TaperScale;
+		Object[ParticleKeys::bRenderGeometry] = Beam->bRenderGeometry;
+		Object[ParticleKeys::bRenderDirectLine] = Beam->bRenderDirectLine;
+		Object[ParticleKeys::bRenderLines] = Beam->bRenderLines;
+		Object[ParticleKeys::bRenderTessellation] = Beam->bRenderTessellation;
+
+		json::JSON Targets = json::Array();
+		for (const FBeamTargetData& Target : Beam->TargetData)
+		{
+			json::JSON TargetObject = json::JSON::Make(json::JSON::Class::Object);
+			TargetObject[ParticleKeys::TargetName] = Target.TargetName.ToString();
+			TargetObject[ParticleKeys::TargetPercentage] = Target.TargetPercentage;
+			Targets.append(TargetObject);
+		}
+		Object[ParticleKeys::TargetData] = Targets;
+	}
+
 	return Object;
 }
 
@@ -205,6 +305,11 @@ json::JSON SerializeLODLevel(UParticleLODLevel* LOD)
 	Object[ParticleKeys::bEnabled] = LOD->bEnabled != 0;
 	Object[ParticleKeys::Required] = SerializeRequiredModule(LOD->RequiredModule);
 	Object[ParticleKeys::Spawn] = SerializeSpawnModule(LOD->SpawnModule);
+	json::JSON TypeDataObject = SerializeTypeDataModule(FindLODTypeDataModule(LOD));
+	if (TypeDataObject.hasKey(ParticleKeys::Type))
+	{
+		Object[ParticleKeys::TypeData] = TypeDataObject;
+	}
 
 	json::JSON Modules = json::Array();
 	for (UParticleModule* Module : LOD->Modules)
@@ -303,6 +408,72 @@ UParticleModuleSpawn* DeserializeSpawnModule(json::JSON& Object, UParticleLODLev
 	return Spawn;
 }
 
+UParticleModuleTypeDataBase* DeserializeTypeDataModule(json::JSON& Object, UParticleLODLevel* Outer)
+{
+	if (!Object.hasKey(ParticleKeys::Type))
+	{
+		return nullptr;
+	}
+
+	const FString Type = Object[ParticleKeys::Type].ToString();
+	if (Type != ParticleKeys::Beam2)
+	{
+		return nullptr;
+	}
+
+	UParticleModuleTypeDataBeam2* Beam = GUObjectArray.CreateObject<UParticleModuleTypeDataBeam2>(Outer);
+	if (Object.hasKey(ParticleKeys::BeamMethod))
+	{
+		const int32 Value = static_cast<int32>(Object[ParticleKeys::BeamMethod].ToInt());
+		Beam->BeamMethod = static_cast<EBeam2Method>(std::clamp(Value, 0, static_cast<int32>(PEB2M_MAX) - 1));
+	}
+	if (Object.hasKey(ParticleKeys::InterpolationPoints)) Beam->InterpolationPoints = std::max(1, static_cast<int32>(Object[ParticleKeys::InterpolationPoints].ToInt()));
+	if (Object.hasKey(ParticleKeys::Sheets)) Beam->Sheets = std::max(1, static_cast<int32>(Object[ParticleKeys::Sheets].ToInt()));
+	if (Object.hasKey(ParticleKeys::MaxBeamCount)) Beam->MaxBeamCount = std::max(1, static_cast<int32>(Object[ParticleKeys::MaxBeamCount].ToInt()));
+	if (Object.hasKey(ParticleKeys::Speed)) Beam->Speed = std::max(0.0f, static_cast<float>(Object[ParticleKeys::Speed].ToFloat()));
+	if (Object.hasKey(ParticleKeys::bAlwaysOn)) Beam->bAlwaysOn = Object[ParticleKeys::bAlwaysOn].ToBool();
+	if (Object.hasKey(ParticleKeys::UpVectorStepSize)) Beam->UpVectorStepSize = std::max(0, static_cast<int32>(Object[ParticleKeys::UpVectorStepSize].ToInt()));
+	if (Object.hasKey(ParticleKeys::Distance)) Beam->Distance = std::max(0.0f, static_cast<float>(Object[ParticleKeys::Distance].ToFloat()));
+	Beam->SourcePoint = ReadVectorJSON(Object, ParticleKeys::SourcePoint, Beam->SourcePoint);
+	Beam->TargetPoint = ReadVectorJSON(Object, ParticleKeys::TargetPoint, Beam->TargetPoint);
+	if (Object.hasKey(ParticleKeys::Width)) Beam->Width = std::max(0.0f, static_cast<float>(Object[ParticleKeys::Width].ToFloat()));
+	if (Object.hasKey(ParticleKeys::TextureTile)) Beam->TextureTile = std::max(1, static_cast<int32>(Object[ParticleKeys::TextureTile].ToInt()));
+	if (Object.hasKey(ParticleKeys::TextureTileDistance)) Beam->TextureTileDistance = std::max(0.0f, static_cast<float>(Object[ParticleKeys::TextureTileDistance].ToFloat()));
+	Beam->Color = ReadVectorJSON(Object, ParticleKeys::Color, Beam->Color);
+	if (Object.hasKey(ParticleKeys::Alpha)) Beam->Alpha = std::clamp(static_cast<float>(Object[ParticleKeys::Alpha].ToFloat()), 0.0f, 1.0f);
+	if (Object.hasKey(ParticleKeys::BranchParentName)) Beam->BranchParentName = FName(Object[ParticleKeys::BranchParentName].ToString());
+	if (Object.hasKey(ParticleKeys::TaperMethod))
+	{
+		const int32 Value = static_cast<int32>(Object[ParticleKeys::TaperMethod].ToInt());
+		Beam->TaperMethod = static_cast<EBeamTaperMethod>(std::clamp(Value, 0, static_cast<int32>(PEBTM_MAX) - 1));
+	}
+	if (Object.hasKey(ParticleKeys::TaperFactor)) Beam->TaperFactor = std::max(0.0f, static_cast<float>(Object[ParticleKeys::TaperFactor].ToFloat()));
+	if (Object.hasKey(ParticleKeys::TaperScale)) Beam->TaperScale = std::max(0.0f, static_cast<float>(Object[ParticleKeys::TaperScale].ToFloat()));
+	if (Object.hasKey(ParticleKeys::bRenderGeometry)) Beam->bRenderGeometry = Object[ParticleKeys::bRenderGeometry].ToBool();
+	if (Object.hasKey(ParticleKeys::bRenderDirectLine)) Beam->bRenderDirectLine = Object[ParticleKeys::bRenderDirectLine].ToBool();
+	if (Object.hasKey(ParticleKeys::bRenderLines)) Beam->bRenderLines = Object[ParticleKeys::bRenderLines].ToBool();
+	if (Object.hasKey(ParticleKeys::bRenderTessellation)) Beam->bRenderTessellation = Object[ParticleKeys::bRenderTessellation].ToBool();
+
+	if (Object.hasKey(ParticleKeys::TargetData))
+	{
+		for (auto& TargetObject : Object[ParticleKeys::TargetData].ArrayRange())
+		{
+			FBeamTargetData Target;
+			if (TargetObject.hasKey(ParticleKeys::TargetName))
+			{
+				Target.TargetName = FName(TargetObject[ParticleKeys::TargetName].ToString());
+			}
+			if (TargetObject.hasKey(ParticleKeys::TargetPercentage))
+			{
+				Target.TargetPercentage = std::clamp(static_cast<float>(TargetObject[ParticleKeys::TargetPercentage].ToFloat()), 0.0f, 100.0f);
+			}
+			Beam->TargetData.push_back(Target);
+		}
+	}
+
+	return Beam;
+}
+
 UParticleModule* DeserializeModule(json::JSON& Object, UParticleLODLevel* Outer)
 {
 	if (!Object.hasKey(ParticleKeys::Type))
@@ -394,6 +565,15 @@ UParticleLODLevel* DeserializeLODLevel(json::JSON& Object, UParticleEmitter* Out
 	else
 	{
 		LOD->SpawnModule = GUObjectArray.CreateObject<UParticleModuleSpawn>(LOD);
+	}
+
+	if (Object.hasKey(ParticleKeys::TypeData))
+	{
+		if (UParticleModuleTypeDataBase* TypeData = DeserializeTypeDataModule(Object[ParticleKeys::TypeData], LOD))
+		{
+			LOD->TypeDataModule = TypeData;
+			LOD->Modules.push_back(TypeData);
+		}
 	}
 
 	if (Object.hasKey(ParticleKeys::Modules))
