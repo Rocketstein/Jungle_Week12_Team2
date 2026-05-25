@@ -10,6 +10,9 @@
 #include <cstring>
 #include <utility>
 
+#include "GameFramework/World.h"
+#include "Particle/ParticleLODContext.h"
+
 namespace
 {
 void MoveReplayDataBase(FDynamicEmitterReplayDataBase& Dest, FDynamicEmitterReplayDataBase& Source)
@@ -167,11 +170,16 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 		InitializeSystem();
 	}
 
+	UWorld* World = GetWorld();
+	if (World)
+	{
+		LODLevel = DecideLODLevel(World->GetParticleLODContext());
+	}
 	for (FParticleEmitterInstance* EmitterInstance : EmitterInstances)
 	{
 		if (EmitterInstance)
 		{
-			EmitterInstance->Tick(DeltaTime, false);
+			EmitterInstance->Tick(DeltaTime, LODLevel, false);
 		}
 	}
 
@@ -204,6 +212,27 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 	ParticleSceneProxy->UpdateMesh();
 }
 
+int32 UParticleSystemComponent::DecideLODLevel(const FParticleLODContext& Context) const
+{
+	if (!Context.bValid || LODDistances.empty())
+	{
+		return 0;
+	}
+
+	const float Distance = (Context.ViewPosition - GetWorldLocation()).Length();
+	int32 SelectedLOD = 0;
+	for (int32 Index = 0; Index < static_cast<int32>(LODDistances.size()); ++Index)
+	{
+		if (Distance < LODDistances[Index])
+		{
+			break;
+		}
+		SelectedLOD = Index;
+	}
+
+	return std::clamp(SelectedLOD, 0, static_cast<int32>(LODDistances.size()) - 1);
+}
+
 void UParticleSystemComponent::InitParticles()
 {
 	ResetParticles(true);
@@ -214,6 +243,7 @@ void UParticleSystemComponent::InitParticles()
 		return;
 	}
 
+	ParticleTemplate->NormalizeLODData();
 	EmitterInstances.reserve(ParticleTemplate->Emitters.size());
 	for (UParticleEmitter* Emitter : ParticleTemplate->Emitters)
 	{
@@ -228,6 +258,8 @@ void UParticleSystemComponent::InitParticles()
 		Instance->Init();
 		EmitterInstances.push_back(Instance);
 	}
+
+	LODDistances = ParticleTemplate->GetLODDistances();
 }
 
 void UParticleSystemComponent::ResetParticles(bool bEmptyInstances)

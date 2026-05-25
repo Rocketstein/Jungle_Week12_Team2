@@ -2,6 +2,7 @@
 
 #include "Component/PrimitiveComponent.h"
 #include "Core/UObject/TSoftObjectPtr.h"
+#include "Particle/ParticleLODContext.h"
 #include "Particle/ParticleSystem.h"
 #include "ParticleSystemComponent.generated.h"
 
@@ -32,6 +33,7 @@ public:
 	FPrimitiveSceneProxy* CreateSceneProxy() override;
 	FParticleSystemSceneProxy* GetSceneProxy() const;
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
+	int32 DecideLODLevel(const FParticleLODContext& Context) const;
 	virtual void InitParticles();
 	void ResetParticles(bool bEmptyInstances = false);
 	void InitializeSystem();
@@ -44,4 +46,5 @@ public:
 
 	TArray<FParticleEmitterInstance*> EmitterInstances;
 	int32 LODLevel = 0;
+	TArray<float> LODDistances;
 };
