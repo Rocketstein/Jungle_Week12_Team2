@@ -7,6 +7,7 @@
 #include "Particle/ParticleModule.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <cstring>
 #include <cmath>
 #include <malloc.h>
@@ -20,6 +21,7 @@ FParticleEmitterInstance::FParticleEmitterInstance(UParticleSystemComponent* InC
 FParticleEmitterInstance::~FParticleEmitterInstance()
 {
 	DataContainer.Free();
+	std::free(InstanceData);
 	ParticleData = nullptr;
 	ParticleIndices = nullptr;
 	InstanceData = nullptr;
@@ -28,10 +30,56 @@ FParticleEmitterInstance::~FParticleEmitterInstance()
 void FParticleEmitterInstance::InitParameters(UParticleEmitter* InTemplate)
 {
 	SpriteTemplate = InTemplate;
+	if (SpriteTemplate)
+	{
+		SpriteTemplate->UpdateModuleLists();
+		SpriteTemplate->CacheEmitterModuleInfo();
+	}
+
 	SetCurrentLODLevel(0);
-	PayloadOffset = sizeof(FBaseParticle);
-	ParticleSize = AlignParticleDataSize(sizeof(FBaseParticle), 16);
-	ParticleStride = ParticleSize;
+	ParticleSize = SpriteTemplate ? SpriteTemplate->ParticleSize : static_cast<int32>(sizeof(FBaseParticle));
+	TypeDataOffset = SpriteTemplate ? SpriteTemplate->TypeDataOffset : 0;
+	TypeDataInstanceOffset = SpriteTemplate ? SpriteTemplate->TypeDataInstanceOffset : -1;
+
+	if (SpriteTemplate && SpriteTemplate->ReqInstanceBytes > 0)
+	{
+		if (!InstanceData || SpriteTemplate->ReqInstanceBytes > InstancePayloadSize)
+		{
+			uint8* NewInstanceData = static_cast<uint8*>(std::realloc(InstanceData, SpriteTemplate->ReqInstanceBytes));
+			if (NewInstanceData)
+			{
+				InstanceData = NewInstanceData;
+				InstancePayloadSize = SpriteTemplate->ReqInstanceBytes;
+			}
+			else
+			{
+				InstancePayloadSize = 0;
+			}
+		}
+
+		if (InstanceData)
+		{
+			std::memset(InstanceData, 0, InstancePayloadSize);
+			for (UParticleModule* ParticleModule : SpriteTemplate->ModulesNeedingInstanceData)
+			{
+				if (ParticleModule)
+				{
+					ParticleModule->PrepPerInstanceBlock(this, GetModuleInstanceData(ParticleModule));
+				}
+			}
+		}
+	}
+	else if (InstanceData)
+	{
+		std::free(InstanceData);
+		InstanceData = nullptr;
+		InstancePayloadSize = 0;
+	}
+
+	PayloadOffset = ParticleSize;
+	ParticleSize += static_cast<int32>(RequiredBytes());
+	ParticleSize = AlignParticleDataSize(ParticleSize, 16);
+	ParticleStride = static_cast<int32>(CalculateParticleStride(static_cast<uint32>(ParticleSize)));
 	ActiveParticles = 0;
 	ParticleCounter = 0;
 	SpawnFraction = 0.0f;
@@ -124,8 +172,14 @@ void FParticleEmitterInstance::Tick(float DeltaTime, int32 LODLevel, bool bSuppr
 			continue;
 		}
 
-		UParticleModule::FUpdateContext Context(*this, 0, DeltaTime);
+		UParticleModule::FUpdateContext Context(*this, static_cast<int32>(GetModuleDataOffset(Module)), DeltaTime);
 		Module->Update(Context);
+	}
+
+	if (CurrentLODLevel->TypeDataModule)
+	{
+		UParticleModule::FUpdateContext Context(*this, TypeDataOffset, DeltaTime);
+		CurrentLODLevel->TypeDataModule->Update(Context);
 	}
 
 	for (int32 ActiveIndex = ActiveParticles - 1; ActiveIndex >= 0; --ActiveIndex)
@@ -237,8 +291,14 @@ void FParticleEmitterInstance::SpawnParticles(int32 Count, float StartTime, floa
 					continue;
 				}
 
-				UParticleModule::FSpawnContext Context(*this, 0, SpawnTime, &Particle);
+				UParticleModule::FSpawnContext Context(*this, static_cast<int32>(GetModuleDataOffset(Module)), SpawnTime, &Particle);
 				Module->Spawn(Context);
+			}
+
+			if (CurrentLODLevel->TypeDataModule)
+			{
+				UParticleModule::FSpawnContext Context(*this, TypeDataOffset, SpawnTime, &Particle);
+				CurrentLODLevel->TypeDataModule->Spawn(Context);
 			}
 		}
 
@@ -363,6 +423,53 @@ bool FParticleEmitterInstance::FillReplayData(FDynamicEmitterReplayDataBase& Out
 	}
 
 	return true;
+}
+
+uint32 FParticleEmitterInstance::RequiredBytes()
+{
+	return 0;
+}
+
+uint32 FParticleEmitterInstance::GetModuleDataOffset(UParticleModule* Module)
+{
+	if (!SpriteTemplate || !Module)
+	{
+		return 0;
+	}
+
+	const auto Offset = SpriteTemplate->ModuleOffsetMap.find(Module);
+	return Offset != SpriteTemplate->ModuleOffsetMap.end() ? Offset->second : 0;
+}
+
+uint8* FParticleEmitterInstance::GetModuleInstanceData(UParticleModule* Module)
+{
+	if (!SpriteTemplate || !InstanceData || !Module)
+	{
+		return nullptr;
+	}
+
+	const auto Offset = SpriteTemplate->ModuleInstanceOffsetMap.find(Module);
+	if (Offset == SpriteTemplate->ModuleInstanceOffsetMap.end() || Offset->second >= static_cast<uint32>(InstancePayloadSize))
+	{
+		return nullptr;
+	}
+
+	return InstanceData + Offset->second;
+}
+
+uint8* FParticleEmitterInstance::GetTypeDataModuleInstanceData()
+{
+	if (!InstanceData || TypeDataInstanceOffset < 0 || TypeDataInstanceOffset >= InstancePayloadSize)
+	{
+		return nullptr;
+	}
+
+	return InstanceData + TypeDataInstanceOffset;
+}
+
+uint32 FParticleEmitterInstance::CalculateParticleStride(uint32 InParticleSize)
+{
+	return InParticleSize;
 }
 
 FBaseParticle* FParticleEmitterInstance::GetParticleDirect(int32 DirectIndex) const

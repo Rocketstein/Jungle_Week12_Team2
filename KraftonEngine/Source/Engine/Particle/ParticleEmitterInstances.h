@@ -7,6 +7,7 @@
 
 class UParticleEmitter;
 class UParticleLODLevel;
+class UParticleModule;
 class UParticleSystemComponent;
 
 struct FParticleEventInstancePayload;
@@ -30,6 +31,8 @@ struct FParticleEmitterInstance : FParticleEmitterInstanceFixLayout
 	uint16* ParticleIndices = nullptr;
 	uint8* InstanceData = nullptr;
 	int32 InstancePayloadSize = 0;
+	int32 TypeDataOffset = 0;
+	int32 TypeDataInstanceOffset = -1;
 	int32 PayloadOffset = 0;
 	int32 ParticleSize = 0;
 	int32 ParticleStride = 0;
@@ -61,6 +64,13 @@ struct FParticleEmitterInstance : FParticleEmitterInstanceFixLayout
 	virtual void KillParticle(int32 Index);
 	virtual FDynamicEmitterReplayDataBase* GetReplayData();
 	virtual bool FillReplayData(FDynamicEmitterReplayDataBase& OutData);
+
+	// Payload calculating and accessing functions
+	virtual uint32 RequiredBytes();
+	virtual uint32 GetModuleDataOffset(UParticleModule* Module);
+	virtual uint8* GetModuleInstanceData(UParticleModule* Module);
+	virtual uint8* GetTypeDataModuleInstanceData();
+	virtual uint32 CalculateParticleStride(uint32 InParticleSize);
 
 	FBaseParticle* GetParticleDirect(int32 DirectIndex) const;
 

@@ -1,5 +1,6 @@
 ﻿#include "Particle/ParticleEmitter.h"
 
+#include "Particle/ParticleHelper.h"
 #include "Particle/ParticleLODLevel.h"
 #include "Particle/ParticleModule.h"
 
@@ -155,6 +156,98 @@ bool UParticleEmitter::CalculateMaxActiveParticleCount()
 		}
 	}
 	return true;
+}
+
+void UParticleEmitter::CacheEmitterModuleInfo()
+{
+	ModuleOffsetMap.clear();
+	ModuleInstanceOffsetMap.clear();
+	ModulesNeedingInstanceData.clear();
+
+	ParticleSize = sizeof(FBaseParticle);
+	ReqInstanceBytes = 0;
+	TypeDataOffset = 0;
+	TypeDataInstanceOffset = -1;
+
+	UParticleLODLevel* HighLODLevel = GetLODLevel(0);
+	if (!HighLODLevel)
+	{
+		return;
+	}
+
+	HighLODLevel->UpdateModuleLists();
+
+	UParticleModuleTypeDataBase* HighTypeData = HighLODLevel->TypeDataModule;
+	if (HighTypeData)
+	{
+		const int32 ReqBytes = static_cast<int32>(HighTypeData->RequiredBytes(nullptr));
+		if (ReqBytes > 0)
+		{
+			TypeDataOffset = ParticleSize;
+			ParticleSize += ReqBytes;
+		}
+
+		const int32 TempInstanceBytes = static_cast<int32>(HighTypeData->RequiredBytesPerInstance());
+		if (TempInstanceBytes > 0)
+		{
+			TypeDataInstanceOffset = ReqInstanceBytes;
+			ReqInstanceBytes += TempInstanceBytes;
+		}
+	}
+
+	for (int32 ModuleIdx = 0; ModuleIdx < static_cast<int32>(HighLODLevel->Modules.size()); ++ModuleIdx)
+	{
+		UParticleModule* ParticleModule = HighLODLevel->Modules[ModuleIdx];
+		if (!ParticleModule || ParticleModule->GetModuleType() == EPMT_TypeData)
+		{
+			continue;
+		}
+
+		const int32 ReqBytes = static_cast<int32>(ParticleModule->RequiredBytes(HighTypeData));
+		if (ReqBytes > 0)
+		{
+			ModuleOffsetMap.emplace(ParticleModule, static_cast<uint32>(ParticleSize));
+			for (int32 LODIdx = 1; LODIdx < static_cast<int32>(LODLevels.size()); ++LODIdx)
+			{
+				UParticleLODLevel* CurLODLevel = LODLevels[LODIdx];
+				if (!CurLODLevel)
+				{
+					continue;
+				}
+
+				UParticleModule* LODModule = CurLODLevel->GetModuleAtIndex(ModuleIdx);
+				if (LODModule)
+				{
+					ModuleOffsetMap.emplace(LODModule, static_cast<uint32>(ParticleSize));
+				}
+			}
+			ParticleSize += ReqBytes;
+		}
+
+		const int32 TempInstanceBytes = static_cast<int32>(ParticleModule->RequiredBytesPerInstance());
+		if (TempInstanceBytes > 0)
+		{
+			ModuleInstanceOffsetMap.emplace(ParticleModule, static_cast<uint32>(ReqInstanceBytes));
+			ModulesNeedingInstanceData.push_back(ParticleModule);
+
+			for (int32 LODIdx = 1; LODIdx < static_cast<int32>(LODLevels.size()); ++LODIdx)
+			{
+				UParticleLODLevel* CurLODLevel = LODLevels[LODIdx];
+				if (!CurLODLevel)
+				{
+					continue;
+				}
+
+				UParticleModule* LODModule = CurLODLevel->GetModuleAtIndex(ModuleIdx);
+				if (LODModule)
+				{
+					ModuleInstanceOffsetMap.emplace(LODModule, static_cast<uint32>(ReqInstanceBytes));
+				}
+			}
+
+			ReqInstanceBytes += TempInstanceBytes;
+		}
+	}
 }
 
 bool UParticleEmitter::HasAnyEnabledLODs() const
