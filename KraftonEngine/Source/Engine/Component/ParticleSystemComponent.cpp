@@ -343,6 +343,7 @@ void UParticleSystemComponent::InitParticles()
 			continue;
 		}
 
+		Emitter->CalculateMaxActiveParticleCount();
 		FParticleEmitterInstance* Instance = CreateEmitterInstance(this, Emitter);
 		Instance->InitParameters(Emitter);
 		Instance->SetCurrentLODLevel(LODLevel);

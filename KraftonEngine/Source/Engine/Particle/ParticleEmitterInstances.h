@@ -48,6 +48,7 @@ struct FParticleEmitterInstance : FParticleEmitterInstanceFixLayout
 	float LastDeltaTime = 0.0f;
 	FVector Location = FVector::ZeroVector;
 	FVector OldLocation = FVector::ZeroVector;
+	TArray<uint8> BurstFired;
 
 	FParticleDataContainer DataContainer;
 
@@ -66,6 +67,8 @@ struct FParticleEmitterInstance : FParticleEmitterInstanceFixLayout
 	virtual void Tick_ModuleFinalUpdate(float DeltaTime, UParticleLODLevel* CurrentLODLevel);
 	virtual float Tick_SpawnParticles(float DeltaTime, UParticleLODLevel* CurrentLODLevel, bool bSuppressSpawning, bool bFirstTime);
 	virtual float Spawn(float DeltaTime);
+	virtual void ResetBurstList();
+	virtual int32 GetCurrentBurstCount(float DeltaTime);
 	virtual void SpawnParticles(int32 Count, float StartTime, float Increment, const FVector& InitialLocation,
 		const FVector& InitialVelocity, FParticleEventInstancePayload* EventPayload);
 	virtual void KillParticle(int32 Index);

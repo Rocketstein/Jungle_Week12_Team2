@@ -915,9 +915,9 @@ void FParticleEditorWidget::RenderToolbar()
 	ImGui::SameLine();
 
 	const int32 LODCount = GetLODCount();
-	if (DrawParticleToolbarButton("LowerLOD", L"Cascade_LowerLOD_512x.png", "Lower LOD", SelectedLODIndex >= LODCount - 1))
+	if (DrawParticleToolbarButton("LowerLOD", L"Cascade_LowerLOD_512x.png", "Lower LOD", SelectedLODIndex <= 0))
 	{
-		SetSelectedLODIndex(SelectedLODIndex + 1);
+		SetSelectedLODIndex(SelectedLODIndex - 1);
 	}
 	ImGui::SameLine();
 	if (DrawParticleToolbarButton("AddLODLeft", L"Cascade_AddLOD1_512x.png", "Add LOD", false))
@@ -939,9 +939,9 @@ void FParticleEditorWidget::RenderToolbar()
 		AddLOD();
 	}
 	ImGui::SameLine();
-	if (DrawParticleToolbarButton("HigherLOD", L"Cascade_HigherLOD_512x.png", "Higher LOD", SelectedLODIndex <= 0))
+	if (DrawParticleToolbarButton("HigherLOD", L"Cascade_HigherLOD_512x.png", "Higher LOD", SelectedLODIndex >= LODCount - 1))
 	{
-		SetSelectedLODIndex(SelectedLODIndex - 1);
+		SetSelectedLODIndex(SelectedLODIndex + 1);
 	}
 	ImGui::SameLine();
 	if (DrawParticleToolbarButton("DeleteLOD", L"Cascade_DeleteLOD_512x.png", "Delete LOD", SelectedLODIndex <= 0 || LODCount <= 1))

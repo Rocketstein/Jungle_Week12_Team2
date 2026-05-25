@@ -86,6 +86,7 @@ void FParticleEmitterInstance::InitParameters(UParticleEmitter* InTemplate)
 	SecondsSinceCreation = 0.0f;
 	EmitterTime = 0.0f;
 	LastDeltaTime = 0.0f;
+	ResetBurstList();
 
 	const int32 InitialCount = SpriteTemplate ? std::max(SpriteTemplate->InitialAllocationCount, 0) : 0;
 	Resize(InitialCount);
@@ -288,7 +289,7 @@ float FParticleEmitterInstance::Spawn(float DeltaTime)
 	int32 SpawnCount = 0;
 	int32 BurstCount = 0;
 	const float OldLeftover = SpawnFraction;
-	bool bProcessSpawnRate = true;
+	bool bProcessSpawnRate = true;  
 	bool bProcessBurstList = true;
 	UParticleLODLevel* HighestLODLevel = SpriteTemplate ? SpriteTemplate->GetLODLevel(0) : nullptr;
 
@@ -325,7 +326,10 @@ float FParticleEmitterInstance::Spawn(float DeltaTime)
 	}
 
 	(void)bProcessSpawnRate;
-	(void)bProcessBurstList;
+	if (bProcessBurstList)
+	{
+		BurstCount += GetCurrentBurstCount(DeltaTime);
+	}
 
 	if (SpawnRate <= 0.0f && SpawnCount <= 0 && BurstCount <= 0)
 	{
@@ -347,6 +351,53 @@ float FParticleEmitterInstance::Spawn(float DeltaTime)
 	}
 
 	return NewLeftover;
+}
+
+void FParticleEmitterInstance::ResetBurstList()
+{
+	const UParticleLODLevel* LODLevel = CurrentLODLevel;
+	const int32 BurstCount = (LODLevel && LODLevel->SpawnModule)
+		? static_cast<int32>(LODLevel->SpawnModule->BurstList.size())
+		: 0;
+	BurstFired.assign(static_cast<size_t>(std::max(0, BurstCount)), 0);
+}
+
+int32 FParticleEmitterInstance::GetCurrentBurstCount(float DeltaTime)
+{
+	if (!CurrentLODLevel || !CurrentLODLevel->SpawnModule)
+	{
+		return 0;
+	}
+
+	const TArray<FParticleBurst>& BurstList = CurrentLODLevel->SpawnModule->BurstList;
+	if (BurstFired.size() < BurstList.size())
+	{
+		BurstFired.resize(BurstList.size(), 0);
+	}
+
+	const float PreviousEmitterTime = std::max(0.0f, EmitterTime - std::max(0.0f, DeltaTime));
+	int32 BurstCount = 0;
+	for (int32 BurstIndex = 0; BurstIndex < static_cast<int32>(BurstList.size()); ++BurstIndex)
+	{
+		if (BurstFired[BurstIndex] != 0)
+		{
+			continue;
+		}
+
+		const FParticleBurst& Burst = BurstList[BurstIndex];
+		const float BurstTime = std::max(0.0f, Burst.Time);
+		const bool bFireThisTick = (BurstTime > PreviousEmitterTime && BurstTime <= EmitterTime)
+			|| (PreviousEmitterTime == 0.0f && BurstTime == 0.0f && EmitterTime >= 0.0f);
+		if (!bFireThisTick)
+		{
+			continue;
+		}
+
+		BurstFired[BurstIndex] = 1;
+		BurstCount += std::max(0, Burst.Count);
+	}
+
+	return BurstCount;
 }
 
 void FParticleEmitterInstance::SpawnParticles(int32 Count, float StartTime, float Increment, const FVector& InitialLocation,
