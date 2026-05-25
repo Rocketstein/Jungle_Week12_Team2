@@ -182,10 +182,12 @@ struct FDynamicBeamEmitterData : public FDynamicBeamEmitterDataBase
 {
 	FDynamicBeamEmitterReplayData BeamSource;
 	const FDynamicEmitterReplayDataBase& GetSource() const override { return BeamSource; }
+	int32 GetDynamicVertexStride() const override { return sizeof(FBeamParticleInstanceVertex); }
 };
 
 struct FDynamicRibbonEmitterData : public FDynamicRibbonEmitterDataBase 
 {
 	FDynamicRibbonEmitterReplayData RibbonSource;
 	const FDynamicEmitterReplayDataBase& GetSource() const override { return RibbonSource; }
+	int32 GetDynamicVertexStride() const override { return sizeof(FRibbonParticleInstanceVertex); }
 };

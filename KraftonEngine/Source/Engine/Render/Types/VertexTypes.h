@@ -74,6 +74,18 @@ struct FMeshParticleInstanceVertex
 	FVector4 DynamicParam;
 };
 
+struct FBeamParticleInstanceVertex
+{
+	FVector  Position;
+	FVector2 UV;
+	FVector4 Color;
+};
+
+struct FRibbonParticleInstanceVertex
+{
+	FVector Position;
+};
+
 template<typename VertexType>
 struct TMeshData
 {
