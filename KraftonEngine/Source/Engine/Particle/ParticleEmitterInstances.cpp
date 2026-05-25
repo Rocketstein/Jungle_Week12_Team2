@@ -163,31 +163,18 @@ void FParticleEmitterInstance::Tick(float DeltaTime, int32 LODLevel, bool bSuppr
 		return;
 	}
 
+	KillParticles();
+	ResetParticleParameters(DeltaTime);
+	Tick_ModuleUpdate(DeltaTime, CurrentLODLevel);
 	SpawnFraction = Tick_SpawnParticles(DeltaTime, CurrentLODLevel, bSuppressSpawning, false);
+	Tick_ModulePostUpdate(DeltaTime, CurrentLODLevel);
+	UpdateParticles(DeltaTime);
+	Tick_ModuleFinalUpdate(DeltaTime, CurrentLODLevel);
+}
 
-	UParticleLODLevel* HighestLODLevel = SpriteTemplate ? SpriteTemplate->GetLODLevel(0) : nullptr;
-	for (int32 ModuleIndex = 0; ModuleIndex < static_cast<int32>(CurrentLODLevel->UpdateModules.size()); ++ModuleIndex)
-	{
-		UParticleModule* Module = CurrentLODLevel->UpdateModules[ModuleIndex];
-		if (!Module)
-		{
-			continue;
-		}
-
-		UParticleModule* OffsetModule = (HighestLODLevel && ModuleIndex < static_cast<int32>(HighestLODLevel->UpdateModules.size()))
-			? HighestLODLevel->UpdateModules[ModuleIndex]
-			: Module;
-		UParticleModule::FUpdateContext Context(*this, static_cast<int32>(GetModuleDataOffset(OffsetModule)), DeltaTime);
-		Module->Update(Context);
-	}
-
-	if (CurrentLODLevel->TypeDataModule)
-	{
-		UParticleModule::FUpdateContext Context(*this, TypeDataOffset, DeltaTime);
-		CurrentLODLevel->TypeDataModule->Update(Context);
-	}
-
-	for (int32 ActiveIndex = ActiveParticles - 1; ActiveIndex >= 0; --ActiveIndex)
+void FParticleEmitterInstance::ResetParticleParameters(float DeltaTime)
+{
+	for (int32 ActiveIndex = 0; ActiveIndex < ActiveParticles; ++ActiveIndex)
 	{
 		FBaseParticle* Particle = GetParticleDirect(ParticleIndices[ActiveIndex]);
 		if (!Particle)
@@ -199,21 +186,78 @@ void FParticleEmitterInstance::Tick(float DeltaTime, int32 LODLevel, bool bSuppr
 		Particle->Flags &= ~STATE_Particle_JustSpawned;
 
 		Particle->Velocity = Particle->BaseVelocity;
+		Particle->Size = Particle->BaseSize;
 		Particle->RotationRate = Particle->BaseRotationRate;
-		if (!bJustSpawned)
-		{
-			Particle->Location = Particle->Location + Particle->Velocity * DeltaTime;
-			Particle->Rotation += Particle->RotationRate * DeltaTime;
-		}
+		Particle->Color = Particle->BaseColor;
 
-		if (Particle->OneOverMaxLifetime > 0.0f)
+		if (!bJustSpawned && Particle->OneOverMaxLifetime > 0.0f)
 		{
 			Particle->RelativeTime += DeltaTime * Particle->OneOverMaxLifetime;
-			if (Particle->RelativeTime >= 1.0f)
-			{
-				KillParticle(ActiveIndex);
-			}
 		}
+	}
+}
+
+void FParticleEmitterInstance::Tick_ModuleUpdate(float DeltaTime, UParticleLODLevel* InCurrentLODLevel)
+{
+	if (!InCurrentLODLevel)
+	{
+		return;
+	}
+
+	UParticleLODLevel* HighestLODLevel = SpriteTemplate ? SpriteTemplate->GetLODLevel(0) : nullptr;
+	for (int32 ModuleIndex = 0; ModuleIndex < static_cast<int32>(InCurrentLODLevel->UpdateModules.size()); ++ModuleIndex)
+	{
+		UParticleModule* Module = InCurrentLODLevel->UpdateModules[ModuleIndex];
+		if (!Module || !Module->bEnabled || !Module->bUpdateModule)
+		{
+			continue;
+		}
+
+		UParticleModule* OffsetModule = (HighestLODLevel && ModuleIndex < static_cast<int32>(HighestLODLevel->UpdateModules.size()))
+			? HighestLODLevel->UpdateModules[ModuleIndex]
+			: Module;
+		UParticleModule::FUpdateContext Context(*this, static_cast<int32>(GetModuleDataOffset(OffsetModule)), DeltaTime);
+		Module->Update(Context);
+	}
+}
+
+void FParticleEmitterInstance::Tick_ModulePostUpdate(float DeltaTime, UParticleLODLevel* InCurrentLODLevel)
+{
+	if (InCurrentLODLevel && InCurrentLODLevel->TypeDataModule)
+	{
+		UParticleModule::FUpdateContext Context(*this, TypeDataOffset, DeltaTime);
+		InCurrentLODLevel->TypeDataModule->Update(Context);
+	}
+}
+
+void FParticleEmitterInstance::Tick_ModuleFinalUpdate(float DeltaTime, UParticleLODLevel* InCurrentLODLevel)
+{
+	if (!InCurrentLODLevel)
+	{
+		return;
+	}
+
+	UParticleLODLevel* HighestLODLevel = SpriteTemplate ? SpriteTemplate->GetLODLevel(0) : nullptr;
+	for (int32 ModuleIndex = 0; ModuleIndex < static_cast<int32>(InCurrentLODLevel->UpdateModules.size()); ++ModuleIndex)
+	{
+		UParticleModule* Module = InCurrentLODLevel->UpdateModules[ModuleIndex];
+		if (!Module || !Module->bEnabled || !Module->bFinalUpdateModule)
+		{
+			continue;
+		}
+
+		UParticleModule* OffsetModule = (HighestLODLevel && ModuleIndex < static_cast<int32>(HighestLODLevel->UpdateModules.size()))
+			? HighestLODLevel->UpdateModules[ModuleIndex]
+			: Module;
+		UParticleModule::FUpdateContext Context(*this, static_cast<int32>(GetModuleDataOffset(OffsetModule)), DeltaTime);
+		Module->FinalUpdate(Context);
+	}
+
+	if (InCurrentLODLevel->TypeDataModule && InCurrentLODLevel->TypeDataModule->bEnabled
+		&& InCurrentLODLevel->TypeDataModule->bFinalUpdateModule)
+	{
+		UParticleModule::FUpdateContext Context(*this, TypeDataOffset, DeltaTime);
+		InCurrentLODLevel->TypeDataModule->FinalUpdate(Context);
 	}
 }
 
@@ -335,6 +379,38 @@ void FParticleEmitterInstance::KillParticle(int32 Index)
 	ParticleIndices[LastActiveIndex] = RemovedDirectIndex;
 
 	--ActiveParticles;
+}
+
+void FParticleEmitterInstance::KillParticles()
+{
+	for (int32 ActiveIndex = ActiveParticles - 1; ActiveIndex >= 0; --ActiveIndex)
+	{
+		FBaseParticle* Particle = GetParticleDirect(ParticleIndices[ActiveIndex]);
+		if (Particle && Particle->RelativeTime >= 1.0f)
+		{
+			KillParticle(ActiveIndex);
+		}
+	}
+}
+
+void FParticleEmitterInstance::UpdateParticles(float DeltaTime)
+{
+	for (int32 ActiveIndex = 0; ActiveIndex < ActiveParticles; ++ActiveIndex)
+	{
+		FBaseParticle* Particle = GetParticleDirect(ParticleIndices[ActiveIndex]);
+		if (!Particle)
+		{
+			continue;
+		}
+
+		if ((Particle->Flags & STATE_Particle_JustSpawned) != 0)
+		{
+			continue;
+		}
+
+		Particle->Location = Particle->Location + Particle->Velocity * DeltaTime;
+		Particle->Rotation += Particle->RotationRate * DeltaTime;
+	}
 }
 
 FDynamicEmitterReplayDataBase* FParticleEmitterInstance::GetReplayData()
