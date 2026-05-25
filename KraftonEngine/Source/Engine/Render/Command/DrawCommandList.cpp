@@ -69,7 +69,7 @@ void FDrawCommandList::Sort()
 {
 	if (Commands.size() > 1)
 	{
-		std::sort(Commands.begin(), Commands.end(),
+		std::stable_sort(Commands.begin(), Commands.end(),
 			[](const FDrawCommand& A, const FDrawCommand& B)
 			{
 				if (A.Pass != B.Pass)
