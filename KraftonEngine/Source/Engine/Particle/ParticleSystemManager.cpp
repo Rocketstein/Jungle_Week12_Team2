@@ -1,4 +1,4 @@
-#include "Particle/ParticleSystemManager.h"
+﻿#include "Particle/ParticleSystemManager.h"
 
 #include "Asset/AssetPackage.h"
 #include "Materials/Material.h"
@@ -52,6 +52,11 @@ namespace ParticleKeys
 	static constexpr const char* bKillOnDeactivate = "bKillOnDeactivate";
 	static constexpr const char* bKillOnCompleted = "bKillOnCompleted";
 	static constexpr const char* Rate = "Rate";
+	static constexpr const char* BurstList = "BurstList";
+	static constexpr const char* Count = "Count";
+	static constexpr const char* CountLow = "CountLow";
+	static constexpr const char* Time = "Time";
+	static constexpr const char* ParticleBurstMethod = "ParticleBurstMethod";
 	static constexpr const char* Lifetime = "Lifetime";
 	static constexpr const char* LifetimeMin = "LifetimeMin";
 	static constexpr const char* LifetimeMax = "LifetimeMax";
@@ -183,6 +188,18 @@ json::JSON SerializeSpawnModule(UParticleModuleSpawn* Spawn)
 	if (Spawn)
 	{
 		Object[ParticleKeys::Rate] = Spawn->Rate;
+		Object[ParticleKeys::ParticleBurstMethod] = static_cast<int32>(Spawn->ParticleBurstMethod);
+
+		json::JSON Bursts = json::Array();
+		for (const FParticleBurst& Burst : Spawn->BurstList)
+		{
+			json::JSON BurstObject = json::JSON::Make(json::JSON::Class::Object);
+			BurstObject[ParticleKeys::Count] = Burst.Count;
+			BurstObject[ParticleKeys::CountLow] = Burst.CountLow;
+			BurstObject[ParticleKeys::Time] = Burst.Time;
+			Bursts.append(BurstObject);
+		}
+		Object[ParticleKeys::BurstList] = Bursts;
 	}
 	return Object;
 }
@@ -431,6 +448,36 @@ UParticleModuleSpawn* DeserializeSpawnModule(json::JSON& Object, UParticleLODLev
 	if (Object.hasKey(ParticleKeys::Rate))
 	{
 		Spawn->Rate = std::max(0.0f, static_cast<float>(Object[ParticleKeys::Rate].ToFloat()));
+	}
+	if (Object.hasKey(ParticleKeys::ParticleBurstMethod))
+	{
+		Spawn->ParticleBurstMethod = static_cast<EParticleBurstMethod>(
+			std::clamp(static_cast<int32>(Object[ParticleKeys::ParticleBurstMethod].ToInt()), 0, static_cast<int32>(EPBM_MAX) - 1));
+	}
+	if (Object.hasKey(ParticleKeys::BurstList))
+	{
+		Spawn->BurstList.clear();
+		for (auto& BurstObject : Object[ParticleKeys::BurstList].ArrayRange())
+		{
+			FParticleBurst Burst;
+			if (BurstObject.hasKey(ParticleKeys::Count))
+			{
+				Burst.Count = std::max(0, static_cast<int32>(BurstObject[ParticleKeys::Count].ToInt()));
+			}
+			if (BurstObject.hasKey(ParticleKeys::CountLow))
+			{
+				Burst.CountLow = static_cast<int32>(BurstObject[ParticleKeys::CountLow].ToInt());
+				if (Burst.CountLow > -1)
+				{
+					Burst.CountLow = std::clamp(Burst.CountLow, 0, Burst.Count);
+				}
+			}
+			if (BurstObject.hasKey(ParticleKeys::Time))
+			{
+				Burst.Time = std::clamp(static_cast<float>(BurstObject[ParticleKeys::Time].ToFloat()), 0.0f, 1.0f);
+			}
+			Spawn->BurstList.push_back(Burst);
+		}
 	}
 	return Spawn;
 }

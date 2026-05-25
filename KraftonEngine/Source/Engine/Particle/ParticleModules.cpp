@@ -69,9 +69,7 @@ UParticleModule* UParticleModuleRequired::CloneForLOD(UParticleLODLevel* NewOute
 	Copy->bKillOnCompleted = bKillOnCompleted;
 	Copy->SortMode = SortMode;
 	Copy->EmitterDuration = EmitterDuration;
-	Copy->BurstList = BurstList;
 	Copy->EmitterDelay = EmitterDelay;
-	Copy->ParticleBurstMethod = ParticleBurstMethod;
 	Copy->EmitterLoops = EmitterLoops;
 	Copy->MaxDrawCount = MaxDrawCount;
 	return Copy;
@@ -80,6 +78,8 @@ UParticleModule* UParticleModuleRequired::CloneForLOD(UParticleLODLevel* NewOute
 UParticleModuleSpawn::UParticleModuleSpawn()
 {
 	bEnabled = true;
+	bProcessSpawnRate = true;
+	bProcessBurstList = true;
 }
 
 bool UParticleModuleSpawn::GetSpawnAmount(const FContext& Context, int32 Offset, float OldLeftover, float DeltaTime,
@@ -94,11 +94,23 @@ bool UParticleModuleSpawn::GetSpawnAmount(const FContext& Context, int32 Offset,
 	return true;
 }
 
+int32 UParticleModuleSpawn::GetMaximumBurstCount()
+{
+	int32 MaxBurst = 0;
+	for (const FParticleBurst& Burst : BurstList)
+	{
+		MaxBurst += std::max(Burst.Count, Burst.CountLow);
+	}
+	return std::max(0, MaxBurst);
+}
+
 UParticleModule* UParticleModuleSpawn::CloneForLOD(UParticleLODLevel* NewOuter) const
 {
 	UParticleModuleSpawn* Copy = GUObjectArray.CreateObject<UParticleModuleSpawn>(NewOuter);
 	CopyModuleBaseTo(Copy);
 	Copy->Rate = Rate;
+	Copy->BurstList = BurstList;
+	Copy->ParticleBurstMethod = ParticleBurstMethod;
 	return Copy;
 }
 

@@ -66,9 +66,9 @@ int32 UParticleLODLevel::CalculateMaxActiveParticleCount()
 		}
 	}
 
-	if (RequiredModule)
+	if (SpawnModule)
 	{
-		for (const FParticleBurst& Burst : RequiredModule->BurstList)
+		for (const FParticleBurst& Burst : SpawnModule->BurstList)
 		{
 			MaxBurstCount += std::max(Burst.Count, Burst.CountLow);
 		}
