@@ -112,6 +112,8 @@ struct FDynamicBeamEmitterReplayData : public FDynamicRenderableEmitterReplayDat
 	FName BranchParentName;					// Parent emitter requested by branch beams
 	TArray<FBeamTargetData> TargetData;		// Imported branch target metadata
 
+	uint32 BeamCount = 1;
+
 	FDynamicBeamEmitterReplayData()
 	{
 		eEmitterType = DET_Beam2;

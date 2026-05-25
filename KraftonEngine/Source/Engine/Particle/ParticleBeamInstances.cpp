@@ -1,4 +1,4 @@
-#include "ParticleBeamInstances.h"
+﻿#include "ParticleBeamInstances.h"
 
 #include "Component/ParticleSystemComponent.h"
 #include "Materials/Material.h"
@@ -48,7 +48,7 @@ FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
 	FDynamicBeamEmitterReplayData* NewEmitterReplayData = new FDynamicBeamEmitterReplayData();
 	NewEmitterReplayData->Source = ComponentToWorld.TransformPositionWithW(LocalSource);
 	NewEmitterReplayData->Target = ComponentToWorld.TransformPositionWithW(LocalTarget);
-	NewEmitterReplayData->ActiveParticleCount = 1;
+	NewEmitterReplayData->BeamCount = ActiveParticles; // Actual number of particles
 	NewEmitterReplayData->ParticleStride = 0;
 	NewEmitterReplayData->Scale = FVector::OneVector;
 	NewEmitterReplayData->Width = BeamModule->Width;
@@ -70,6 +70,7 @@ FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
 	NewEmitterReplayData->bRenderTessellation = BeamModule->bRenderTessellation;
 	NewEmitterReplayData->BranchParentName = BeamModule->BranchParentName;
 	NewEmitterReplayData->TargetData = BeamModule->TargetData;
+	NewEmitterReplayData->ActiveParticleCount = ActiveParticles * BeamModule->Sheets;	// Actual number of particles
 
 	if (CurrentLODLevel->RequiredModule)
 	{

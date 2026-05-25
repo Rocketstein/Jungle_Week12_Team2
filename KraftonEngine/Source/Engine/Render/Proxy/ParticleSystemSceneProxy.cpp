@@ -597,7 +597,7 @@ void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(FDynamicBeamEmi
 	Draw.FirstIndex = 0;
 	Draw.IndexCount = 0;
 
-	if (!Source.bRenderGeometry)
+	if (!Source.bRenderGeometry || Source.ActiveParticleCount == 0)
 		return;
 
 	const FVector BeamDelta = Source.Target - Source.Source;
