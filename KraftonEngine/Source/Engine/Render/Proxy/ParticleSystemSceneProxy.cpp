@@ -149,17 +149,21 @@ void FParticleSystemSceneProxy::UpdateMesh()
 	{
 		FEmitterDraw& Draw = EmitterDraws[i];
 
-		if (Draw.Type == DET_Sprite)
+		switch(Draw.Type)
+		{
+		case (DET_Sprite):
 		{
 			Draw.FirstIndex = 0;
 			Draw.IndexCount = 0;
+			break;
 		}
-		else if (Draw.Type == DET_Beam2)
+		case (DET_Beam2):
 		{
 			Draw.FirstIndex = 0;
 			Draw.IndexCount = 0;
+			break;
 		}
-		else if (Draw.Type == DET_Mesh)
+		case (DET_Mesh):
 		{
 			const auto& Source = static_cast<const FDynamicMeshEmitterReplayData&>(
 				DynamicData[i]->GetSource());
@@ -171,6 +175,8 @@ void FParticleSystemSceneProxy::UpdateMesh()
 			Draw.InstanceCount = ParticleCount;
 			Draw.MeshGeom = Source.StaticMesh ? Source.StaticMesh->GetLODMeshBuffer(Source.LODLevel) : nullptr;
 			Draw.IndexCount = Draw.MeshGeom ? Draw.MeshGeom->GetIndexBuffer().GetIndexCount() : 0;
+			break;
+		}
 		}
 	}
 
