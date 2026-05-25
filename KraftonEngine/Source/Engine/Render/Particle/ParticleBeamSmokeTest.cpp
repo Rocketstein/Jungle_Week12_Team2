@@ -1,4 +1,4 @@
-#include "Render/Particle/ParticleBeamSmokeTest.h"
+﻿#include "Render/Particle/ParticleBeamSmokeTest.h"
 
 #include "Component/ActorComponent.h"
 #include "Component/ParticleSystemComponent.h"
@@ -86,7 +86,7 @@ namespace
 		P->Rotation           = 0.0f;
 		P->BaseRotationRate   = 0.0f;
 		P->RotationRate       = 0.0f;
-		P->Color              = FLinearColor::White;
+		P->Color              = P->Color = FLinearColor(1.0f, 1.0f, 1.0f, 1.0f);
 		P->BaseColor          = P->Color;
 		P->RelativeTime       = 0.0f;
 		P->OneOverMaxLifetime = 0.0f;
