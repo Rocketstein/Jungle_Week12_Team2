@@ -1380,6 +1380,9 @@
       <Filter>ThirdParty\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Source\Engine\Particle\ParticleBeamInstances.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -4120,6 +4123,9 @@
     </ClInclude>
     <ClInclude Include="ThirdParty\sol2\include\sol\utility\to_string.hpp">
       <Filter>ThirdParty\sol2\include\sol\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleBeamInstances.h">
+      <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -515,6 +515,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Engine\Object\UField.cpp" />
     <ClCompile Include="Source\Engine\Object\UStruct.cpp" />
     <ClCompile Include="Source\Engine\Object\UUIDGenerator.cpp" />
+    <ClCompile Include="Source\Engine\Particle\ParticleBeamInstances.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleEmitter.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleEmitterInstances.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleLODContext.cpp" />
@@ -858,6 +859,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\Object\UField.h" />
     <ClInclude Include="Source\Engine\Object\UStruct.h" />
     <ClInclude Include="Source\Engine\Object\UUIDGenerator.h" />
+    <ClInclude Include="Source\Engine\Particle\ParticleBeamInstances.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEmitter.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEmitterInstances.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleHelper.h" />
