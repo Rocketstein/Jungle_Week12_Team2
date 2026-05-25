@@ -60,6 +60,8 @@ namespace ParticleKeys
 	static constexpr const char* StartAlpha = "StartAlpha";
 	static constexpr const char* StartAlphaMin = "StartAlphaMin";
 	static constexpr const char* StartAlphaMax = "StartAlphaMax";
+	static constexpr const char* EndColor = "EndColor";
+	static constexpr const char* EndAlpha = "EndAlpha";
 	static constexpr const char* StartSize = "StartSize";
 	static constexpr const char* StartSizeMin = "StartSizeMin";
 	static constexpr const char* StartSizeMax = "StartSizeMax";
@@ -182,6 +184,8 @@ json::JSON SerializeModule(UParticleModule* Module)
 		Object[ParticleKeys::StartAlpha] = Color->StartAlpha;
 		Object[ParticleKeys::StartAlphaMin] = Color->StartAlphaMin;
 		Object[ParticleKeys::StartAlphaMax] = Color->StartAlphaMax;
+		Object[ParticleKeys::EndColor] = MakeVectorJSON(Color->EndColor);
+		Object[ParticleKeys::EndAlpha] = Color->EndAlpha;
 	}
 	else if (UParticleModuleSize* Size = Cast<UParticleModuleSize>(Module))
 	{
@@ -354,6 +358,8 @@ UParticleModule* DeserializeModule(json::JSON& Object, UParticleLODLevel* Outer)
 		}
 		if (Object.hasKey(ParticleKeys::StartAlphaMin)) Color->StartAlphaMin = std::clamp(static_cast<float>(Object[ParticleKeys::StartAlphaMin].ToFloat()), 0.0f, 1.0f);
 		if (Object.hasKey(ParticleKeys::StartAlphaMax)) Color->StartAlphaMax = std::clamp(static_cast<float>(Object[ParticleKeys::StartAlphaMax].ToFloat()), 0.0f, 1.0f);
+		Color->EndColor = ReadVectorJSON(Object, ParticleKeys::EndColor, Color->EndColor);
+		if (Object.hasKey(ParticleKeys::EndAlpha)) Color->EndAlpha = std::clamp(static_cast<float>(Object[ParticleKeys::EndAlpha].ToFloat()), 0.0f, 1.0f);
 		Module = Color;
 	}
 	else if (Type == "InitialSize")

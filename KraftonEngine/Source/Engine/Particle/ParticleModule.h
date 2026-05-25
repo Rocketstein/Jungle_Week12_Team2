@@ -277,7 +277,14 @@ public:
 	float StartAlphaMin = 1.0f;
 	float StartAlphaMax = 1.0f;
 
+	UPROPERTY(Edit, Category="Color", DisplayName="End Color")
+	FVector EndColor = FVector::OneVector;
+
+	UPROPERTY(Edit, Category="Color", DisplayName="End Alpha", Min=0.0f, Max=1.0f, Speed=0.01f)
+	float EndAlpha = 0.0f;
+
 	void Spawn(const FSpawnContext& Context) override;
+	void Update(const FUpdateContext& Context) override;
 };
 
 UCLASS()

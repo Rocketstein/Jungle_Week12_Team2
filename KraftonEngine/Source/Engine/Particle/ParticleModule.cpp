@@ -92,6 +92,7 @@ void UParticleModuleVelocity::Spawn(const FSpawnContext& Context)
 UParticleModuleColor::UParticleModuleColor()
 {
 	bSpawnModule = true;
+	bUpdateModule = true;
 }
 
 void UParticleModuleColor::Spawn(const FSpawnContext& Context)
@@ -104,6 +105,35 @@ void UParticleModuleColor::Spawn(const FSpawnContext& Context)
 	const float Alpha = std::max(0.0f, std::min(RandomRange(StartAlphaMin, StartAlphaMax), 1.0f));
 	Context.ParticleBase->BaseColor = FLinearColor(StartColor.X, StartColor.Y, StartColor.Z, Alpha);
 	Context.ParticleBase->Color = Context.ParticleBase->BaseColor;
+}
+
+void UParticleModuleColor::Update(const FUpdateContext& Context)
+{
+	FParticleEmitterInstance& Owner = Context.Owner;
+	if (!Owner.ParticleData || !Owner.ParticleIndices)
+	{
+		return;
+	}
+
+	const float ClampedEndAlpha = std::clamp(EndAlpha, 0.0f, 1.0f);
+
+	for (int32 ParticleIndex = 0; ParticleIndex < Owner.ActiveParticles; ++ParticleIndex)
+	{
+		FBaseParticle* Particle = reinterpret_cast<FBaseParticle*>(
+			Owner.ParticleData + Owner.ParticleStride * Owner.ParticleIndices[ParticleIndex]);
+		if (!Particle)
+		{
+			continue;
+		}
+
+		const float T = std::clamp(Particle->RelativeTime, 0.0f, 1.0f);
+		const FLinearColor& Base = Particle->BaseColor;
+		Particle->Color = FLinearColor(
+			Base.R + (EndColor.X - Base.R) * T,
+			Base.G + (EndColor.Y - Base.G) * T,
+			Base.B + (EndColor.Z - Base.B) * T,
+			Base.A + (ClampedEndAlpha - Base.A) * T);
+	}
 }
 
 UParticleModuleSize::UParticleModuleSize()

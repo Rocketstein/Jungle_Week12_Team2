@@ -17,7 +17,7 @@
   "Particle" : {
     "SubUVColumns" : 6,
     "SubUVRows" : 6,
-    "UseSubUV" : true
+    "UseSubUV" : false
   },
   "PathFileName" : "Asset/Particle/Materials/M_Flare_A.mat",
   "RasterizerState" : "SolidNoCull",

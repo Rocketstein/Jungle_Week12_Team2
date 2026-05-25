@@ -267,6 +267,8 @@ UParticleEmitter* FParticleEditorWidget::CreateDefaultEmitter(const FString& Emi
 	Color->StartAlpha = 1.0f;
 	Color->StartAlphaMin = Color->StartAlpha;
 	Color->StartAlphaMax = Color->StartAlpha;
+	Color->EndColor = FVector(1.0f, 1.0f, 1.0f);
+	Color->EndAlpha = 0.0f;
 	LOD->Modules.push_back(Color);
 
 	LOD->UpdateModuleLists();
@@ -912,6 +914,20 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		{
 			Color->StartAlphaMax = std::clamp(StartAlphaMax, 0.0f, 1.0f);
 			Color->StartAlpha = Color->StartAlphaMax;
+			bChanged = true;
+		}
+
+		float EndColor[3] = { Color->EndColor.X, Color->EndColor.Y, Color->EndColor.Z };
+		if (ImGui::ColorEdit3("End Color", EndColor))
+		{
+			Color->EndColor = FVector(EndColor[0], EndColor[1], EndColor[2]);
+			bChanged = true;
+		}
+
+		float EndAlpha = Color->EndAlpha;
+		if (ImGui::DragFloat("End Alpha", &EndAlpha, 0.01f, 0.0f, 1.0f))
+		{
+			Color->EndAlpha = std::clamp(EndAlpha, 0.0f, 1.0f);
 			bChanged = true;
 		}
 	}
