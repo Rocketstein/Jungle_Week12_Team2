@@ -26,6 +26,31 @@ namespace {
 		}
 	}
 
+	static float ApplyTaper(EBeamTaperMethod TaperMethod, float TaperFactor, float TaperScale, float Alpha)
+	{
+		Alpha = std::clamp(Alpha, 0.0f, 1.0f);
+
+		switch (TaperMethod)
+		{
+		case PEBTM_Full:
+			return (1.0f - Alpha * (1.0f - TaperFactor)) * TaperScale;
+
+		case PEBTM_Partial:
+			if (Alpha <= TaperFactor)
+			{
+				return TaperScale;
+			}
+			{
+				const float Denom = std::max(1.0f - TaperFactor, 0.000001f);
+				return (1.0f - (Alpha - TaperFactor) / Denom) * TaperScale;
+			}
+
+		case PEBTM_None:
+		default:
+			return 1.0f;
+		}
+	}
+
 }
 
 FParticleSystemSceneProxy::FParticleSystemSceneProxy(UParticleSystemComponent* InComponent)

@@ -106,6 +106,8 @@ private:
 		bool PrepareDrawBuffer(ID3D11Device*, ID3D11DeviceContext*, FDrawCommandBuffer&) const;
 
 	private:
+
+	private:
 		TArray<FBeamParticleInstanceVertex> PackedVertices;
 		TArray<uint32>						PackedIndices;
 		mutable FDynamicVertexBuffer		VertexBuffer;
