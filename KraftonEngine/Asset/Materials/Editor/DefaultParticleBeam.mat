@@ -1,12 +1,26 @@
 {
-  "PathFileName": "Asset/Materials/Editor/DefaultParticleBeam.mat",
-  "ShaderPath": "Shaders/Particle/ParticleBeam.hlsl",
-  "RenderPass": "AlphaBlend",
-  "BlendState": "Additive",
-  "DepthStencilState": "DepthReadOnly",
-  "RasterizerState": "SolidNoCull",
-  "Textures": {
-    "DiffuseTexture": "Asset/Particle/Textures/T_Flare_A.PNG"
+  "BlendState" : "Additive",
+  "DepthStencilState" : "DepthReadOnly",
+  "Origin" : "Editor",
+  "Parameters" : {
+    "BeamAlpha" : 0.000000,
+    "BeamColor" : [0.000000, 0.000000, 0.000000],
+    "BeamPointCount" : 0.000000,
+    "BeamSource" : [0.000000, 0.000000, 0.000000],
+    "BeamTaperFactor" : 0.000000,
+    "BeamTaperMethod" : 0.000000,
+    "BeamTaperScale" : 0.000000,
+    "BeamTarget" : [0.000000, 0.000000, 0.000000],
+    "BeamTextureTile" : 0.000000,
+    "BeamTextureTileDistance" : 0.000000,
+    "BeamWidth" : 0.000000,
+    "_BeamPad" : [0.000000, 0.000000, 0.000000]
   },
-  "Origin": "Editor"
+  "PathFileName" : "Asset/Materials/Editor/DefaultParticleBeam.mat",
+  "RasterizerState" : "SolidNoCull",
+  "RenderPass" : "AlphaBlend",
+  "ShaderPath" : "Shaders/Particle/ParticleBeam.hlsl",
+  "Textures" : {
+    "DiffuseTexture" : "Asset/Particle/Textures/T_Flare_A.PNG"
+  }
 }
