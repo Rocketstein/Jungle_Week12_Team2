@@ -539,22 +539,111 @@ void FParticleSystemSceneProxy::FMeshParticlePacker::PackEmitter(const FFrameCon
 //============================================================================
 void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(const FFrameContext& Frame, FDynamicBeamEmitterData& Emitter, FEmitterDraw& Draw)
 {
-	
+	const FDynamicBeamEmitterReplayData& Source = Emitter.BeamSource;
+	const int32 Count = Source.Sheets;
+	if (Count <= 0 ||
+		!Source.DataContainer.ParticleData ||
+		!Source.DataContainer.ParticleIndices ||
+		Source.ParticleStride < static_cast<int32>(sizeof(FBaseParticle)))
+	{
+		return;
+	}
+
+	TArray<uint16> SortedParticleIndices(Source.DataContainer.ParticleIndices, Source.DataContainer.ParticleIndices + Count);
+
+	if (ShouldSortEmitter(Emitter.BeamSource.BlendMode)) {
+		Emitter.SortParticles(Source.SortMode, Frame.CameraPosition, Frame.CameraForward, FMatrix::Identity,
+			SortedParticleIndices.data(), Count, Source.DataContainer.ParticleData, Source.ParticleStride);
+	}
+
+	const uint32 ParticleCount = static_cast<uint32>(Count);
+	const uint32 FirstParticle = IndexCursor / 6;
+	EnsureIndexPattern(FirstParticle + ParticleCount);
+
+	const int32 SubImageColumns = std::max(1, static_cast<int32>(Draw.ParticleParams.SubUVCols));
+	const int32 SubImageRows = std::max(1, static_cast<int32>(Draw.ParticleParams.SubUVRows));
+	const int32 SubImageCount = std::max(1, SubImageColumns * SubImageRows);
+
+	PackedVertices.reserve(PackedVertices.size() + Count * 4);
+	for (int32 i = 0; i < Count; ++i)
+	{
+		const uint16 Idx = SortedParticleIndices[i];
+		const uint8* Bytes = Source.DataContainer.ParticleData + Idx * Source.ParticleStride;
+		const FBaseParticle& P = *reinterpret_cast<const FBaseParticle*>(Bytes);
+		const float NormalizedAge = std::clamp(P.RelativeTime, 0.0f, 1.0f);
+		const int32 SubImageIndex = std::clamp(
+			static_cast<int32>(std::floor(NormalizedAge * static_cast<float>(SubImageCount))),
+			0,
+			SubImageCount - 1);
+
+		for (int corner = 0; corner < 4; ++corner)
+		{
+			FParticleSpriteVertex V;
+			V.Position = P.Location;
+			V.Size = FVector(P.Size.X, P.Size.Y, /*subImageLerp*/ 0.0f);
+			V.UV = FVector2{ float(corner & 1), float((corner >> 1) & 1) };  // 0,0..1,1
+			V.Color = FVector4(P.Color.R, P.Color.G, P.Color.B, P.Color.A);
+			V.Rotation = P.Rotation;
+			V.SubImageIndex = static_cast<float>(SubImageIndex);
+			V.Velocity = P.Velocity;
+			PackedVertices.push_back(V);
+		}
+	}
+
+	IndexCursor += ParticleCount * 6;
 }
 
 bool FParticleSystemSceneProxy::FBeamParticlePacker::HasPackedBeams() const
 {
-
+	return !PackedVertices.empty() && !PackedIndices.empty();
 }
 
-void FParticleSystemSceneProxy::FBeamParticlePacker::MarkGpuBuffersDirty() const
+bool FParticleSystemSceneProxy::FBeamParticlePacker::PrepareDrawBuffer(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FDrawCommandBuffer& Out) const
 {
+	if (!HasPackedBeams())
+	{
+		return false;
+	}
 
-}
+	const uint32 VertCount = static_cast<uint32>(PackedVertices.size());
+	const uint32 IndexCount = static_cast<uint32>(IndexPattern.size());
 
-bool FParticleSystemSceneProxy::FBeamParticlePacker::PrepareDrawBuffer(ID3D11Device*, ID3D11DeviceContext*, FDrawCommandBuffer&) const
-{
-	
+	if (VertexBuffer.GetMaxCount() == 0)
+	{
+		VertexBuffer.Create(InDevice, VertCount, sizeof(FParticleSpriteVertex));
+	}
+	else
+	{
+		VertexBuffer.EnsureCapacity(InDevice, VertCount);
+	}
+
+	// NOTE: FDynamicVertexBuffer::Update takes ELEMENT count, not byte count.
+	if (bGpuBuffersDirty)
+	{
+		VertexBuffer.Update(InDeviceContext, PackedVertices.data(), VertCount);
+		bGpuBuffersDirty = false;
+	}
+
+	if (bIndexBufferDirty)
+	{
+		if (IndexBuffer.GetMaxCount() == 0)
+		{
+			IndexBuffer.Create(InDevice, IndexCount);
+		}
+		else
+		{
+			IndexBuffer.EnsureCapacity(InDevice, IndexCount);
+		}
+
+		IndexBuffer.Update(InDeviceContext, IndexPattern.data(), IndexCount);
+		bIndexBufferDirty = false;
+	}
+
+	Out.VB = VertexBuffer.GetBuffer();
+	Out.VBStride = sizeof(FParticleSpriteVertex);
+	Out.IB = IndexBuffer.GetBuffer();
+	Out.BaseVertex = 0;
+	return Out.VB != nullptr && Out.IB != nullptr;
 }
 
 //============================================================================

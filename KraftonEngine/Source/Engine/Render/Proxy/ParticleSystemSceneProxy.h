@@ -102,7 +102,7 @@ private:
 		void ResetFrame() { PackedVertices.clear(); }
 		void PackEmitter(const FFrameContext& Frame, FDynamicBeamEmitterData& Emitter, FEmitterDraw& Draw);
 		bool HasPackedBeams() const;
-		void MarkGpuBuffersDirty() const;
+		void MarkGpuBuffersDirty() const { bGpuBuffersDirty = true; }
 		bool PrepareDrawBuffer(ID3D11Device*, ID3D11DeviceContext*, FDrawCommandBuffer&) const;
 
 	private:
