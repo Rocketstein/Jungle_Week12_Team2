@@ -149,10 +149,12 @@ struct FDynamicMeshEmitterData : public FDynamicMeshEmitterDataBase
 
 struct FDynamicBeamEmitterData : public FDynamicBeamEmitterDataBase
 {
-
+	FDynamicBeamEmitterReplayData BeamSource;
+	const FDynamicEmitterReplayDataBase& GetSource() const override { return BeamSource; }
 };
 
 struct FDynamicRibbonEmitterData : public FDynamicRibbonEmitterDataBase 
 {
-	
+	FDynamicRibbonEmitterReplayData RibbonSource;
+	const FDynamicEmitterReplayDataBase& GetSource() const override { return RibbonSource; }
 };
