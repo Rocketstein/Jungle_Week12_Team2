@@ -1,7 +1,8 @@
-#include "ParticleBeamInstances.h"
+﻿#include "ParticleBeamInstances.h"
 
 #include "Component/ParticleSystemComponent.h"
 #include "Materials/Material.h"
+#include "Particle/ParticleHelper.h"
 #include "Particle/ParticleLODLevel.h"
 #include "Particle/ParticleModule.h"
 #include "Particle/TypeData/ParticleModuleTypeDataBeam2.h"
@@ -11,6 +12,7 @@
 void FBeam2EmitterInstance::Tick(float DeltaTime, int32 LODLevel, bool bSuppressSpawning)
 {
 	FParticleEmitterInstance::Tick(DeltaTime, LODLevel, bSuppressSpawning);
+	BeamTravelTime += DeltaTime;
 }
 
 FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
@@ -45,23 +47,25 @@ FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
 	}
 
 	const FMatrix& ComponentToWorld = Component->GetWorldMatrix();
+	const int32 SheetCount = std::max(1, BeamModule->Sheets);
+	const int32 MaxBeamCount = std::max(1, BeamModule->MaxBeamCount);
+	const int32 LogicalBeamCount = BeamModule->bAlwaysOn
+		? std::clamp(std::max(1, ActiveParticles), 1, MaxBeamCount)
+		: std::clamp(ActiveParticles, 0, MaxBeamCount);
+	const float FullBeamLength = (ComponentToWorld.TransformPositionWithW(LocalTarget)
+		- ComponentToWorld.TransformPositionWithW(LocalSource)).Length();
+	const float BeamProgress = (BeamModule->Speed > 0.0f && FullBeamLength > 1e-6f)
+		? std::clamp((BeamTravelTime * BeamModule->Speed) / FullBeamLength, 0.0f, 1.0f)
+		: 1.0f;
+
 	FDynamicBeamEmitterReplayData* NewEmitterReplayData = new FDynamicBeamEmitterReplayData();
-	NewEmitterReplayData->Source = ComponentToWorld.TransformPositionWithW(LocalSource);
-	NewEmitterReplayData->Target = ComponentToWorld.TransformPositionWithW(LocalTarget);
-	NewEmitterReplayData->ActiveParticleCount = 1;
+	NewEmitterReplayData->LogicalBeamCount = LogicalBeamCount;
 	NewEmitterReplayData->ParticleStride = 0;
 	NewEmitterReplayData->Scale = FVector::OneVector;
-	NewEmitterReplayData->Width = BeamModule->Width;
-	NewEmitterReplayData->Color = BeamModule->Color;
-	NewEmitterReplayData->Alpha = std::clamp(BeamModule->Alpha, 0.0f, 1.0f);
 	NewEmitterReplayData->InterpolationPoints = std::max(0, BeamModule->InterpolationPoints);
-	NewEmitterReplayData->Sheets = std::max(1, BeamModule->Sheets);
-	NewEmitterReplayData->MaxBeamCount = std::max(1, BeamModule->MaxBeamCount);
-	NewEmitterReplayData->Speed = std::max(0.0f, BeamModule->Speed);
+	NewEmitterReplayData->Sheets = SheetCount;
+	NewEmitterReplayData->MaxBeamCount = MaxBeamCount;
 	NewEmitterReplayData->UpVectorStepSize = std::max(0, BeamModule->UpVectorStepSize);
-	NewEmitterReplayData->TaperFactor = BeamModule->TaperFactor;
-	NewEmitterReplayData->TaperMethod = BeamModule->TaperMethod;
-	NewEmitterReplayData->TaperScale = BeamModule->TaperScale;
 	NewEmitterReplayData->TextureTile = std::max(1, BeamModule->TextureTile);
 	NewEmitterReplayData->TextureTileDistance = std::max(0.0f, BeamModule->TextureTileDistance);
 	NewEmitterReplayData->bRenderDirectLine = BeamModule->bRenderDirectLine;
@@ -70,6 +74,40 @@ FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
 	NewEmitterReplayData->bRenderTessellation = BeamModule->bRenderTessellation;
 	NewEmitterReplayData->BranchParentName = BeamModule->BranchParentName;
 	NewEmitterReplayData->TargetData = BeamModule->TargetData;
+	NewEmitterReplayData->ActiveParticleCount = LogicalBeamCount * SheetCount;
+
+	const FVector WorldSource = ComponentToWorld.TransformPositionWithW(LocalSource);
+	const FVector WorldTarget = ComponentToWorld.TransformPositionWithW(LocalTarget);
+	const FVector WorldBeamDelta = WorldTarget - WorldSource;
+	NewEmitterReplayData->Beams.reserve(LogicalBeamCount);
+	for (int32 i = 0; i < LogicalBeamCount; ++i)
+	{
+		const FBaseParticle* Particle = (i < ActiveParticles && ParticleIndices)
+			? GetParticleDirect(ParticleIndices[i])
+			: nullptr;
+		const FVector BeamOffset = Particle ? (Particle->Location - Location) : FVector::ZeroVector;
+		const FVector BeamColor = Particle
+			? FVector(Particle->Color.R * BeamModule->Color.X,
+			          Particle->Color.G * BeamModule->Color.Y,
+			          Particle->Color.B * BeamModule->Color.Z)
+			: BeamModule->Color;
+		const float BeamAlpha = Particle
+			? Particle->Color.A * BeamModule->Alpha
+			: BeamModule->Alpha;
+		const float WidthScale = Particle ? std::max(0.0f, Particle->Size.X) : 1.0f;
+
+		FBeamInstanceData Beam;
+		Beam.Source       = WorldSource + BeamOffset;
+		Beam.Target       = Beam.Source + WorldBeamDelta;
+		Beam.Color        = BeamColor;
+		Beam.Alpha        = std::clamp(BeamAlpha, 0.0f, 1.0f);
+		Beam.Width        = BeamModule->Width * WidthScale;
+		Beam.TaperMethod  = BeamModule->TaperMethod;
+		Beam.TaperFactor  = BeamModule->TaperFactor;
+		Beam.TaperScale   = BeamModule->TaperScale;
+		Beam.BeamProgress = BeamProgress;
+		NewEmitterReplayData->Beams.push_back(Beam);
+	}
 
 	if (CurrentLODLevel->RequiredModule)
 	{

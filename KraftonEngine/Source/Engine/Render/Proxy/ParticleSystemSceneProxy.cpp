@@ -26,6 +26,44 @@ namespace {
 		}
 	}
 
+	FVector SafeNormalizeBeam(const FVector& Value, const FVector& Fallback)
+	{
+		const float LenSq = Value.Dot(Value);
+		return (LenSq > 1e-6f) ? Value * (1.0f / std::sqrt(LenSq)) : Fallback;
+	}
+
+	FVector RotateAroundAxis(const FVector& Value, const FVector& UnitAxis, float Radians)
+	{
+		const float S = std::sin(Radians);
+		const float C = std::cos(Radians);
+		return Value * C
+			+ UnitAxis.Cross(Value) * S
+			+ UnitAxis * (UnitAxis.Dot(Value) * (1.0f - C));
+	}
+
+	float ApplyBeamTaper(EBeamTaperMethod TaperMethod, float TaperFactor, float TaperScale, float Alpha)
+	{
+		Alpha = std::clamp(Alpha, 0.0f, 1.0f);
+		TaperScale = std::max(0.0f, TaperScale);
+
+		if (TaperMethod == PEBTM_Full)
+		{
+			return (1.0f - Alpha * (1.0f - TaperFactor)) * TaperScale;
+		}
+
+		if (TaperMethod == PEBTM_Partial)
+		{
+			if (Alpha <= TaperFactor)
+			{
+				return TaperScale;
+			}
+			const float Denom = std::max(1.0f - TaperFactor, 1e-6f);
+			return (1.0f - (Alpha - TaperFactor) / Denom) * TaperScale;
+		}
+
+		return TaperScale;
+	}
+
 }
 
 FParticleSystemSceneProxy::FParticleSystemSceneProxy(UParticleSystemComponent* InComponent)
@@ -179,18 +217,26 @@ void FParticleSystemSceneProxy::UpdatePerViewport(const FFrameContext& Frame)
 bool FParticleSystemSceneProxy::PrepareDrawBuffer(
 	ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FDrawCommandBuffer& Out) const
 {
+	FDrawCommandBuffer SpriteBuffer;
+	const bool bHasSpriteBuffer = SpritePacker.HasPackedSprites()
+		&& SpritePacker.PrepareDrawBuffer(InDevice, InDeviceContext, SpriteBuffer);
+
+	FDrawCommandBuffer BeamBuffer;
+	const bool bHasBeamBuffer = BeamPacker.PrepareDrawBuffer(InDevice, InDeviceContext, BeamBuffer);
+
 	if (SpritePacker.HasPackedSprites())
 	{
-		return SpritePacker.PrepareDrawBuffer(InDevice, InDeviceContext, Out);
+		if (bHasSpriteBuffer)
+		{
+			Out = SpriteBuffer;
+			return true;
+		}
 	}
 
-	if (BeamPacker.HasReadyBeams() && BeamPacker.EnsureStaticIndexBuffer(InDevice))
+	if (bHasBeamBuffer)
 	{
-		Out.VB         = nullptr;
-		Out.VBStride   = 0;
-		Out.IB         = BeamPacker.GetStaticIndexBuffer();
-		Out.BaseVertex = 0;
-		return Out.IB != nullptr;
+		Out = BeamBuffer;
+		return true;
 	}
 
 	for (const FEmitterDraw& Draw : EmitterDraws)
@@ -301,7 +347,7 @@ void FParticleSystemSceneProxy::PackParticles(const FFrameContext& Frame)
 		}
 		case DET_Beam2:
 		{
-			BeamPacker.PackEmitter(static_cast<FDynamicBeamEmitterData&>(*DynamicData[DrawIndex]), Draw);
+			BeamPacker.PackEmitter(Frame, static_cast<FDynamicBeamEmitterData&>(*DynamicData[DrawIndex]), Draw);
 			break;
 		}
 		default:
@@ -382,28 +428,16 @@ bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevic
 	}
 	else if (Hit.Type == DET_Beam2 && Hit.IndexCount > 0)
 	{
-		if (!BeamPacker.EnsureStaticIndexBuffer(InDevice))
+		Cmd.Buffer.VB         = BeamPacker.GetVertexBuffer();
+		Cmd.Buffer.VBStride   = sizeof(FBeamParticleInstanceVertex);
+		Cmd.Buffer.IB         = BeamPacker.GetIndexBuffer();
+		Cmd.Buffer.FirstIndex = Hit.FirstIndex;
+		Cmd.Buffer.IndexCount = Hit.IndexCount;
+		Cmd.Buffer.BaseVertex = 0;
+		if (!Cmd.Buffer.VB || !Cmd.Buffer.IB)
 		{
 			return false;
 		}
-
-		if (Hit.bBeamParamCBDirty)
-		{
-			if (!Hit.BeamParamCB.GetBuffer())
-			{
-				Hit.BeamParamCB.Create(InDevice, sizeof(FBeamParamConstants), "BeamParamCB");
-			}
-			Hit.BeamParamCB.Update(InDeviceContext, &Hit.BeamParams, sizeof(FBeamParamConstants));
-			Hit.bBeamParamCBDirty = false;
-		}
-		Cmd.Bindings.PerShaderCB[1] = &Hit.BeamParamCB;
-
-		Cmd.Buffer.VB         = nullptr;
-		Cmd.Buffer.VBStride   = 0;
-		Cmd.Buffer.IB         = BeamPacker.GetStaticIndexBuffer();
-		Cmd.Buffer.FirstIndex = 0;
-		Cmd.Buffer.IndexCount = Hit.IndexCount;
-		Cmd.Buffer.BaseVertex = 0;
 	}
 	return true;
 }
@@ -589,19 +623,71 @@ void FParticleSystemSceneProxy::FMeshParticlePacker::PackEmitter(const FFrameCon
 
 
 //============================================================================
-//	Beam Packer — VS-driven: only fills the per-emitter CB + section index range.
+//	Beam Packer — CPU-expanded dynamic geometry.
 //============================================================================
-void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(FDynamicBeamEmitterData& Emitter, FEmitterDraw& Draw)
+void FParticleSystemSceneProxy::FBeamParticlePacker::ResetFrame()
+{
+	PackedVertices.clear();
+	PackedIndices.clear();
+	bGpuBuffersDirty = true;
+}
+
+bool FParticleSystemSceneProxy::FBeamParticlePacker::PrepareDrawBuffer(
+	ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FDrawCommandBuffer& Out) const
+{
+	if (!HasPackedBeams())
+	{
+		return false;
+	}
+
+	const uint32 VertCount = static_cast<uint32>(PackedVertices.size());
+	const uint32 IndexCount = static_cast<uint32>(PackedIndices.size());
+
+	if (VertexBuffer.GetMaxCount() == 0)
+	{
+		VertexBuffer.Create(InDevice, VertCount, sizeof(FBeamParticleInstanceVertex));
+	}
+	else
+	{
+		VertexBuffer.EnsureCapacity(InDevice, VertCount);
+	}
+
+	if (IndexBuffer.GetMaxCount() == 0)
+	{
+		IndexBuffer.Create(InDevice, IndexCount);
+	}
+	else
+	{
+		IndexBuffer.EnsureCapacity(InDevice, IndexCount);
+	}
+
+	if (bGpuBuffersDirty)
+	{
+		if (!VertexBuffer.Update(InDeviceContext, PackedVertices.data(), VertCount))
+		{
+			return false;
+		}
+		if (!IndexBuffer.Update(InDeviceContext, PackedIndices.data(), IndexCount))
+		{
+			return false;
+		}
+		bGpuBuffersDirty = false;
+	}
+
+	Out.VB = VertexBuffer.GetBuffer();
+	Out.VBStride = sizeof(FBeamParticleInstanceVertex);
+	Out.IB = IndexBuffer.GetBuffer();
+	Out.BaseVertex = 0;
+	return Out.VB != nullptr && Out.IB != nullptr;
+}
+
+void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(const FFrameContext& Frame, FDynamicBeamEmitterData& Emitter, FEmitterDraw& Draw)
 {
 	const FDynamicBeamEmitterReplayData& Source = Emitter.BeamSource;
-	Draw.FirstIndex = 0;
+	Draw.FirstIndex = static_cast<uint32>(PackedIndices.size());
 	Draw.IndexCount = 0;
 
-	if (!Source.bRenderGeometry)
-		return;
-
-	const FVector BeamDelta = Source.Target - Source.Source;
-	if (BeamDelta.Length() <= 1e-6f)
+	if (!Source.bRenderGeometry || Source.Beams.empty())
 		return;
 
 	const int32 SegmentCount = std::clamp(Source.InterpolationPoints + 1,
@@ -610,39 +696,85 @@ void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(FDynamicBeamEmi
 	const int32 SheetCount = std::clamp(Source.Sheets,
 		1, static_cast<int32>(MaxSheetsPerBeam));
 
-	FBeamParamConstants& P = Draw.BeamParams;
-	P.Source              = Source.Source;
-	P.Target              = Source.Target;
-	P.Width               = Source.Width;
-	P.Color               = Source.Color;
-	P.Alpha               = std::clamp(Source.Alpha, 0.0f, 1.0f);
-	P.TaperFactor         = Source.TaperFactor;
-	P.TaperScale          = Source.TaperScale;
-	P.TaperMethod         = static_cast<uint32>(Source.TaperMethod);
-	P.PointCount          = static_cast<uint32>(PointCount);
-	P.TextureTile         = static_cast<uint32>(std::max(1, Source.TextureTile));
-	P.TextureTileDistance = std::max(0.0f, Source.TextureTileDistance);
-	P.SheetCount          = static_cast<uint32>(SheetCount);
-	Draw.bBeamParamCBDirty = true;
+	const uint32 VertsPerBeam   = static_cast<uint32>(PointCount) * 2u * static_cast<uint32>(SheetCount);
+	const uint32 IndicesPerBeam = static_cast<uint32>(SegmentCount) * 6u * static_cast<uint32>(SheetCount);
+	PackedVertices.reserve(PackedVertices.size() + VertsPerBeam   * Source.Beams.size());
+	PackedIndices.reserve (PackedIndices.size()  + IndicesPerBeam * Source.Beams.size());
 
-	Draw.IndexCount = static_cast<uint32>(SegmentCount) * 6 * static_cast<uint32>(SheetCount);
-	bAnyBeamReady = true;
-}
+	constexpr float Pi = 3.14159265358979323846f;
+	uint32 IndicesEmitted = 0;
 
-bool FParticleSystemSceneProxy::FBeamParticlePacker::EnsureStaticIndexBuffer(ID3D11Device* InDevice) const
-{
-	if (StaticIB.GetBuffer())
-		return true;
-
-	TArray<uint32> Indices;
-	Indices.resize(MaxIndexCount);
-	for (uint32 i = 0; i < MaxIndexCount; ++i)
+	for (const FBeamInstanceData& Beam : Source.Beams)
 	{
-		Indices[i] = i;
+		const FVector BeamDelta = Beam.Target - Beam.Source;
+		const float BeamLen = BeamDelta.Length();
+		if (BeamLen <= 1e-6f)
+			continue;
+
+		const float   Progress     = std::clamp(Beam.BeamProgress, 0.0f, 1.0f);
+		const float   VisibleLen   = BeamLen * Progress;
+		const FVector VisibleDelta = BeamDelta * Progress;
+		const FVector BeamDir      = BeamDelta * (1.0f / BeamLen);
+		const FVector4 PackedColor(Beam.Color.X, Beam.Color.Y, Beam.Color.Z,
+			std::clamp(Beam.Alpha, 0.0f, 1.0f));
+
+		for (int32 SheetIdx = 0; SheetIdx < SheetCount; ++SheetIdx)
+		{
+			const uint32 SheetVertexBase = static_cast<uint32>(PackedVertices.size());
+			for (int32 PointIdx = 0; PointIdx < PointCount; ++PointIdx)
+			{
+				const float T = static_cast<float>(PointIdx) / static_cast<float>(std::max(PointCount - 1, 1));
+				const FVector Center = Beam.Source + VisibleDelta * T;
+				const float Taper = ApplyBeamTaper(Beam.TaperMethod, Beam.TaperFactor, Beam.TaperScale, T);
+				const float HalfWidth = std::max(0.0f, Beam.Width * Taper) * 0.5f;
+
+				const FVector ToCamera = SafeNormalizeBeam(Frame.CameraPosition - Center, FVector::UpVector);
+				FVector SideAxis = SafeNormalizeBeam(ToCamera.Cross(BeamDir), FVector::ForwardVector);
+				if (SheetIdx > 0)
+				{
+					const float SheetAngle = Pi * static_cast<float>(SheetIdx) / static_cast<float>(SheetCount);
+					SideAxis = SafeNormalizeBeam(RotateAroundAxis(SideAxis, BeamDir, SheetAngle), SideAxis);
+				}
+
+				const float U = (Source.TextureTileDistance > 0.0f)
+					? (VisibleLen * T) / Source.TextureTileDistance
+					: T * static_cast<float>(std::max(1, Source.TextureTile));
+
+				FBeamParticleInstanceVertex Left;
+				Left.Position = Center - SideAxis * HalfWidth;
+				Left.UV       = FVector2(U, 0.0f);
+				Left.Color    = PackedColor;
+				PackedVertices.push_back(Left);
+
+				FBeamParticleInstanceVertex Right;
+				Right.Position = Center + SideAxis * HalfWidth;
+				Right.UV       = FVector2(U, 1.0f);
+				Right.Color    = PackedColor;
+				PackedVertices.push_back(Right);
+			}
+
+			for (int32 SegIdx = 0; SegIdx < SegmentCount; ++SegIdx)
+			{
+				const uint32 P0Left  = SheetVertexBase + static_cast<uint32>(SegIdx) * 2u;
+				const uint32 P0Right = P0Left + 1u;
+				const uint32 P1Left  = P0Left + 2u;
+				const uint32 P1Right = P0Left + 3u;
+
+				PackedIndices.push_back(P0Left);
+				PackedIndices.push_back(P1Left);
+				PackedIndices.push_back(P0Right);
+				PackedIndices.push_back(P1Left);
+				PackedIndices.push_back(P1Right);
+				PackedIndices.push_back(P0Right);
+			}
+		}
+
+		IndicesEmitted += IndicesPerBeam;
 	}
 
-	StaticIB.Create(InDevice, Indices.data(), MaxIndexCount, MaxIndexCount * sizeof(uint32));
-	return StaticIB.GetBuffer() != nullptr;
+	Draw.IndexCount = IndicesEmitted;
+	if (IndicesEmitted > 0)
+		bGpuBuffersDirty = true;
 }
 
 //============================================================================

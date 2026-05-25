@@ -350,6 +350,7 @@ public:
 	virtual bool SupportsSpecificScreenAlignmentFlags() const { return false; }
 	virtual bool IsAMeshEmitter() const { return false; }
 	virtual bool IsABeamEmitter() const { return false; }
+	virtual bool IsARibbonEmitter() const { return false; }
 };
 
 UCLASS()
