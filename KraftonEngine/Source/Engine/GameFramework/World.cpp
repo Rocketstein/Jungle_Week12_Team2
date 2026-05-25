@@ -314,6 +314,21 @@ void UWorld::UpdateActorInOctree(AActor* Actor)
 	Partition.UpdateActor(Actor);
 }
 
+FParticleLODContext UWorld::GetParticleLODContext() const
+{
+	FParticleLODContext Context;
+	FMinimalViewInfo POV;
+	if (!GetActivePOV(POV))
+	{
+		return Context;
+	}
+
+	Context.bValid = true;
+	Context.ViewForward = POV.Rotation.GetForwardVector();
+	Context.ViewPosition = POV.Location;
+	return Context;
+}
+
 FLODUpdateContext UWorld::PrepareLODContext()
 {
 	// 잔여 정리: POV currency 사용. 카메라 인스턴스 비교는 제거 — 위치/회전 변화로만 swap 감지.

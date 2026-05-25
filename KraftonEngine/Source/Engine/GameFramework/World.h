@@ -16,6 +16,7 @@
 #include <Collision/SpatialPartition.h>
 #include "GameFramework/WorldSettings.h"
 #include "Physics/IPhysicsScene.h"
+#include "Particle/ParticleLODContext.h"
 #include "World.generated.h"
 #include <memory>
 
@@ -109,6 +110,8 @@ public:
 	void RemoveActorToOctree(AActor* actor);
 	void UpdateActorInOctree(AActor* actor);
 
+
+	FParticleLODContext GetParticleLODContext() const;
 private:
 	//TArray<AActor*> Actors;
 	ULevel* PersistentLevel;
