@@ -10,7 +10,7 @@ void FBeam2EmitterInstance::Tick(float DeltaTime, bool bSuppressSpawning)
 FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
 {
 	UParticleModuleTypeDataBeam2* BeamModule = static_cast<UParticleModuleTypeDataBeam2*>(CurrentLODLevel->TypeDataModule);
-	if (!BeamModule) return nullptr;
+	if (!BeamModule || !Component) return nullptr;
 
 	FVector Source;
 	FVector Target;
@@ -19,15 +19,15 @@ FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
 	{
 	case (PEB2M_Distance):
 	{
-		// TODO: Add "Use Local Space" variant that adds Location to Source
-		Source = BeamModule->SourcePoint;
-		FVector TargetDir = Component ? Component->GetForwardVector() : FVector(1, 0, 0);
+		// TODO: Add "Use Local Space" branch that adds emitter transformation to Source
+		Source = Component->GetRelativeTransform().ToMatrix().TransformVector(BeamModule->SourcePoint);
+		FVector TargetDir = Component->GetForwardVector();
 		Target = TargetDir * BeamModule->Distance;
 		break;
 	}
 	case (PEB2M_Target):
 	{
-		Source = BeamModule->SourcePoint;
+		Source = Component->GetRelativeTransform().ToMatrix().TransformVector(BeamModule->SourcePoint);
 		Target = BeamModule->TargetPoint;
 		break;	
 	}
