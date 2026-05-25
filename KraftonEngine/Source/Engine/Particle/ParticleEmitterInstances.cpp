@@ -165,14 +165,19 @@ void FParticleEmitterInstance::Tick(float DeltaTime, int32 LODLevel, bool bSuppr
 
 	SpawnFraction = Tick_SpawnParticles(DeltaTime, CurrentLODLevel, bSuppressSpawning, false);
 
-	for (UParticleModule* Module : CurrentLODLevel->UpdateModules)
+	UParticleLODLevel* HighestLODLevel = SpriteTemplate ? SpriteTemplate->GetLODLevel(0) : nullptr;
+	for (int32 ModuleIndex = 0; ModuleIndex < static_cast<int32>(CurrentLODLevel->UpdateModules.size()); ++ModuleIndex)
 	{
+		UParticleModule* Module = CurrentLODLevel->UpdateModules[ModuleIndex];
 		if (!Module)
 		{
 			continue;
 		}
 
-		UParticleModule::FUpdateContext Context(*this, static_cast<int32>(GetModuleDataOffset(Module)), DeltaTime);
+		UParticleModule* OffsetModule = (HighestLODLevel && ModuleIndex < static_cast<int32>(HighestLODLevel->UpdateModules.size()))
+			? HighestLODLevel->UpdateModules[ModuleIndex]
+			: Module;
+		UParticleModule::FUpdateContext Context(*this, static_cast<int32>(GetModuleDataOffset(OffsetModule)), DeltaTime);
 		Module->Update(Context);
 	}
 
@@ -284,14 +289,19 @@ void FParticleEmitterInstance::SpawnParticles(int32 Count, float StartTime, floa
 
 		if (CurrentLODLevel)
 		{
-			for (UParticleModule* Module : CurrentLODLevel->SpawnModules)
+			UParticleLODLevel* HighestLODLevel = SpriteTemplate ? SpriteTemplate->GetLODLevel(0) : nullptr;
+			for (int32 ModuleIndex = 0; ModuleIndex < static_cast<int32>(CurrentLODLevel->SpawnModules.size()); ++ModuleIndex)
 			{
+				UParticleModule* Module = CurrentLODLevel->SpawnModules[ModuleIndex];
 				if (!Module)
 				{
 					continue;
 				}
 
-				UParticleModule::FSpawnContext Context(*this, static_cast<int32>(GetModuleDataOffset(Module)), SpawnTime, &Particle);
+				UParticleModule* OffsetModule = (HighestLODLevel && ModuleIndex < static_cast<int32>(HighestLODLevel->SpawnModules.size()))
+					? HighestLODLevel->SpawnModules[ModuleIndex]
+					: Module;
+				UParticleModule::FSpawnContext Context(*this, static_cast<int32>(GetModuleDataOffset(OffsetModule)), SpawnTime, &Particle);
 				Module->Spawn(Context);
 			}
 

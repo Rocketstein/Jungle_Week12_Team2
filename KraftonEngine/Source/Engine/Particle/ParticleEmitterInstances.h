@@ -10,7 +10,10 @@ class UParticleLODLevel;
 class UParticleModule;
 class UParticleSystemComponent;
 
+
+// General event instance payload
 struct FParticleEventInstancePayload;
+
 
 struct FParticleEmitterInstanceFixLayout
 {
@@ -75,6 +78,7 @@ struct FParticleEmitterInstance : FParticleEmitterInstanceFixLayout
 	FBaseParticle* GetParticleDirect(int32 DirectIndex) const;
 
 protected:
+	// Spawning and updating functions
 	virtual void PreSpawn(FBaseParticle* Particle, const FVector& InitialLocation, const FVector& InitialVelocity);
 	virtual void PostSpawn(FBaseParticle* Particle, float Interp, float SpawnTime);
 };
