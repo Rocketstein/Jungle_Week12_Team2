@@ -63,7 +63,7 @@ public:
 	int32 ParticleSize = 0;
 	int32 ReqInstanceBytes = 0;
 	int32 TypeDataOffset = 0;
-	int32 TypeDataInstanceOffset = 0;
+	int32 TypeDataInstanceOffset = -1;
 
 	TArray<UParticleModule*> ModulesNeedingInstanceData;
 
@@ -76,7 +76,7 @@ public:
 	virtual UParticleLODLevel* GetBestLODLevel(int32 LODLevel) const;
 	virtual bool CalculateMaxActiveParticleCount();
 	virtual void Build() {}
-	virtual void CacheEmitterModuleInfo() {}
+	virtual void CacheEmitterModuleInfo();
 	virtual bool HasAnyEnabledLODs() const;
 
 private:
