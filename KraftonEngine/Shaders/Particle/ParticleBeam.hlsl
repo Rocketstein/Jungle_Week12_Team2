@@ -73,7 +73,7 @@ PS_Input_Particle VS(uint vid : SV_VertexID)
 
 float4 PS(PS_Input_Particle Input) : SV_Target
 {
-    float4 Col = DiffuseTexture.Sample(LinearClampSampler, Input.texcoord);
+    float4 Col = DiffuseTexture.Sample(LinearWrapSampler, Input.texcoord);
     clip(Col.a * Input.color.a - 0.01f);
 
     return float4(ApplyWireframe(Col.rgb) * Input.color.rgb,
