@@ -6,6 +6,7 @@
     "BeamAlpha" : 0.000000,
     "BeamColor" : [0.000000, 0.000000, 0.000000],
     "BeamPointCount" : 0.000000,
+    "BeamSheetCount" : 0.000000,
     "BeamSource" : [0.000000, 0.000000, 0.000000],
     "BeamTaperFactor" : 0.000000,
     "BeamTaperMethod" : 0.000000,

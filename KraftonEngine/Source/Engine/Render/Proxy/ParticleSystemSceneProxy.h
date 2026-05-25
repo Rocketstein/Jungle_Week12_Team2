@@ -107,7 +107,8 @@ private:
 	struct FBeamParticlePacker
 	{
 		static constexpr uint32 MaxSegmentsPerBeam = 256;
-		static constexpr uint32 MaxIndexCount      = MaxSegmentsPerBeam * 6;
+		static constexpr uint32 MaxSheetsPerBeam   = 16;
+		static constexpr uint32 MaxIndexCount      = MaxSegmentsPerBeam * 6 * MaxSheetsPerBeam;
 
 		void ResetFrame() { bAnyBeamReady = false; }
 		void PackEmitter(FDynamicBeamEmitterData& Emitter, FEmitterDraw& Draw);

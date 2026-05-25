@@ -42,7 +42,8 @@ cbuffer BeamParamBuffer : register(b3)
     uint   BeamPointCount;
     uint   BeamTextureTile;
     float  BeamTextureTileDistance;
-    float3 _BeamPad;
+    uint   BeamSheetCount;
+    float2 _BeamPad;
 }
 
 static const uint BEAM_TAPER_NONE    = 0;

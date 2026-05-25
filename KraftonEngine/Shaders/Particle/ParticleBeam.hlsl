@@ -19,10 +19,21 @@ float3 SafeNormalizeBeam(float3 V, float3 Fallback)
     return (LenSq > 1e-6f) ? V * rsqrt(LenSq) : Fallback;
 }
 
+float3 RotateAroundAxis(float3 V, float3 UnitAxis, float Radians)
+{
+    float S, C;
+    sincos(Radians, S, C);
+    return V * C + cross(UnitAxis, V) * S + UnitAxis * dot(UnitAxis, V) * (1.0f - C);
+}
+
 PS_Input_Particle VS(uint vid : SV_VertexID)
 {
-    uint segIdx    = vid / 6;
-    uint cornerIdx = vid % 6;
+    uint segmentCount     = max(BeamPointCount, 2u) - 1u;
+    uint verticesPerSheet = segmentCount * 6u;
+    uint sheetIdx         = vid / verticesPerSheet;
+    uint localVid         = vid - sheetIdx * verticesPerSheet;
+    uint segIdx           = localVid / 6u;
+    uint cornerIdx        = localVid % 6u;
     uint2 Corner   = BeamCorner[cornerIdx];
     uint pointIdx  = segIdx + Corner.x;
     uint side      = Corner.y;
@@ -41,6 +52,12 @@ PS_Input_Particle VS(uint vid : SV_VertexID)
 
     float3 ToCamera  = SafeNormalizeBeam(CameraWorldPos - Center, float3(0, 0, 1));
     float3 SideAxis  = SafeNormalizeBeam(cross(ToCamera, BeamDir), float3(1, 0, 0));
+    uint SheetCount  = max(BeamSheetCount, 1u);
+    if (sheetIdx > 0u)
+    {
+        float SheetAngle = 3.14159265359f * (float)sheetIdx / (float)SheetCount;
+        SideAxis = SafeNormalizeBeam(RotateAroundAxis(SideAxis, BeamDir, SheetAngle), SideAxis);
+    }
     float3 WorldPos  = Center + SideAxis * (HalfWidth * SideSign);
 
     float U = (BeamTextureTileDistance > 0.0f)

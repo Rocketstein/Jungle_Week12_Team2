@@ -607,6 +607,8 @@ void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(FDynamicBeamEmi
 	const int32 SegmentCount = std::clamp(Source.InterpolationPoints + 1,
 		1, static_cast<int32>(MaxSegmentsPerBeam));
 	const int32 PointCount = SegmentCount + 1;
+	const int32 SheetCount = std::clamp(Source.Sheets,
+		1, static_cast<int32>(MaxSheetsPerBeam));
 
 	FBeamParamConstants& P = Draw.BeamParams;
 	P.Source              = Source.Source;
@@ -620,9 +622,10 @@ void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(FDynamicBeamEmi
 	P.PointCount          = static_cast<uint32>(PointCount);
 	P.TextureTile         = static_cast<uint32>(std::max(1, Source.TextureTile));
 	P.TextureTileDistance = std::max(0.0f, Source.TextureTileDistance);
+	P.SheetCount          = static_cast<uint32>(SheetCount);
 	Draw.bBeamParamCBDirty = true;
 
-	Draw.IndexCount = static_cast<uint32>(SegmentCount) * 6;
+	Draw.IndexCount = static_cast<uint32>(SegmentCount) * 6 * static_cast<uint32>(SheetCount);
 	bAnyBeamReady = true;
 }
 
