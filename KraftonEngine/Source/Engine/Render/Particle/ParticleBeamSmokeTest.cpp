@@ -64,7 +64,7 @@ namespace
 
 		Src.InterpolationPoints  = 8;
 		Src.Sheets               = 5;
-		Src.TextureTile          = 5;
+		Src.TextureTile          = 2000;
 		Src.TextureTileDistance  = 0.0f;
 
 		// Exercise the taper path on half the beams; leave the rest straight so a
