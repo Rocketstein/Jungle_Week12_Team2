@@ -241,16 +241,16 @@ void FParticleEmitterInstance::Tick_ModuleFinalUpdate(float DeltaTime, UParticle
 	}
 
 	UParticleLODLevel* HighestLODLevel = SpriteTemplate ? SpriteTemplate->GetLODLevel(0) : nullptr;
-	for (int32 ModuleIndex = 0; ModuleIndex < static_cast<int32>(InCurrentLODLevel->UpdateModules.size()); ++ModuleIndex)
+	for (int32 ModuleIndex = 0; ModuleIndex < static_cast<int32>(InCurrentLODLevel->FinalUpdateModules.size()); ++ModuleIndex)
 	{
-		UParticleModule* Module = InCurrentLODLevel->UpdateModules[ModuleIndex];
+		UParticleModule* Module = InCurrentLODLevel->FinalUpdateModules[ModuleIndex];
 		if (!Module || !Module->bEnabled || !Module->bFinalUpdateModule)
 		{
 			continue;
 		}
 
-		UParticleModule* OffsetModule = (HighestLODLevel && ModuleIndex < static_cast<int32>(HighestLODLevel->UpdateModules.size()))
-			? HighestLODLevel->UpdateModules[ModuleIndex]
+		UParticleModule* OffsetModule = (HighestLODLevel && ModuleIndex < static_cast<int32>(HighestLODLevel->FinalUpdateModules.size()))
+			? HighestLODLevel->FinalUpdateModules[ModuleIndex]
 			: Module;
 		UParticleModule::FUpdateContext Context(*this, static_cast<int32>(GetModuleDataOffset(OffsetModule)), DeltaTime);
 		Module->FinalUpdate(Context);
