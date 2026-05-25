@@ -292,6 +292,7 @@ float FParticleEmitterInstance::Spawn(float DeltaTime)
 	bool bProcessBurstList = true;
 	UParticleLODLevel* HighestLODLevel = SpriteTemplate ? SpriteTemplate->GetLODLevel(0) : nullptr;
 
+	// Spawning modules are processed in order, and the same module in different LOD levels shares the same instance data offset.
 	for (int32 SpawnModIndex = 0; SpawnModIndex < static_cast<int32>(CurrentLODLevel->SpawningModules.size()); ++SpawnModIndex)
 	{
 		UParticleModuleSpawnBase* SpawnModule = CurrentLODLevel->SpawningModules[SpawnModIndex];
