@@ -39,12 +39,12 @@ namespace
 		Src.MaterialInterface     = Material;
 		Src.ActiveParticleCount   = N;
 		Src.ParticleStride        = AlignParticleDataSize(static_cast<int32>(sizeof(FBaseParticle)), 16);
-		Src.SortMode              = EParticleSortMode::PSORTMODE_None;
+		Src.SortMode              = EParticleSortMode::PSORTMODE_ViewProjDepth;
 		Src.SubImages_Horizontal  = 1;
 		Src.SubImages_Vertical    = 1;
 		Src.ScreenAlignment       = static_cast<uint8>(PSA_FacingCameraPosition);
 		Src.EmitterOrigin         = WorldCenter;
-		Src.BlendMode             = EBlendState::Additive;
+		Src.BlendMode             = EBlendState::AlphaBlend;
 
 		Src.DataContainer.Alloc(Src.ParticleStride * N, N);
 
@@ -69,7 +69,7 @@ namespace
 			P->Color              = FLinearColor(1.0f,
 			                                     0.5f + 0.5f * std::cos(t),
 			                                     0.5f + 0.5f * std::sin(t),
-			                                     1.0f);
+			                                     0.8f);
 			P->BaseColor          = P->Color;
 			P->RelativeTime       = 0.0f;
 			P->OneOverMaxLifetime = 0.0f;
