@@ -86,26 +86,26 @@ struct FDynamicMeshEmitterReplayData : public FDynamicRenderableEmitterReplayDat
 
 struct FDynamicBeamEmitterReplayData : public FDynamicRenderableEmitterReplayDataBase
 {
-	FVector Source;
-	FVector Target;
-	FVector Color;
-	float Alpha = 1.0f;
-	float Width = 8.0f;
+	FVector Source;							// World-space start point of the beam
+	FVector Target;							// World-space end point of the beam
+	FVector Color;							// Base RGB tint applied to the beam
+	float Alpha = 1.0f;						// Opacity multiplier for the beam
+	float Width = 8.0f;						// Beam thickness in world units
 
-	int32 InterpolationPoints = 8;
-	int32 Sheets = 1;
+	int32 InterpolationPoints = 8;			// Number of subdivisions along the beam for curve interpolation
+	int32 Sheets = 1;						// Number of crossed quad sheets used to render the beam
 
-	int32 TextureTile = 1;
-	float TextureTileDistance = 0.0f;
+	int32 TextureTile = 1;					// Number of times the texture tiles along the beam length
+	float TextureTileDistance = 0.0f;		// Distance per texture tile (overrides TextureTile when non-zero)
 
-	EBeamTaperMethod TaperMethod = PEBTM_None;
-	float TaperFactor = 1.0f;
-	float TaperScale = 1.0f;
+	EBeamTaperMethod TaperMethod = PEBTM_None;	// Width taper mode along the beam (none/start/end/full)
+	float TaperFactor = 1.0f;				// Strength of the taper effect
+	float TaperScale = 1.0f;				// Additional scale applied on top of the taper
 
-	bool bRenderGeometry = true;
-	bool bRenderDirectLine = false;
-	bool bRenderLines = false;
-	bool bRenderTessellation = false;
+	bool bRenderGeometry = true;			// Whether to render the solid beam geometry
+	bool bRenderDirectLine = false;			// Whether to render a debug straight line from Source to Target
+	bool bRenderLines = false;				// Whether to render debug lines along the interpolated path
+	bool bRenderTessellation = false;		// Whether to render debug tessellation wireframe
 
 	FDynamicBeamEmitterReplayData()
 	{
