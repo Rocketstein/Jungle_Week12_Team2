@@ -1,12 +1,53 @@
 #include "Particle/ParticleSystem.h"
 
 #include "Particle/ParticleEmitter.h"
+#include "Particle/ParticleLODLevel.h"
+#include "Particle/ParticleModule.h"
 
 #include <algorithm>
 
 namespace
 {
 	constexpr float DefaultLODDistanceStep = 1250.0f;
+
+	void DestroyLODLevel(UParticleLODLevel* LOD)
+	{
+		if (!LOD)
+		{
+			return;
+		}
+
+		for (UParticleModule* Module : LOD->Modules)
+		{
+			if (Module)
+			{
+				if (Module == LOD->TypeDataModule)
+				{
+					LOD->TypeDataModule = nullptr;
+				}
+				GUObjectArray.DestroyObject(Module);
+			}
+		}
+		LOD->Modules.clear();
+
+		if (LOD->RequiredModule)
+		{
+			GUObjectArray.DestroyObject(LOD->RequiredModule);
+			LOD->RequiredModule = nullptr;
+		}
+		if (LOD->SpawnModule)
+		{
+			GUObjectArray.DestroyObject(LOD->SpawnModule);
+			LOD->SpawnModule = nullptr;
+		}
+		if (LOD->TypeDataModule)
+		{
+			GUObjectArray.DestroyObject(LOD->TypeDataModule);
+			LOD->TypeDataModule = nullptr;
+		}
+
+		GUObjectArray.DestroyObject(LOD);
+	}
 }
 
 int32 UParticleSystem::GetLODCount() const
@@ -41,7 +82,9 @@ bool UParticleSystem::RemoveLOD(int32 LODIndex)
 	{
 		if (Emitter && LODIndex < static_cast<int32>(Emitter->LODLevels.size()))
 		{
+			UParticleLODLevel* RemovedLOD = Emitter->LODLevels[LODIndex];
 			Emitter->LODLevels.erase(Emitter->LODLevels.begin() + LODIndex);
+			DestroyLODLevel(RemovedLOD);
 		}
 	}
 

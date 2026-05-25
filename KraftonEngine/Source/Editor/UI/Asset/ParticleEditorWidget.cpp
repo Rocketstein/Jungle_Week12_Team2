@@ -2,6 +2,7 @@
 
 #include "Component/ParticleSystemComponent.h"
 #include "Editor/UI/ContentBrowser/ContentItem.h"
+#include "Editor/UI/EditorTextureManager.h"
 #include "GameFramework/AActor.h"
 #include "Input/InputSystem.h"
 #include "GameFramework/World.h"
@@ -14,6 +15,7 @@
 #include "Particle/ParticleSpriteEmitter.h"
 #include "Particle/ParticleSystem.h"
 #include "Particle/ParticleSystemManager.h"
+#include "Platform/Paths.h"
 #include "Runtime/Engine.h"
 #include "Settings/EditorSettings.h"
 #include "Slate/SlateApplication.h"
@@ -52,6 +54,14 @@ namespace
 		"Texture Alpha",
 		"Texture Luminance"
 	};
+
+	FString GetParticleEditorIconPath(const wchar_t* FileName)
+	{
+		return FPaths::ToUtf8(FPaths::Combine(
+			FPaths::AssetDir(),
+			L"Editor/Icons/ParticleEditor",
+			FileName));
+	}
 
 	ImU32 GetModuleRowColor(bool bSelected, int32 ModuleIndex)
 	{
@@ -118,6 +128,80 @@ namespace
 		const float MaxTopHeight = (std::max)(MinTopHeight, AvailableHeight - SplitterHeight - MinBottomHeight);
 		TopHeight = std::clamp(TopHeight, MinTopHeight, MaxTopHeight);
 	}
+
+	bool DrawParticleToolbarButton(const char* Id, const wchar_t* IconFileName, const char* Label, bool bDisabled)
+	{
+		bool bClicked = false;
+		ID3D11ShaderResourceView* Icon = FEditorTextureManager::Get().GetOrLoadIcon(GetParticleEditorIconPath(IconFileName));
+
+		ImGui::PushID(Id);
+		ImGui::BeginDisabled(bDisabled);
+		if (Icon)
+		{
+			bClicked |= ImGui::ImageButton("##Icon", reinterpret_cast<ImTextureID>(Icon), ImVec2(18.0f, 18.0f));
+			ImGui::SameLine(0.0f, 4.0f);
+		}
+		bClicked |= ImGui::Button(Label);
+		ImGui::EndDisabled();
+
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+		{
+			ImGui::SetTooltip("%s", Label);
+		}
+		ImGui::PopID();
+
+		return bClicked && !bDisabled;
+	}
+
+	void DestroyEmitterTree(UParticleEmitter* Emitter)
+	{
+		if (!Emitter)
+		{
+			return;
+		}
+
+		for (UParticleLODLevel* LOD : Emitter->LODLevels)
+		{
+			if (!LOD)
+			{
+				continue;
+			}
+
+			for (UParticleModule* Module : LOD->Modules)
+			{
+				if (Module)
+				{
+					if (Module == LOD->TypeDataModule)
+					{
+						LOD->TypeDataModule = nullptr;
+					}
+					GUObjectArray.DestroyObject(Module);
+				}
+			}
+			LOD->Modules.clear();
+
+			if (LOD->RequiredModule)
+			{
+				GUObjectArray.DestroyObject(LOD->RequiredModule);
+				LOD->RequiredModule = nullptr;
+			}
+			if (LOD->SpawnModule)
+			{
+				GUObjectArray.DestroyObject(LOD->SpawnModule);
+				LOD->SpawnModule = nullptr;
+			}
+			if (LOD->TypeDataModule)
+			{
+				GUObjectArray.DestroyObject(LOD->TypeDataModule);
+				LOD->TypeDataModule = nullptr;
+			}
+
+			GUObjectArray.DestroyObject(LOD);
+		}
+		Emitter->LODLevels.clear();
+
+		GUObjectArray.DestroyObject(Emitter);
+	}
 }
 
 FParticleEditorWidget::FParticleEditorWidget()
@@ -153,6 +237,9 @@ void FParticleEditorWidget::Open(UObject* Object)
 		return;
 	}
 
+	SelectedEmitterIndex = 0;
+	SelectedLODIndex = 0;
+	SelectedModule = nullptr;
 	EnsureDefaultSystem();
 	InitializePreviewWorld();
 }
@@ -164,6 +251,7 @@ void FParticleEditorWidget::Close()
 	EditingParticleSystem = nullptr;
 	PreviewParticleComponent = nullptr;
 	PreviewActor = nullptr;
+	SelectedLODIndex = 0;
 	SelectedModule = nullptr;
 }
 
@@ -192,6 +280,11 @@ void FParticleEditorWidget::EnsureDefaultSystem()
 {
 	if (!EditingParticleSystem || !EditingParticleSystem->Emitters.empty())
 	{
+		if (EditingParticleSystem)
+		{
+			EditingParticleSystem->NormalizeLODData();
+			SelectedLODIndex = ClampLODIndex(SelectedLODIndex);
+		}
 		if (!SelectedModule)
 		{
 			SelectedModule = GetSelectedRequiredModule();
@@ -203,6 +296,8 @@ void FParticleEditorWidget::EnsureDefaultSystem()
 	{
 		EditingParticleSystem->Emitters.push_back(Emitter);
 		SelectedEmitterIndex = 0;
+		EditingParticleSystem->NormalizeLODData();
+		SelectedLODIndex = ClampLODIndex(SelectedLODIndex);
 		SelectedModule = GetSelectedRequiredModule();
 	}
 }
@@ -238,41 +333,184 @@ UParticleEmitter* FParticleEditorWidget::CreateDefaultEmitter(const FString& Emi
 	Spawn->Rate = 20.0f;
 	LOD->SpawnModule = Spawn;
 
-	UParticleModuleLifetime* Lifetime = GUObjectArray.CreateObject<UParticleModuleLifetime>(LOD);
-	Lifetime->Lifetime = 1.0f;
-	Lifetime->LifetimeMin = Lifetime->Lifetime;
-	Lifetime->LifetimeMax = Lifetime->Lifetime;
-	LOD->Modules.push_back(Lifetime);
-
-	UParticleModuleVelocity* Velocity = GUObjectArray.CreateObject<UParticleModuleVelocity>(LOD);
-	Velocity->StartVelocity = FVector(0.0f, 0.0f, 35.0f);
-	Velocity->StartVelocityMin = Velocity->StartVelocity;
-	Velocity->StartVelocityMax = Velocity->StartVelocity;
-
-	UParticleModuleSize* Size = GUObjectArray.CreateObject<UParticleModuleSize>(LOD);
-	Size->StartSize = FVector(12.0f, 12.0f, 1.0f);
-	Size->StartSizeMin = Size->StartSize;
-	Size->StartSizeMax = Size->StartSize;
-	LOD->Modules.push_back(Size);
-	LOD->Modules.push_back(Velocity);
-
-	UParticleModuleLocation* Location = GUObjectArray.CreateObject<UParticleModuleLocation>(LOD);
-	Location->StartLocation = FVector::ZeroVector;
-	Location->StartLocationMin = Location->StartLocation;
-	Location->StartLocationMax = Location->StartLocation;
-	LOD->Modules.push_back(Location);
-
-	UParticleModuleColor* Color = GUObjectArray.CreateObject<UParticleModuleColor>(LOD);
-	Color->StartColor = FVector(1.0f, 1.0f, 1.0f);
-	Color->StartAlpha = 1.0f;
-	Color->StartAlphaMin = Color->StartAlpha;
-	Color->StartAlphaMax = Color->StartAlpha;
-	LOD->Modules.push_back(Color);
+	if (UParticleModule* Lifetime = CreateModule(EAddableModuleType::Lifetime, LOD))
+	{
+		LOD->Modules.push_back(Lifetime);
+	}
+	if (UParticleModule* Size = CreateModule(EAddableModuleType::Size, LOD))
+	{
+		LOD->Modules.push_back(Size);
+	}
+	if (UParticleModule* Velocity = CreateModule(EAddableModuleType::Velocity, LOD))
+	{
+		LOD->Modules.push_back(Velocity);
+	}
+	if (UParticleModule* Location = CreateModule(EAddableModuleType::Location, LOD))
+	{
+		LOD->Modules.push_back(Location);
+	}
+	if (UParticleModule* Color = CreateModule(EAddableModuleType::Color, LOD))
+	{
+		LOD->Modules.push_back(Color);
+	}
 
 	LOD->UpdateModuleLists();
 	Emitter->LODLevels.push_back(LOD);
 	Emitter->UpdateModuleLists();
 	return Emitter;
+}
+
+UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleType, UObject* Outer)
+{
+	if (!Outer)
+	{
+		return nullptr;
+	}
+
+	switch (ModuleType)
+	{
+	case EAddableModuleType::Lifetime:
+	{
+		UParticleModuleLifetime* Lifetime = GUObjectArray.CreateObject<UParticleModuleLifetime>(Outer);
+		Lifetime->bEnabled = true;
+		Lifetime->Lifetime = 1.0f;
+		Lifetime->LifetimeMin = Lifetime->Lifetime;
+		Lifetime->LifetimeMax = Lifetime->Lifetime;
+		return Lifetime;
+	}
+	case EAddableModuleType::Size:
+	{
+		UParticleModuleSize* Size = GUObjectArray.CreateObject<UParticleModuleSize>(Outer);
+		Size->bEnabled = true;
+		Size->StartSize = FVector(12.0f, 12.0f, 1.0f);
+		Size->StartSizeMin = Size->StartSize;
+		Size->StartSizeMax = Size->StartSize;
+		return Size;
+	}
+	case EAddableModuleType::Velocity:
+	{
+		UParticleModuleVelocity* Velocity = GUObjectArray.CreateObject<UParticleModuleVelocity>(Outer);
+		Velocity->bEnabled = true;
+		Velocity->StartVelocity = FVector(0.0f, 0.0f, 35.0f);
+		Velocity->StartVelocityMin = Velocity->StartVelocity;
+		Velocity->StartVelocityMax = Velocity->StartVelocity;
+		return Velocity;
+	}
+	case EAddableModuleType::Location:
+	{
+		UParticleModuleLocation* Location = GUObjectArray.CreateObject<UParticleModuleLocation>(Outer);
+		Location->bEnabled = true;
+		Location->StartLocation = FVector::ZeroVector;
+		Location->StartLocationMin = Location->StartLocation;
+		Location->StartLocationMax = Location->StartLocation;
+		return Location;
+	}
+	case EAddableModuleType::Color:
+	{
+		UParticleModuleColor* Color = GUObjectArray.CreateObject<UParticleModuleColor>(Outer);
+		Color->bEnabled = true;
+		Color->StartColor = FVector(1.0f, 1.0f, 1.0f);
+		Color->StartAlpha = 1.0f;
+		Color->StartAlphaMin = Color->StartAlpha;
+		Color->StartAlphaMax = Color->StartAlpha;
+		Color->EndColor = FVector(1.0f, 1.0f, 1.0f);
+		Color->EndAlpha = 0.0f;
+		return Color;
+	}
+	}
+
+	return nullptr;
+}
+
+void FParticleEditorWidget::AddModuleToEmitter(int32 EmitterIndex, EAddableModuleType ModuleType)
+{
+	if (!EditingParticleSystem || EmitterIndex < 0 || EmitterIndex >= static_cast<int32>(EditingParticleSystem->Emitters.size()))
+	{
+		return;
+	}
+
+	UParticleEmitter* Emitter = EditingParticleSystem->Emitters[EmitterIndex];
+	UParticleLODLevel* LOD = GetSelectedLODLevel(Emitter);
+	if (!LOD)
+	{
+		return;
+	}
+
+	UParticleModule* NewModule = CreateModule(ModuleType, LOD);
+	if (!NewModule)
+	{
+		return;
+	}
+
+	LOD->Modules.push_back(NewModule);
+	SelectedEmitterIndex = EmitterIndex;
+	SelectedModule = NewModule;
+	ApplyEmitterEdit();
+}
+
+void FParticleEditorWidget::DeleteModuleFromEmitter(int32 EmitterIndex, UParticleModule* Module)
+{
+	if (!EditingParticleSystem || !Module || EmitterIndex < 0 || EmitterIndex >= static_cast<int32>(EditingParticleSystem->Emitters.size()))
+	{
+		return;
+	}
+
+	UParticleEmitter* Emitter = EditingParticleSystem->Emitters[EmitterIndex];
+	UParticleLODLevel* LOD = GetSelectedLODLevel(Emitter);
+	if (!LOD)
+	{
+		return;
+	}
+
+	auto ModuleIt = std::find(LOD->Modules.begin(), LOD->Modules.end(), Module);
+	if (ModuleIt == LOD->Modules.end())
+	{
+		return;
+	}
+
+	LOD->Modules.erase(ModuleIt);
+	if (Module == LOD->TypeDataModule)
+	{
+		LOD->TypeDataModule = nullptr;
+	}
+	if (SelectedModule == Module)
+	{
+		SelectedEmitterIndex = EmitterIndex;
+		SelectedModule = LOD->RequiredModule;
+		if (!SelectedModule)
+		{
+			SelectedModule = LOD->SpawnModule;
+		}
+	}
+
+	GUObjectArray.DestroyObject(Module);
+	ApplyEmitterEdit();
+}
+
+void FParticleEditorWidget::DeleteEmitter(int32 EmitterIndex)
+{
+	if (!EditingParticleSystem || EmitterIndex < 0 || EmitterIndex >= static_cast<int32>(EditingParticleSystem->Emitters.size()))
+	{
+		return;
+	}
+
+	UParticleEmitter* EmitterToDelete = EditingParticleSystem->Emitters[EmitterIndex];
+	EditingParticleSystem->Emitters.erase(EditingParticleSystem->Emitters.begin() + EmitterIndex);
+
+	SelectedModule = nullptr;
+	if (EditingParticleSystem->Emitters.empty())
+	{
+		SelectedEmitterIndex = 0;
+	}
+	else
+	{
+		SelectedEmitterIndex = std::clamp(EmitterIndex, 0, static_cast<int32>(EditingParticleSystem->Emitters.size()) - 1);
+		SelectedModule = GetSelectedRequiredModule();
+	}
+
+	DestroyEmitterTree(EmitterToDelete);
+	RestartPreviewSystem();
+	MarkDirty();
 }
 
 void FParticleEditorWidget::InitializePreviewWorld()
@@ -295,8 +533,8 @@ void FParticleEditorWidget::InitializePreviewWorld()
 
 	PreviewParticleComponent = PreviewActor->AddComponent<UParticleSystemComponent>();
 	PreviewActor->SetRootComponent(PreviewParticleComponent);
+	PreviewParticleComponent->SetForcedLODLevel(SelectedLODIndex);
 	PreviewParticleComponent->SetTemplate(EditingParticleSystem);
-	PreviewParticleComponent->InitializeSystem();
 
 	ViewportClient.Initialize(Device, 640, 480);
 	ViewportClient.SetClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -333,6 +571,7 @@ void FParticleEditorWidget::RestartPreviewSystem()
 		return;
 	}
 
+	PreviewParticleComponent->SetForcedLODLevel(SelectedLODIndex);
 	PreviewParticleComponent->ResetParticles(true);
 	PreviewParticleComponent->InitializeSystem();
 }
@@ -346,6 +585,76 @@ void FParticleEditorWidget::ApplyEmitterEdit()
 
 	RestartPreviewSystem();
 	MarkDirty();
+}
+
+int32 FParticleEditorWidget::GetLODCount() const
+{
+	return EditingParticleSystem ? EditingParticleSystem->GetLODCount() : 1;
+}
+
+int32 FParticleEditorWidget::ClampLODIndex(int32 LODIndex) const
+{
+	return std::clamp(LODIndex, 0, (std::max)(0, GetLODCount() - 1));
+}
+
+void FParticleEditorWidget::SetSelectedLODIndex(int32 LODIndex)
+{
+	SelectedLODIndex = ClampLODIndex(LODIndex);
+	SelectedModule = GetSelectedRequiredModule();
+	ApplySelectedLODToPreview(true);
+}
+
+UParticleLODLevel* FParticleEditorWidget::GetSelectedLODLevel(UParticleEmitter* Emitter) const
+{
+	if (!Emitter)
+	{
+		return nullptr;
+	}
+
+	return Emitter->GetLODLevel(ClampLODIndex(SelectedLODIndex));
+}
+
+void FParticleEditorWidget::AddLOD()
+{
+	if (!EditingParticleSystem)
+	{
+		return;
+	}
+
+	const int32 NewLODIndex = EditingParticleSystem->CreateLOD();
+	SetSelectedLODIndex(NewLODIndex);
+	MarkDirty();
+}
+
+void FParticleEditorWidget::DeleteSelectedLOD()
+{
+	if (!EditingParticleSystem || SelectedLODIndex <= 0)
+	{
+		return;
+	}
+
+	const int32 OldLODIndex = SelectedLODIndex;
+	if (!EditingParticleSystem->RemoveLOD(SelectedLODIndex))
+	{
+		return;
+	}
+
+	SetSelectedLODIndex(OldLODIndex - 1);
+	MarkDirty();
+}
+
+void FParticleEditorWidget::ApplySelectedLODToPreview(bool bRestart)
+{
+	if (!PreviewParticleComponent)
+	{
+		return;
+	}
+
+	PreviewParticleComponent->SetForcedLODLevel(SelectedLODIndex);
+	if (bRestart)
+	{
+		RestartPreviewSystem();
+	}
 }
 
 UParticleEmitter* FParticleEditorWidget::GetSelectedEmitter() const
@@ -368,7 +677,7 @@ UParticleModuleRequired* FParticleEditorWidget::GetSelectedRequiredModule() cons
 		return nullptr;
 	}
 
-	UParticleLODLevel* LOD = Emitter->GetLODLevel(0);
+	UParticleLODLevel* LOD = GetSelectedLODLevel(Emitter);
 	return LOD ? LOD->RequiredModule : nullptr;
 }
 
@@ -380,7 +689,7 @@ UParticleModule* FParticleEditorWidget::GetSelectedModule() const
 		return nullptr;
 	}
 
-	UParticleLODLevel* LOD = Emitter->GetLODLevel(0);
+	UParticleLODLevel* LOD = GetSelectedLODLevel(Emitter);
 	if (!LOD)
 	{
 		return nullptr;
@@ -588,6 +897,46 @@ void FParticleEditorWidget::RenderToolbar()
 		ViewportClient.ResetCameraToPreviewBounds();
 	}
 	ImGui::SameLine();
+	ImGui::TextDisabled("|");
+	ImGui::SameLine();
+
+	const int32 LODCount = GetLODCount();
+	if (DrawParticleToolbarButton("LowerLOD", L"Cascade_LowerLOD_512x.png", "Lower LOD", SelectedLODIndex >= LODCount - 1))
+	{
+		SetSelectedLODIndex(SelectedLODIndex + 1);
+	}
+	ImGui::SameLine();
+	if (DrawParticleToolbarButton("AddLODLeft", L"Cascade_AddLOD1_512x.png", "Add LOD", false))
+	{
+		AddLOD();
+	}
+	ImGui::SameLine();
+	ImGui::TextUnformatted("LOD :");
+	ImGui::SameLine();
+	int32 EditableLODIndex = SelectedLODIndex;
+	ImGui::SetNextItemWidth(42.0f);
+	if (ImGui::InputInt("##ParticleSelectedLOD", &EditableLODIndex, 0, 0))
+	{
+		SetSelectedLODIndex(EditableLODIndex);
+	}
+	ImGui::SameLine();
+	if (DrawParticleToolbarButton("AddLODRight", L"Cascade_AddLOD2_512x.png", "Add LOD", false))
+	{
+		AddLOD();
+	}
+	ImGui::SameLine();
+	if (DrawParticleToolbarButton("HigherLOD", L"Cascade_HigherLOD_512x.png", "Higher LOD", SelectedLODIndex <= 0))
+	{
+		SetSelectedLODIndex(SelectedLODIndex - 1);
+	}
+	ImGui::SameLine();
+	if (DrawParticleToolbarButton("DeleteLOD", L"Cascade_DeleteLOD_512x.png", "Delete LOD", SelectedLODIndex <= 0 || LODCount <= 1))
+	{
+		DeleteSelectedLOD();
+	}
+	ImGui::SameLine();
+	ImGui::TextDisabled("|");
+	ImGui::SameLine();
 	ImGui::TextDisabled("%zu emitters", EditingParticleSystem ? EditingParticleSystem->Emitters.size() : 0);
 }
 
@@ -650,6 +999,7 @@ void FParticleEditorWidget::RenderEmitterList()
 		if (UParticleEmitter* NewEmitter = CreateDefaultEmitter(NameBuffer))
 		{
 			EditingParticleSystem->Emitters.push_back(NewEmitter);
+			EditingParticleSystem->NormalizeLODData();
 			SelectedEmitterIndex = NewIndex;
 			SelectedModule = GetSelectedRequiredModule();
 			RestartPreviewSystem();
@@ -666,10 +1016,67 @@ void FParticleEditorWidget::RenderEmitterList()
 		return;
 	}
 
+	int32 EmitterToDelete = -1;
+	int32 EmitterToAddModule = -1;
+	int32 EmitterToDeleteModule = -1;
+	UParticleModule* ModuleToDelete = nullptr;
+	EAddableModuleType ModuleTypeToAdd = EAddableModuleType::Lifetime;
+	auto QueueAddModule = [&](int32 EmitterIndex, EAddableModuleType ModuleType)
+	{
+		EmitterToAddModule = EmitterIndex;
+		ModuleTypeToAdd = ModuleType;
+	};
+	auto DrawEmitterContextMenu = [&](int32 EmitterIndex)
+	{
+		if (ImGui::BeginMenu("Add Module"))
+		{
+			if (ImGui::MenuItem("Lifetime"))
+			{
+				QueueAddModule(EmitterIndex, EAddableModuleType::Lifetime);
+			}
+			if (ImGui::MenuItem("Initial Size"))
+			{
+				QueueAddModule(EmitterIndex, EAddableModuleType::Size);
+			}
+			if (ImGui::MenuItem("Initial Velocity"))
+			{
+				QueueAddModule(EmitterIndex, EAddableModuleType::Velocity);
+			}
+			if (ImGui::MenuItem("Initial Location"))
+			{
+				QueueAddModule(EmitterIndex, EAddableModuleType::Location);
+			}
+			if (ImGui::MenuItem("Color Over Life"))
+			{
+				QueueAddModule(EmitterIndex, EAddableModuleType::Color);
+			}
+			ImGui::EndMenu();
+		}
+
+		ImGui::Separator();
+		if (ImGui::MenuItem("Delete Emitter"))
+		{
+			EmitterToDelete = EmitterIndex;
+		}
+	};
+	auto DrawModuleContextMenu = [&](int32 EmitterIndex, UParticleLODLevel* LOD, UParticleModule* Module)
+	{
+		DrawEmitterContextMenu(EmitterIndex);
+
+		const bool bCanDeleteModule = LOD && Module &&
+			std::find(LOD->Modules.begin(), LOD->Modules.end(), Module) != LOD->Modules.end();
+		ImGui::Separator();
+		if (ImGui::MenuItem("Delete Module", nullptr, false, bCanDeleteModule))
+		{
+			EmitterToDeleteModule = EmitterIndex;
+			ModuleToDelete = Module;
+		}
+	};
+
 	for (int32 Index = 0; Index < static_cast<int32>(EditingParticleSystem->Emitters.size()); ++Index)
 	{
 		UParticleEmitter* Emitter = EditingParticleSystem->Emitters[Index];
-		UParticleLODLevel* LOD = Emitter ? Emitter->GetLODLevel(0) : nullptr;
+		UParticleLODLevel* LOD = GetSelectedLODLevel(Emitter);
 		if (!Emitter || !LOD)
 		{
 			continue;
@@ -690,6 +1097,13 @@ void FParticleEditorWidget::RenderEmitterList()
 			SelectedModule = LOD->RequiredModule;
 		}
 		ImGui::PopStyleColor(3);
+		if (ImGui::BeginPopupContextItem("EmitterHeaderContext"))
+		{
+			SelectedEmitterIndex = Index;
+			SelectedModule = LOD->RequiredModule;
+			DrawEmitterContextMenu(Index);
+			ImGui::EndPopup();
+		}
 
 		auto DrawModuleRow = [&](UParticleModule* Module, int32 ModuleIndex)
 		{
@@ -698,6 +1112,7 @@ void FParticleEditorWidget::RenderEmitterList()
 				return;
 			}
 
+			ImGui::PushID(Module);
 			const bool bSelected = Index == SelectedEmitterIndex && Module == GetSelectedModule();
 			const ImU32 RowColor = GetModuleRowColor(bSelected, ModuleIndex);
 			ImGui::PushStyleColor(ImGuiCol_Header, RowColor);
@@ -710,6 +1125,14 @@ void FParticleEditorWidget::RenderEmitterList()
 				SelectedModule = Module;
 			}
 			ImGui::PopStyleColor(3);
+			if (ImGui::BeginPopupContextItem("ModuleRowContext"))
+			{
+				SelectedEmitterIndex = Index;
+				SelectedModule = Module;
+				DrawModuleContextMenu(Index, LOD, Module);
+				ImGui::EndPopup();
+			}
+			ImGui::PopID();
 		};
 
 		int32 ModuleIndex = 0;
@@ -718,6 +1141,14 @@ void FParticleEditorWidget::RenderEmitterList()
 		for (UParticleModule* Module : LOD->Modules)
 		{
 			DrawModuleRow(Module, ModuleIndex++);
+		}
+
+		if (ImGui::BeginPopupContextWindow("EmitterColumnContext", ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverItems))
+		{
+			SelectedEmitterIndex = Index;
+			SelectedModule = GetSelectedModule();
+			DrawEmitterContextMenu(Index);
+			ImGui::EndPopup();
 		}
 
 		ImGui::EndChild();
@@ -731,6 +1162,19 @@ void FParticleEditorWidget::RenderEmitterList()
 	}
 
 	ImGui::EndChild();
+
+	if (EmitterToDelete >= 0)
+	{
+		DeleteEmitter(EmitterToDelete);
+	}
+	else if (EmitterToDeleteModule >= 0)
+	{
+		DeleteModuleFromEmitter(EmitterToDeleteModule, ModuleToDelete);
+	}
+	else if (EmitterToAddModule >= 0)
+	{
+		AddModuleToEmitter(EmitterToAddModule, ModuleTypeToAdd);
+	}
 }
 
 void FParticleEditorWidget::RenderCurvePanel()
@@ -912,6 +1356,20 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		{
 			Color->StartAlphaMax = std::clamp(StartAlphaMax, 0.0f, 1.0f);
 			Color->StartAlpha = Color->StartAlphaMax;
+			bChanged = true;
+		}
+
+		float EndColor[3] = { Color->EndColor.X, Color->EndColor.Y, Color->EndColor.Z };
+		if (ImGui::ColorEdit3("End Color", EndColor))
+		{
+			Color->EndColor = FVector(EndColor[0], EndColor[1], EndColor[2]);
+			bChanged = true;
+		}
+
+		float EndAlpha = Color->EndAlpha;
+		if (ImGui::DragFloat("End Alpha", &EndAlpha, 0.01f, 0.0f, 1.0f))
+		{
+			Color->EndAlpha = std::clamp(EndAlpha, 0.0f, 1.0f);
 			bChanged = true;
 		}
 	}
