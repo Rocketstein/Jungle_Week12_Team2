@@ -53,6 +53,7 @@ private:
 	UParticleLODLevel* GetSelectedLODLevel(UParticleEmitter* Emitter) const;
 	void AddLOD();
 	void DeleteSelectedLOD();
+	void ApplySelectedLODToPreview(bool bRestart);
 	void InitializePreviewWorld();
 	void ReleasePreviewWorld();
 	void RestartPreviewSystem();

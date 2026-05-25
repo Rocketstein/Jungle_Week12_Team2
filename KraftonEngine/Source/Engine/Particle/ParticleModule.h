@@ -53,7 +53,7 @@ public:
 	uint8 bSpawnModule : 1 = false;
 	uint8 bUpdateModule : 1 = false;
 	uint8 bFinalUpdateModule : 1 = false;
-	uint8 bEnabled : 1 = false;
+	uint8 bEnabled : 1 = true;
 	uint8 bEditable : 1 = false;
 	uint8 LODValidity = 0xff;
 

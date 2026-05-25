@@ -17,6 +17,8 @@
 
 namespace
 {
+constexpr int32 ParticleSystemVersion = 2;
+
 namespace ParticleKeys
 {
 	static constexpr const char* Version = "Version";
@@ -248,7 +250,12 @@ json::JSON SerializeEmitter(UParticleEmitter* Emitter)
 json::JSON SerializeParticleSystem(UParticleSystem* ParticleSystem)
 {
 	json::JSON Root = json::JSON::Make(json::JSON::Class::Object);
-	Root[ParticleKeys::Version] = 1;
+	Root[ParticleKeys::Version] = ParticleSystemVersion;
+
+	if (ParticleSystem)
+	{
+		ParticleSystem->NormalizeLODData();
+	}
 
 	json::JSON LODDistances = json::Array();
 	if (ParticleSystem)
@@ -311,6 +318,7 @@ UParticleModuleRequired* DeserializeRequiredModule(json::JSON& Object, UParticle
 UParticleModuleSpawn* DeserializeSpawnModule(json::JSON& Object, UParticleLODLevel* Outer)
 {
 	UParticleModuleSpawn* Spawn = GUObjectArray.CreateObject<UParticleModuleSpawn>(Outer);
+	Spawn->bEnabled = true;
 	if (Object.hasKey(ParticleKeys::Rate))
 	{
 		Spawn->Rate = std::max(0.0f, static_cast<float>(Object[ParticleKeys::Rate].ToFloat()));
@@ -389,7 +397,41 @@ UParticleModule* DeserializeModule(json::JSON& Object, UParticleLODLevel* Outer)
 	return Module;
 }
 
-UParticleLODLevel* DeserializeLODLevel(json::JSON& Object, UParticleEmitter* Outer)
+void RestoreLegacyDisabledModules(UParticleLODLevel* LOD, bool bAllowLegacyRestore)
+{
+	if (!bAllowLegacyRestore || !LOD || LOD->Modules.empty())
+	{
+		return;
+	}
+
+	bool bHasEnabledModule = false;
+	for (UParticleModule* Module : LOD->Modules)
+	{
+		if (Module && Module->bEnabled)
+		{
+			bHasEnabledModule = true;
+			break;
+		}
+	}
+
+	if (bHasEnabledModule)
+	{
+		return;
+	}
+
+	// Early particle assets were saved after module support was added, but before
+	// newly created/deserialized modules defaulted to enabled. Treat the "all off"
+	// state as legacy data so the particle remains visible when opened.
+	for (UParticleModule* Module : LOD->Modules)
+	{
+		if (Module)
+		{
+			Module->bEnabled = true;
+		}
+	}
+}
+
+UParticleLODLevel* DeserializeLODLevel(json::JSON& Object, UParticleEmitter* Outer, bool bAllowLegacyRestore)
 {
 	UParticleLODLevel* LOD = GUObjectArray.CreateObject<UParticleLODLevel>(Outer);
 	LOD->SetLevelIndex(Object.hasKey(ParticleKeys::Level) ? static_cast<int32>(Object[ParticleKeys::Level].ToInt()) : 0);
@@ -424,11 +466,12 @@ UParticleLODLevel* DeserializeLODLevel(json::JSON& Object, UParticleEmitter* Out
 		}
 	}
 
+	RestoreLegacyDisabledModules(LOD, bAllowLegacyRestore);
 	LOD->UpdateModuleLists();
 	return LOD;
 }
 
-UParticleEmitter* DeserializeEmitter(json::JSON& Object, UParticleSystem* Outer)
+UParticleEmitter* DeserializeEmitter(json::JSON& Object, UParticleSystem* Outer, bool bAllowLegacyRestore)
 {
 	UParticleSpriteEmitter* Emitter = GUObjectArray.CreateObject<UParticleSpriteEmitter>(Outer);
 	Emitter->SetEmitterName(FName(Object.hasKey(ParticleKeys::Name) ? Object[ParticleKeys::Name].ToString() : FString("Particle Emitter")));
@@ -445,14 +488,14 @@ UParticleEmitter* DeserializeEmitter(json::JSON& Object, UParticleSystem* Outer)
 	{
 		for (auto& LODObject : Object[ParticleKeys::LODLevels].ArrayRange())
 		{
-			Emitter->LODLevels.push_back(DeserializeLODLevel(LODObject, Emitter));
+			Emitter->LODLevels.push_back(DeserializeLODLevel(LODObject, Emitter, bAllowLegacyRestore));
 		}
 	}
 
 	if (Emitter->LODLevels.empty())
 	{
 		json::JSON DefaultLOD = json::Object();
-		Emitter->LODLevels.push_back(DeserializeLODLevel(DefaultLOD, Emitter));
+		Emitter->LODLevels.push_back(DeserializeLODLevel(DefaultLOD, Emitter, bAllowLegacyRestore));
 	}
 
 	Emitter->UpdateModuleLists();
@@ -471,6 +514,9 @@ void DeserializeParticleSystem(UParticleSystem* ParticleSystem, const FString& P
 	{
 		return;
 	}
+
+	const int32 Version = Root.hasKey(ParticleKeys::Version) ? static_cast<int32>(Root[ParticleKeys::Version].ToInt()) : 1;
+	const bool bAllowLegacyRestore = Version < ParticleSystemVersion;
 
 	if (Root.hasKey(ParticleKeys::LODDistances))
 	{
@@ -494,7 +540,7 @@ void DeserializeParticleSystem(UParticleSystem* ParticleSystem, const FString& P
 
 	for (auto& EmitterObject : Root[ParticleKeys::Emitters].ArrayRange())
 	{
-		if (UParticleEmitter* Emitter = DeserializeEmitter(EmitterObject, ParticleSystem))
+		if (UParticleEmitter* Emitter = DeserializeEmitter(EmitterObject, ParticleSystem, bAllowLegacyRestore))
 		{
 			ParticleSystem->Emitters.push_back(Emitter);
 		}

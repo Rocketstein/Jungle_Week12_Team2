@@ -533,8 +533,8 @@ void FParticleEditorWidget::InitializePreviewWorld()
 
 	PreviewParticleComponent = PreviewActor->AddComponent<UParticleSystemComponent>();
 	PreviewActor->SetRootComponent(PreviewParticleComponent);
+	PreviewParticleComponent->SetForcedLODLevel(SelectedLODIndex);
 	PreviewParticleComponent->SetTemplate(EditingParticleSystem);
-	PreviewParticleComponent->InitializeSystem();
 
 	ViewportClient.Initialize(Device, 640, 480);
 	ViewportClient.SetClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -571,6 +571,7 @@ void FParticleEditorWidget::RestartPreviewSystem()
 		return;
 	}
 
+	PreviewParticleComponent->SetForcedLODLevel(SelectedLODIndex);
 	PreviewParticleComponent->ResetParticles(true);
 	PreviewParticleComponent->InitializeSystem();
 }
@@ -600,6 +601,7 @@ void FParticleEditorWidget::SetSelectedLODIndex(int32 LODIndex)
 {
 	SelectedLODIndex = ClampLODIndex(LODIndex);
 	SelectedModule = GetSelectedRequiredModule();
+	ApplySelectedLODToPreview(true);
 }
 
 UParticleLODLevel* FParticleEditorWidget::GetSelectedLODLevel(UParticleEmitter* Emitter) const
@@ -621,7 +623,6 @@ void FParticleEditorWidget::AddLOD()
 
 	const int32 NewLODIndex = EditingParticleSystem->CreateLOD();
 	SetSelectedLODIndex(NewLODIndex);
-	RestartPreviewSystem();
 	MarkDirty();
 }
 
@@ -639,8 +640,21 @@ void FParticleEditorWidget::DeleteSelectedLOD()
 	}
 
 	SetSelectedLODIndex(OldLODIndex - 1);
-	RestartPreviewSystem();
 	MarkDirty();
+}
+
+void FParticleEditorWidget::ApplySelectedLODToPreview(bool bRestart)
+{
+	if (!PreviewParticleComponent)
+	{
+		return;
+	}
+
+	PreviewParticleComponent->SetForcedLODLevel(SelectedLODIndex);
+	if (bRestart)
+	{
+		RestartPreviewSystem();
+	}
 }
 
 UParticleEmitter* FParticleEditorWidget::GetSelectedEmitter() const
