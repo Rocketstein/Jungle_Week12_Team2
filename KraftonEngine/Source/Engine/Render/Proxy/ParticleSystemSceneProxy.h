@@ -132,6 +132,7 @@ private:
 	FMatrix ComponentToWorld = FMatrix::Identity;
 	FSpriteParticlePacker SpritePacker;
 	FMeshParticlePacker MeshPacker;
+	FBeamParticlePacker BeamPacker;
 
 	bool bInstancePacked	  = false;
 
