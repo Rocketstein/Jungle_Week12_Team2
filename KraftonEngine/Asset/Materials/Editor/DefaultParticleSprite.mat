@@ -3,6 +3,10 @@
   "DepthStencilState" : "",
   "Origin" : "Editor",
   "Parameters" : {
+    "AlphaPower" : 0.000000,
+    "AlphaSource" : 0.000000,
+    "AlphaThreshold" : 0.000000,
+    "ColorIntensity" : 0.000000,
     "EmitterOrigin" : [0.000000, 0.000000, 0.000000],
     "ScreenAlignment" : 0,
     "SubUVCols" : 0,

@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Component/PrimitiveComponent.h"
+#include "Core/UObject/TSoftObjectPtr.h"
 #include "Particle/ParticleLODContext.h"
 #include "Particle/ParticleSystem.h"
 #include "ParticleSystemComponent.generated.h"
@@ -26,6 +27,7 @@ public:
 	~UParticleSystemComponent() override;
 
 	void PostEditProperty(const char* PropertyName) override;
+	void EndPlay() override;
 	UFXSystemAsset* GetFXSystemAsset() const override;
 	void SetTemplate(UParticleSystem* NewTemplate);
 	FPrimitiveSceneProxy* CreateSceneProxy() override;
@@ -37,7 +39,7 @@ public:
 	void InitializeSystem();
 
 	UPROPERTY(Edit, Category="Particles", DisplayName="Template", Type=SoftObject, Class=UParticleSystem)
-	UParticleSystem* Template = nullptr;
+	TSoftObjectPtr<UParticleSystem> Template;
 
 	UPROPERTY(Edit, Category="Particles", DisplayName="Particle System Priority", Min=0, Max=65535, Speed=1.0f)
 	int32 SortPriority = 0;

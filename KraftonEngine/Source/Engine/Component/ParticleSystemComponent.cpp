@@ -120,14 +120,20 @@ void UParticleSystemComponent::PostEditProperty(const char* PropertyName)
 	}
 }
 
+void UParticleSystemComponent::EndPlay()
+{
+	ResetParticles(true);
+	UFXSystemComponent::EndPlay();
+}
+
 UFXSystemAsset* UParticleSystemComponent::GetFXSystemAsset() const
 {
-	return Template;
+	return Template.Get();
 }
 
 void UParticleSystemComponent::SetTemplate(UParticleSystem* NewTemplate)
 {
-	if (Template == NewTemplate)
+	if (Template.Get() == NewTemplate)
 	{
 		return;
 	}
@@ -153,7 +159,8 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if (!Template)
+	UParticleSystem* ParticleTemplate = Template.Get();
+	if (!ParticleTemplate)
 	{
 		return;
 	}
@@ -230,14 +237,15 @@ void UParticleSystemComponent::InitParticles()
 {
 	ResetParticles(true);
 
-	if (!Template)
+	UParticleSystem* ParticleTemplate = Template.Get();
+	if (!ParticleTemplate)
 	{
 		return;
 	}
 
-	Template->NormalizeLODData();
-	EmitterInstances.reserve(Template->Emitters.size());
-	for (UParticleEmitter* Emitter : Template->Emitters)
+	ParticleTemplate->NormalizeLODData();
+	EmitterInstances.reserve(ParticleTemplate->Emitters.size());
+	for (UParticleEmitter* Emitter : ParticleTemplate->Emitters)
 	{
 		if (!Emitter)
 		{
@@ -251,7 +259,7 @@ void UParticleSystemComponent::InitParticles()
 		EmitterInstances.push_back(Instance);
 	}
 
-	LODDistances = Template->GetLODDistances();
+	LODDistances = ParticleTemplate->GetLODDistances();
 }
 
 void UParticleSystemComponent::ResetParticles(bool bEmptyInstances)
