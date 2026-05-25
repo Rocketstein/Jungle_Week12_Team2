@@ -65,6 +65,7 @@ void MoveBeamReplayData(FDynamicBeamEmitterReplayData& Dest, FDynamicBeamEmitter
 	Dest.Width = Source.Width;
 	Dest.InterpolationPoints = Source.InterpolationPoints;
 	Dest.Sheets = Source.Sheets;
+	Dest.BeamCount = Source.BeamCount;
 	Dest.MaxBeamCount = Source.MaxBeamCount;
 	Dest.Speed = Source.Speed;
 	Dest.UpVectorStepSize = Source.UpVectorStepSize;

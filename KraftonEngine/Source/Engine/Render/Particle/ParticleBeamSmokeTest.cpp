@@ -46,7 +46,6 @@ namespace
 		FDynamicBeamEmitterReplayData& Src = Emitter->BeamSource;
 		// eEmitterType is already DET_Beam2 via the FDynamicBeamEmitterReplayData ctor.
 		Src.MaterialInterface     = Material;
-		Src.ActiveParticleCount   = 1;
 		Src.ParticleStride        = AlignParticleDataSize(static_cast<int32>(sizeof(FBaseParticle)), 16);
 		Src.SortMode              = EParticleSortMode::PSORTMODE_None;
 		Src.BlendMode             = Material ? Material->GetBlendState() : EBlendState::Additive;
@@ -64,6 +63,8 @@ namespace
 
 		Src.InterpolationPoints  = 8;
 		Src.Sheets               = 5;
+		Src.BeamCount            = 1;
+		Src.ActiveParticleCount  = static_cast<int32>(Src.BeamCount) * Src.Sheets;
 		Src.TextureTile          = 5;
 		Src.TextureTileDistance  = 0.0f;
 

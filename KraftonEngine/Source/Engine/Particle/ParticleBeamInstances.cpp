@@ -45,18 +45,24 @@ FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
 	}
 
 	const FMatrix& ComponentToWorld = Component->GetWorldMatrix();
+	const int32 SheetCount = std::max(1, BeamModule->Sheets);
+	const int32 MaxBeamCount = std::max(1, BeamModule->MaxBeamCount);
+	const int32 LogicalBeamCount = BeamModule->bAlwaysOn
+		? std::clamp(std::max(1, ActiveParticles), 1, MaxBeamCount)
+		: std::clamp(ActiveParticles, 0, MaxBeamCount);
+
 	FDynamicBeamEmitterReplayData* NewEmitterReplayData = new FDynamicBeamEmitterReplayData();
 	NewEmitterReplayData->Source = ComponentToWorld.TransformPositionWithW(LocalSource);
 	NewEmitterReplayData->Target = ComponentToWorld.TransformPositionWithW(LocalTarget);
-	NewEmitterReplayData->BeamCount = ActiveParticles; // Actual number of particles
+	NewEmitterReplayData->BeamCount = static_cast<uint32>(LogicalBeamCount);
 	NewEmitterReplayData->ParticleStride = 0;
 	NewEmitterReplayData->Scale = FVector::OneVector;
 	NewEmitterReplayData->Width = BeamModule->Width;
 	NewEmitterReplayData->Color = BeamModule->Color;
 	NewEmitterReplayData->Alpha = std::clamp(BeamModule->Alpha, 0.0f, 1.0f);
 	NewEmitterReplayData->InterpolationPoints = std::max(0, BeamModule->InterpolationPoints);
-	NewEmitterReplayData->Sheets = std::max(1, BeamModule->Sheets);
-	NewEmitterReplayData->MaxBeamCount = std::max(1, BeamModule->MaxBeamCount);
+	NewEmitterReplayData->Sheets = SheetCount;
+	NewEmitterReplayData->MaxBeamCount = MaxBeamCount;
 	NewEmitterReplayData->Speed = std::max(0.0f, BeamModule->Speed);
 	NewEmitterReplayData->UpVectorStepSize = std::max(0, BeamModule->UpVectorStepSize);
 	NewEmitterReplayData->TaperFactor = BeamModule->TaperFactor;
@@ -70,7 +76,7 @@ FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
 	NewEmitterReplayData->bRenderTessellation = BeamModule->bRenderTessellation;
 	NewEmitterReplayData->BranchParentName = BeamModule->BranchParentName;
 	NewEmitterReplayData->TargetData = BeamModule->TargetData;
-	NewEmitterReplayData->ActiveParticleCount = ActiveParticles * BeamModule->Sheets;	// Actual number of particles
+	NewEmitterReplayData->ActiveParticleCount = LogicalBeamCount * SheetCount;
 
 	if (CurrentLODLevel->RequiredModule)
 	{
