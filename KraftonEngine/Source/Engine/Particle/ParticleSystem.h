@@ -35,6 +35,6 @@ public:
 	void NormalizeLODData();
 
 private:
-	TArray<float> LODDistances;
+	TArray<float> LODDistances = { 0.0f };
 	FString AssetPathFileName;
 };

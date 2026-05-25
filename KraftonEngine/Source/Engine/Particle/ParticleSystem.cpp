@@ -11,13 +11,18 @@ namespace
 
 int32 UParticleSystem::GetLODCount() const
 {
-	return static_cast<int32>(LODDistances.size());
+	return std::max(1, static_cast<int32>(LODDistances.size()));
 }
 
 int32 UParticleSystem::CreateLOD(float Distance)
 {
+	if (LODDistances.empty())
+	{
+		LODDistances.push_back(0.0f);
+	}
+
 	const int32 NewLODIndex = static_cast<int32>(LODDistances.size());
-	const float DefaultDistance = LODDistances.empty() ? 0.0f : LODDistances.back() + DefaultLODDistanceStep;
+	const float DefaultDistance = LODDistances.back() + DefaultLODDistanceStep;
 	LODDistances.push_back(Distance >= 0.0f ? Distance : DefaultDistance);
 	NormalizeLODData();
 
@@ -55,6 +60,11 @@ float UParticleSystem::GetLODDistance(int32 LODIndex) const
 
 bool UParticleSystem::SetLODDistance(int32 LODIndex, float Distance)
 {
+	if (LODDistances.empty())
+	{
+		LODDistances.push_back(0.0f);
+	}
+
 	if (LODIndex < 0 || LODIndex >= static_cast<int32>(LODDistances.size()))
 	{
 		return false;
