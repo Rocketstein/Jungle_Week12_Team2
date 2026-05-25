@@ -255,7 +255,7 @@ void UParticleSystemComponent::InitParticles()
 
 		FParticleEmitterInstance* Instance = new FParticleEmitterInstance(this);
 		Instance->InitParameters(Emitter);
-		Instance->Init();
+		Instance->RebuildTemplateModuleList();
 		EmitterInstances.push_back(Instance);
 	}
 

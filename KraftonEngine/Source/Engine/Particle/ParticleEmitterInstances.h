@@ -50,7 +50,7 @@ struct FParticleEmitterInstance : FParticleEmitterInstanceFixLayout
 	virtual ~FParticleEmitterInstance();
 
 	virtual void InitParameters(UParticleEmitter* InTemplate);
-	virtual void Init();
+	virtual void RebuildTemplateModuleList();
 	virtual bool Resize(int32 NewMaxActiveParticles, bool bSetMaxActiveCount = true);
 	virtual void SetCurrentLODLevel(int32 LODLevel);
 	virtual void Tick(float DeltaTime, int32 LODLevel, bool bSuppressSpawning);
