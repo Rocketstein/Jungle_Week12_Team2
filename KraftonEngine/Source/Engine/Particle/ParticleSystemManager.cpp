@@ -21,6 +21,7 @@ namespace ParticleKeys
 {
 	static constexpr const char* Version = "Version";
 	static constexpr const char* Emitters = "Emitters";
+	static constexpr const char* LODDistances = "LODDistances";
 	static constexpr const char* Name = "Name";
 	static constexpr const char* InitialAllocationCount = "InitialAllocationCount";
 	static constexpr const char* PeakActiveParticles = "PeakActiveParticles";
@@ -249,6 +250,16 @@ json::JSON SerializeParticleSystem(UParticleSystem* ParticleSystem)
 	json::JSON Root = json::JSON::Make(json::JSON::Class::Object);
 	Root[ParticleKeys::Version] = 1;
 
+	json::JSON LODDistances = json::Array();
+	if (ParticleSystem)
+	{
+		for (float Distance : ParticleSystem->GetLODDistances())
+		{
+			LODDistances.append(Distance);
+		}
+	}
+	Root[ParticleKeys::LODDistances] = LODDistances;
+
 	json::JSON Emitters = json::Array();
 	if (ParticleSystem)
 	{
@@ -461,6 +472,26 @@ void DeserializeParticleSystem(UParticleSystem* ParticleSystem, const FString& P
 		return;
 	}
 
+	if (Root.hasKey(ParticleKeys::LODDistances))
+	{
+		json::JSON& LODDistances = Root[ParticleKeys::LODDistances];
+		if (LODDistances.JSONType() == json::JSON::Class::Array)
+		{
+			for (int32 Index = 0; Index < static_cast<int32>(LODDistances.length()); ++Index)
+			{
+				const float Distance = std::max(0.0f, static_cast<float>(LODDistances[Index].ToFloat()));
+				if (Index == 0)
+				{
+					ParticleSystem->SetLODDistance(0, Distance);
+				}
+				else
+				{
+					ParticleSystem->CreateLOD(Distance);
+				}
+			}
+		}
+	}
+
 	for (auto& EmitterObject : Root[ParticleKeys::Emitters].ArrayRange())
 	{
 		if (UParticleEmitter* Emitter = DeserializeEmitter(EmitterObject, ParticleSystem))
@@ -468,6 +499,24 @@ void DeserializeParticleSystem(UParticleSystem* ParticleSystem, const FString& P
 			ParticleSystem->Emitters.push_back(Emitter);
 		}
 	}
+
+	if (!Root.hasKey(ParticleKeys::LODDistances))
+	{
+		int32 MaxLODCount = ParticleSystem->GetLODCount();
+		for (UParticleEmitter* Emitter : ParticleSystem->Emitters)
+		{
+			if (Emitter)
+			{
+				MaxLODCount = std::max(MaxLODCount, static_cast<int32>(Emitter->LODLevels.size()));
+			}
+		}
+		while (ParticleSystem->GetLODCount() < MaxLODCount)
+		{
+			ParticleSystem->CreateLOD();
+		}
+	}
+
+	ParticleSystem->NormalizeLODData();
 }
 }
 

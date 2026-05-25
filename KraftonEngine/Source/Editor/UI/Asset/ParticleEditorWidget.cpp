@@ -2,6 +2,7 @@
 
 #include "Component/ParticleSystemComponent.h"
 #include "Editor/UI/ContentBrowser/ContentItem.h"
+#include "Editor/UI/EditorTextureManager.h"
 #include "GameFramework/AActor.h"
 #include "Input/InputSystem.h"
 #include "GameFramework/World.h"
@@ -14,6 +15,7 @@
 #include "Particle/ParticleSpriteEmitter.h"
 #include "Particle/ParticleSystem.h"
 #include "Particle/ParticleSystemManager.h"
+#include "Platform/Paths.h"
 #include "Runtime/Engine.h"
 #include "Settings/EditorSettings.h"
 #include "Slate/SlateApplication.h"
@@ -52,6 +54,14 @@ namespace
 		"Texture Alpha",
 		"Texture Luminance"
 	};
+
+	FString GetParticleEditorIconPath(const wchar_t* FileName)
+	{
+		return FPaths::ToUtf8(FPaths::Combine(
+			FPaths::AssetDir(),
+			L"Editor/Icons/ParticleEditor",
+			FileName));
+	}
 
 	ImU32 GetModuleRowColor(bool bSelected, int32 ModuleIndex)
 	{
@@ -119,6 +129,30 @@ namespace
 		TopHeight = std::clamp(TopHeight, MinTopHeight, MaxTopHeight);
 	}
 
+	bool DrawParticleToolbarButton(const char* Id, const wchar_t* IconFileName, const char* Label, bool bDisabled)
+	{
+		bool bClicked = false;
+		ID3D11ShaderResourceView* Icon = FEditorTextureManager::Get().GetOrLoadIcon(GetParticleEditorIconPath(IconFileName));
+
+		ImGui::PushID(Id);
+		ImGui::BeginDisabled(bDisabled);
+		if (Icon)
+		{
+			bClicked |= ImGui::ImageButton("##Icon", reinterpret_cast<ImTextureID>(Icon), ImVec2(18.0f, 18.0f));
+			ImGui::SameLine(0.0f, 4.0f);
+		}
+		bClicked |= ImGui::Button(Label);
+		ImGui::EndDisabled();
+
+		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+		{
+			ImGui::SetTooltip("%s", Label);
+		}
+		ImGui::PopID();
+
+		return bClicked && !bDisabled;
+	}
+
 	void DestroyEmitterTree(UParticleEmitter* Emitter)
 	{
 		if (!Emitter)
@@ -137,6 +171,10 @@ namespace
 			{
 				if (Module)
 				{
+					if (Module == LOD->TypeDataModule)
+					{
+						LOD->TypeDataModule = nullptr;
+					}
 					GUObjectArray.DestroyObject(Module);
 				}
 			}
@@ -199,6 +237,9 @@ void FParticleEditorWidget::Open(UObject* Object)
 		return;
 	}
 
+	SelectedEmitterIndex = 0;
+	SelectedLODIndex = 0;
+	SelectedModule = nullptr;
 	EnsureDefaultSystem();
 	InitializePreviewWorld();
 }
@@ -210,6 +251,7 @@ void FParticleEditorWidget::Close()
 	EditingParticleSystem = nullptr;
 	PreviewParticleComponent = nullptr;
 	PreviewActor = nullptr;
+	SelectedLODIndex = 0;
 	SelectedModule = nullptr;
 }
 
@@ -238,6 +280,11 @@ void FParticleEditorWidget::EnsureDefaultSystem()
 {
 	if (!EditingParticleSystem || !EditingParticleSystem->Emitters.empty())
 	{
+		if (EditingParticleSystem)
+		{
+			EditingParticleSystem->NormalizeLODData();
+			SelectedLODIndex = ClampLODIndex(SelectedLODIndex);
+		}
 		if (!SelectedModule)
 		{
 			SelectedModule = GetSelectedRequiredModule();
@@ -249,6 +296,8 @@ void FParticleEditorWidget::EnsureDefaultSystem()
 	{
 		EditingParticleSystem->Emitters.push_back(Emitter);
 		SelectedEmitterIndex = 0;
+		EditingParticleSystem->NormalizeLODData();
+		SelectedLODIndex = ClampLODIndex(SelectedLODIndex);
 		SelectedModule = GetSelectedRequiredModule();
 	}
 }
@@ -381,7 +430,7 @@ void FParticleEditorWidget::AddModuleToEmitter(int32 EmitterIndex, EAddableModul
 	}
 
 	UParticleEmitter* Emitter = EditingParticleSystem->Emitters[EmitterIndex];
-	UParticleLODLevel* LOD = Emitter ? Emitter->GetLODLevel(0) : nullptr;
+	UParticleLODLevel* LOD = GetSelectedLODLevel(Emitter);
 	if (!LOD)
 	{
 		return;
@@ -407,7 +456,7 @@ void FParticleEditorWidget::DeleteModuleFromEmitter(int32 EmitterIndex, UParticl
 	}
 
 	UParticleEmitter* Emitter = EditingParticleSystem->Emitters[EmitterIndex];
-	UParticleLODLevel* LOD = Emitter ? Emitter->GetLODLevel(0) : nullptr;
+	UParticleLODLevel* LOD = GetSelectedLODLevel(Emitter);
 	if (!LOD)
 	{
 		return;
@@ -420,6 +469,10 @@ void FParticleEditorWidget::DeleteModuleFromEmitter(int32 EmitterIndex, UParticl
 	}
 
 	LOD->Modules.erase(ModuleIt);
+	if (Module == LOD->TypeDataModule)
+	{
+		LOD->TypeDataModule = nullptr;
+	}
 	if (SelectedModule == Module)
 	{
 		SelectedEmitterIndex = EmitterIndex;
@@ -533,6 +586,63 @@ void FParticleEditorWidget::ApplyEmitterEdit()
 	MarkDirty();
 }
 
+int32 FParticleEditorWidget::GetLODCount() const
+{
+	return EditingParticleSystem ? EditingParticleSystem->GetLODCount() : 1;
+}
+
+int32 FParticleEditorWidget::ClampLODIndex(int32 LODIndex) const
+{
+	return std::clamp(LODIndex, 0, (std::max)(0, GetLODCount() - 1));
+}
+
+void FParticleEditorWidget::SetSelectedLODIndex(int32 LODIndex)
+{
+	SelectedLODIndex = ClampLODIndex(LODIndex);
+	SelectedModule = GetSelectedRequiredModule();
+}
+
+UParticleLODLevel* FParticleEditorWidget::GetSelectedLODLevel(UParticleEmitter* Emitter) const
+{
+	if (!Emitter)
+	{
+		return nullptr;
+	}
+
+	return Emitter->GetLODLevel(ClampLODIndex(SelectedLODIndex));
+}
+
+void FParticleEditorWidget::AddLOD()
+{
+	if (!EditingParticleSystem)
+	{
+		return;
+	}
+
+	const int32 NewLODIndex = EditingParticleSystem->CreateLOD();
+	SetSelectedLODIndex(NewLODIndex);
+	RestartPreviewSystem();
+	MarkDirty();
+}
+
+void FParticleEditorWidget::DeleteSelectedLOD()
+{
+	if (!EditingParticleSystem || SelectedLODIndex <= 0)
+	{
+		return;
+	}
+
+	const int32 OldLODIndex = SelectedLODIndex;
+	if (!EditingParticleSystem->RemoveLOD(SelectedLODIndex))
+	{
+		return;
+	}
+
+	SetSelectedLODIndex(OldLODIndex - 1);
+	RestartPreviewSystem();
+	MarkDirty();
+}
+
 UParticleEmitter* FParticleEditorWidget::GetSelectedEmitter() const
 {
 	if (!EditingParticleSystem || EditingParticleSystem->Emitters.empty())
@@ -553,7 +663,7 @@ UParticleModuleRequired* FParticleEditorWidget::GetSelectedRequiredModule() cons
 		return nullptr;
 	}
 
-	UParticleLODLevel* LOD = Emitter->GetLODLevel(0);
+	UParticleLODLevel* LOD = GetSelectedLODLevel(Emitter);
 	return LOD ? LOD->RequiredModule : nullptr;
 }
 
@@ -565,7 +675,7 @@ UParticleModule* FParticleEditorWidget::GetSelectedModule() const
 		return nullptr;
 	}
 
-	UParticleLODLevel* LOD = Emitter->GetLODLevel(0);
+	UParticleLODLevel* LOD = GetSelectedLODLevel(Emitter);
 	if (!LOD)
 	{
 		return nullptr;
@@ -773,6 +883,46 @@ void FParticleEditorWidget::RenderToolbar()
 		ViewportClient.ResetCameraToPreviewBounds();
 	}
 	ImGui::SameLine();
+	ImGui::TextDisabled("|");
+	ImGui::SameLine();
+
+	const int32 LODCount = GetLODCount();
+	if (DrawParticleToolbarButton("LowerLOD", L"Cascade_LowerLOD_512x.png", "Lower LOD", SelectedLODIndex >= LODCount - 1))
+	{
+		SetSelectedLODIndex(SelectedLODIndex + 1);
+	}
+	ImGui::SameLine();
+	if (DrawParticleToolbarButton("AddLODLeft", L"Cascade_AddLOD1_512x.png", "Add LOD", false))
+	{
+		AddLOD();
+	}
+	ImGui::SameLine();
+	ImGui::TextUnformatted("LOD :");
+	ImGui::SameLine();
+	int32 EditableLODIndex = SelectedLODIndex;
+	ImGui::SetNextItemWidth(42.0f);
+	if (ImGui::InputInt("##ParticleSelectedLOD", &EditableLODIndex, 0, 0))
+	{
+		SetSelectedLODIndex(EditableLODIndex);
+	}
+	ImGui::SameLine();
+	if (DrawParticleToolbarButton("AddLODRight", L"Cascade_AddLOD2_512x.png", "Add LOD", false))
+	{
+		AddLOD();
+	}
+	ImGui::SameLine();
+	if (DrawParticleToolbarButton("HigherLOD", L"Cascade_HigherLOD_512x.png", "Higher LOD", SelectedLODIndex <= 0))
+	{
+		SetSelectedLODIndex(SelectedLODIndex - 1);
+	}
+	ImGui::SameLine();
+	if (DrawParticleToolbarButton("DeleteLOD", L"Cascade_DeleteLOD_512x.png", "Delete LOD", SelectedLODIndex <= 0 || LODCount <= 1))
+	{
+		DeleteSelectedLOD();
+	}
+	ImGui::SameLine();
+	ImGui::TextDisabled("|");
+	ImGui::SameLine();
 	ImGui::TextDisabled("%zu emitters", EditingParticleSystem ? EditingParticleSystem->Emitters.size() : 0);
 }
 
@@ -835,6 +985,7 @@ void FParticleEditorWidget::RenderEmitterList()
 		if (UParticleEmitter* NewEmitter = CreateDefaultEmitter(NameBuffer))
 		{
 			EditingParticleSystem->Emitters.push_back(NewEmitter);
+			EditingParticleSystem->NormalizeLODData();
 			SelectedEmitterIndex = NewIndex;
 			SelectedModule = GetSelectedRequiredModule();
 			RestartPreviewSystem();
@@ -911,7 +1062,7 @@ void FParticleEditorWidget::RenderEmitterList()
 	for (int32 Index = 0; Index < static_cast<int32>(EditingParticleSystem->Emitters.size()); ++Index)
 	{
 		UParticleEmitter* Emitter = EditingParticleSystem->Emitters[Index];
-		UParticleLODLevel* LOD = Emitter ? Emitter->GetLODLevel(0) : nullptr;
+		UParticleLODLevel* LOD = GetSelectedLODLevel(Emitter);
 		if (!Emitter || !LOD)
 		{
 			continue;

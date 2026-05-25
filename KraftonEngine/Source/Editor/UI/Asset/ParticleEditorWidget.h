@@ -9,6 +9,7 @@
 
 class AActor;
 class UParticleEmitter;
+class UParticleLODLevel;
 class UParticleModule;
 class UParticleModuleRequired;
 class UParticleSystem;
@@ -46,6 +47,12 @@ private:
 	void AddModuleToEmitter(int32 EmitterIndex, EAddableModuleType ModuleType);
 	void DeleteModuleFromEmitter(int32 EmitterIndex, UParticleModule* Module);
 	void DeleteEmitter(int32 EmitterIndex);
+	int32 GetLODCount() const;
+	int32 ClampLODIndex(int32 LODIndex) const;
+	void SetSelectedLODIndex(int32 LODIndex);
+	UParticleLODLevel* GetSelectedLODLevel(UParticleEmitter* Emitter) const;
+	void AddLOD();
+	void DeleteSelectedLOD();
 	void InitializePreviewWorld();
 	void ReleasePreviewWorld();
 	void RestartPreviewSystem();
@@ -74,6 +81,7 @@ private:
 	AActor* PreviewActor = nullptr;
 
 	int32 SelectedEmitterIndex = 0;
+	int32 SelectedLODIndex = 0;
 	UParticleModule* SelectedModule = nullptr;
 	bool bSimulating = true;
 
