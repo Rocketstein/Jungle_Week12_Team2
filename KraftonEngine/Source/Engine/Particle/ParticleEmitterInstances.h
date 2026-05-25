@@ -48,6 +48,7 @@ struct FParticleEmitterInstance : FParticleEmitterInstanceFixLayout
 	float LastDeltaTime = 0.0f;
 	FVector Location = FVector::ZeroVector;
 	FVector OldLocation = FVector::ZeroVector;
+	TArray<uint8> BurstFired;
 
 	FParticleDataContainer DataContainer;
 
@@ -60,11 +61,19 @@ struct FParticleEmitterInstance : FParticleEmitterInstanceFixLayout
 	virtual bool Resize(int32 NewMaxActiveParticles, bool bSetMaxActiveCount = true);
 	virtual void SetCurrentLODLevel(int32 LODLevel);
 	virtual void Tick(float DeltaTime, int32 LODLevel, bool bSuppressSpawning);
+	virtual void ResetParticleParameters(float DeltaTime);
+	virtual void Tick_ModuleUpdate(float DeltaTime, UParticleLODLevel* CurrentLODLevel);
+	virtual void Tick_ModulePostUpdate(float DeltaTime, UParticleLODLevel* CurrentLODLevel);
+	virtual void Tick_ModuleFinalUpdate(float DeltaTime, UParticleLODLevel* CurrentLODLevel);
 	virtual float Tick_SpawnParticles(float DeltaTime, UParticleLODLevel* CurrentLODLevel, bool bSuppressSpawning, bool bFirstTime);
 	virtual float Spawn(float DeltaTime);
+	virtual void ResetBurstList();
+	virtual int32 GetCurrentBurstCount(float DeltaTime);
 	virtual void SpawnParticles(int32 Count, float StartTime, float Increment, const FVector& InitialLocation,
 		const FVector& InitialVelocity, FParticleEventInstancePayload* EventPayload);
 	virtual void KillParticle(int32 Index);
+	virtual void KillParticles();
+	virtual void UpdateParticles(float DeltaTime);
 	virtual FDynamicEmitterReplayDataBase* GetReplayData();
 	virtual bool FillReplayData(FDynamicEmitterReplayDataBase& OutData);
 

@@ -1076,7 +1076,7 @@
     <ClCompile Include="Source\Engine\Particle\ParticleLODLevel.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Particle\ParticleModule.cpp">
+    <ClCompile Include="Source\Engine\Particle\ParticleModules.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleSpriteEmitter.cpp">
@@ -4135,6 +4135,9 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleBeamInstances.h">
       <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\TypeData\ParticleModuleTypeDataRibbon.h">
+      <Filter>Source\Engine\Particle\TypeData</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

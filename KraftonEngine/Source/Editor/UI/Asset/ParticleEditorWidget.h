@@ -39,6 +39,7 @@ private:
 		Velocity,
 		Location,
 		Color,
+		ColorOverLife,
 		Collision
 	};
 

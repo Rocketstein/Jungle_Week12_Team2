@@ -136,9 +136,7 @@ public:
 	uint8 bKillOnCompleted : 1 = false;
 	EParticleSortMode SortMode = PSORTMODE_None;
 	float EmitterDuration = 1.0f;
-	TArray<FParticleBurst> BurstList;
 	float EmitterDelay = 0.0f;
-	EParticleBurstMethod ParticleBurstMethod = EPBM_Instant;
 	int32 EmitterLoops = 0;
 	int32 MaxDrawCount = 0;
 };
@@ -181,12 +179,18 @@ class UParticleModuleSpawn : public UParticleModuleSpawnBase
 public:
 	GENERATED_BODY(UParticleModuleSpawn)
 
+	UParticleModuleSpawn();
+
 	UPROPERTY(Edit, Category="Spawn", DisplayName="Rate", Min=0.0f, Max=10000.0f, Speed=1.0f)
 	float Rate = 10.0f;
+
+	TArray<FParticleBurst> BurstList;
+	EParticleBurstMethod ParticleBurstMethod = EPBM_Instant;
 
 	bool GetSpawnAmount(const FContext& Context, int32 Offset, float OldLeftover, float DeltaTime, int32& Number, float& OutRate) override;
 	float GetMaximumSpawnRate() override { return Rate; }
 	float GetEstimatedSpawnRate() override { return Rate; }
+	int32 GetMaximumBurstCount() override;
 	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
 };
 
@@ -329,11 +333,23 @@ public:
 	float StartAlphaMin = 1.0f;
 	float StartAlphaMax = 1.0f;
 
-	UPROPERTY(Edit, Category="Color", DisplayName="End Color")
-	FVector EndColor = FVector::OneVector;
+	void Spawn(const FSpawnContext& Context) override;
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
+};
 
-	UPROPERTY(Edit, Category="Color", DisplayName="End Alpha", Min=0.0f, Max=1.0f, Speed=0.01f)
-	float EndAlpha = 0.0f;
+UCLASS()
+class UParticleModuleColorOverLife : public UParticleModuleColorBase
+{
+public:
+	GENERATED_BODY(UParticleModuleColorOverLife)
+
+	UParticleModuleColorOverLife();
+
+	UPROPERTY(Edit, Category="Color", DisplayName="Color Over Life")
+	FVector ColorOverLife = FVector::OneVector;
+
+	UPROPERTY(Edit, Category="Color", DisplayName="Alpha Over Life", Min=0.0f, Max=1.0f, Speed=0.01f)
+	float AlphaOverLife = 0.0f;
 
 	void Spawn(const FSpawnContext& Context) override;
 	void Update(const FUpdateContext& Context) override;
@@ -376,6 +392,7 @@ public:
 	virtual bool SupportsSpecificScreenAlignmentFlags() const { return false; }
 	virtual bool IsAMeshEmitter() const { return false; }
 	virtual bool IsABeamEmitter() const { return false; }
+	virtual bool IsARibbonEmitter() const { return false; }
 };
 
 UCLASS()

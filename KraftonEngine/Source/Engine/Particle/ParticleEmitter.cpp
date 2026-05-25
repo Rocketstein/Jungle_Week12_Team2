@@ -156,6 +156,7 @@ bool UParticleEmitter::CalculateMaxActiveParticleCount()
 			PeakActiveParticles = std::max(PeakActiveParticles, LODLevel->CalculateMaxActiveParticleCount());
 		}
 	}
+	InitialAllocationCount = PeakActiveParticles;
 	return true;
 }
 

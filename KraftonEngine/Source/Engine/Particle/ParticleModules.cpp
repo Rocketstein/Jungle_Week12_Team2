@@ -71,12 +71,17 @@ UParticleModule* UParticleModuleRequired::CloneForLOD(UParticleLODLevel* NewOute
 	Copy->bKillOnCompleted = bKillOnCompleted;
 	Copy->SortMode = SortMode;
 	Copy->EmitterDuration = EmitterDuration;
-	Copy->BurstList = BurstList;
 	Copy->EmitterDelay = EmitterDelay;
-	Copy->ParticleBurstMethod = ParticleBurstMethod;
 	Copy->EmitterLoops = EmitterLoops;
 	Copy->MaxDrawCount = MaxDrawCount;
 	return Copy;
+}
+
+UParticleModuleSpawn::UParticleModuleSpawn()
+{
+	bEnabled = true;
+	bProcessSpawnRate = true;
+	bProcessBurstList = true;
 }
 
 bool UParticleModuleSpawn::GetSpawnAmount(const FContext& Context, int32 Offset, float OldLeftover, float DeltaTime,
@@ -87,8 +92,18 @@ bool UParticleModuleSpawn::GetSpawnAmount(const FContext& Context, int32 Offset,
 	(void)OldLeftover;
 	(void)DeltaTime;
 	Number = 0;
-	OutRate = 0.0f;
-	return false;
+	OutRate = std::max(0.0f, Rate);
+	return true;
+}
+
+int32 UParticleModuleSpawn::GetMaximumBurstCount()
+{
+	int32 MaxBurst = 0;
+	for (const FParticleBurst& Burst : BurstList)
+	{
+		MaxBurst += std::max(Burst.Count, Burst.CountLow);
+	}
+	return std::max(0, MaxBurst);
 }
 
 UParticleModule* UParticleModuleSpawn::CloneForLOD(UParticleLODLevel* NewOuter) const
@@ -96,6 +111,8 @@ UParticleModule* UParticleModuleSpawn::CloneForLOD(UParticleLODLevel* NewOuter) 
 	UParticleModuleSpawn* Copy = GUObjectArray.CreateObject<UParticleModuleSpawn>(NewOuter);
 	CopyModuleBaseTo(Copy);
 	Copy->Rate = Rate;
+	Copy->BurstList = BurstList;
+	Copy->ParticleBurstMethod = ParticleBurstMethod;
 	return Copy;
 }
 
@@ -295,7 +312,6 @@ UParticleModule* UParticleModuleCollision::CloneForLOD(UParticleLODLevel* NewOut
 UParticleModuleColor::UParticleModuleColor()
 {
 	bSpawnModule = true;
-	bUpdateModule = true;
 }
 
 void UParticleModuleColor::Spawn(const FSpawnContext& Context)
@@ -310,7 +326,34 @@ void UParticleModuleColor::Spawn(const FSpawnContext& Context)
 	Context.ParticleBase->Color = Context.ParticleBase->BaseColor;
 }
 
-void UParticleModuleColor::Update(const FUpdateContext& Context)
+UParticleModule* UParticleModuleColor::CloneForLOD(UParticleLODLevel* NewOuter) const
+{
+	UParticleModuleColor* Copy = GUObjectArray.CreateObject<UParticleModuleColor>(NewOuter);
+	CopyModuleBaseTo(Copy);
+	Copy->StartColor = StartColor;
+	Copy->StartAlpha = StartAlpha;
+	Copy->StartAlphaMin = StartAlphaMin;
+	Copy->StartAlphaMax = StartAlphaMax;
+	return Copy;
+}
+
+UParticleModuleColorOverLife::UParticleModuleColorOverLife()
+{
+	bSpawnModule = true;
+	bUpdateModule = true;
+}
+
+void UParticleModuleColorOverLife::Spawn(const FSpawnContext& Context)
+{
+	if (!Context.ParticleBase)
+	{
+		return;
+	}
+
+	Context.ParticleBase->Color = Context.ParticleBase->BaseColor;
+}
+
+void UParticleModuleColorOverLife::Update(const FUpdateContext& Context)
 {
 	FParticleEmitterInstance& Owner = Context.Owner;
 	if (!Owner.ParticleData || !Owner.ParticleIndices)
@@ -318,7 +361,7 @@ void UParticleModuleColor::Update(const FUpdateContext& Context)
 		return;
 	}
 
-	const float ClampedEndAlpha = std::clamp(EndAlpha, 0.0f, 1.0f);
+	const float ClampedAlphaOverLife = std::clamp(AlphaOverLife, 0.0f, 1.0f);
 
 	for (int32 ParticleIndex = 0; ParticleIndex < Owner.ActiveParticles; ++ParticleIndex)
 	{
@@ -332,21 +375,19 @@ void UParticleModuleColor::Update(const FUpdateContext& Context)
 		const float T = std::clamp(Particle->RelativeTime, 0.0f, 1.0f);
 		const FLinearColor& Base = Particle->BaseColor;
 		Particle->Color = FLinearColor(
-			Base.R + (EndColor.X - Base.R) * T,
-			Base.G + (EndColor.Y - Base.G) * T,
-			Base.B + (EndColor.Z - Base.B) * T,
-			Base.A + (ClampedEndAlpha - Base.A) * T);
+			Base.R + (ColorOverLife.X - Base.R) * T,
+			Base.G + (ColorOverLife.Y - Base.G) * T,
+			Base.B + (ColorOverLife.Z - Base.B) * T,
+			Base.A + (ClampedAlphaOverLife - Base.A) * T);
 	}
 }
 
-UParticleModule* UParticleModuleColor::CloneForLOD(UParticleLODLevel* NewOuter) const
+UParticleModule* UParticleModuleColorOverLife::CloneForLOD(UParticleLODLevel* NewOuter) const
 {
-	UParticleModuleColor* Copy = GUObjectArray.CreateObject<UParticleModuleColor>(NewOuter);
+	UParticleModuleColorOverLife* Copy = GUObjectArray.CreateObject<UParticleModuleColorOverLife>(NewOuter);
 	CopyModuleBaseTo(Copy);
-	Copy->StartColor = StartColor;
-	Copy->StartAlpha = StartAlpha;
-	Copy->StartAlphaMin = StartAlphaMin;
-	Copy->StartAlphaMax = StartAlphaMax;
+	Copy->ColorOverLife = ColorOverLife;
+	Copy->AlphaOverLife = AlphaOverLife;
 	return Copy;
 }
 

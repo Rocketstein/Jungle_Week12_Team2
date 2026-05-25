@@ -58,21 +58,14 @@ void MoveMeshReplayData(FDynamicMeshEmitterReplayData& Dest, FDynamicMeshEmitter
 void MoveBeamReplayData(FDynamicBeamEmitterReplayData& Dest, FDynamicBeamEmitterReplayData& Source)
 {
 	MoveRenderableReplayData(Dest, Source);
-	Dest.Source = Source.Source;
-	Dest.Target = Source.Target;
-	Dest.Color = Source.Color;
-	Dest.Alpha = Source.Alpha;
-	Dest.Width = Source.Width;
+	Dest.Beams = std::move(Source.Beams);
 	Dest.InterpolationPoints = Source.InterpolationPoints;
 	Dest.Sheets = Source.Sheets;
+	Dest.LogicalBeamCount = Source.LogicalBeamCount;
 	Dest.MaxBeamCount = Source.MaxBeamCount;
-	Dest.Speed = Source.Speed;
 	Dest.UpVectorStepSize = Source.UpVectorStepSize;
 	Dest.TextureTile = Source.TextureTile;
 	Dest.TextureTileDistance = Source.TextureTileDistance;
-	Dest.TaperMethod = Source.TaperMethod;
-	Dest.TaperFactor = Source.TaperFactor;
-	Dest.TaperScale = Source.TaperScale;
 	Dest.bRenderGeometry = Source.bRenderGeometry;
 	Dest.bRenderDirectLine = Source.bRenderDirectLine;
 	Dest.bRenderLines = Source.bRenderLines;
@@ -350,6 +343,7 @@ void UParticleSystemComponent::InitParticles()
 			continue;
 		}
 
+		Emitter->CalculateMaxActiveParticleCount();
 		FParticleEmitterInstance* Instance = CreateEmitterInstance(this, Emitter);
 		Instance->InitParameters(Emitter);
 		Instance->SetCurrentLODLevel(LODLevel);

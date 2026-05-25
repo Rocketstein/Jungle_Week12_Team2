@@ -370,6 +370,10 @@ UParticleEmitter* FParticleEditorWidget::CreateDefaultEmitter(const FString& Emi
 	{
 		LOD->Modules.push_back(Color);
 	}
+	if (UParticleModule* ColorOverLife = CreateModule(EAddableModuleType::ColorOverLife, LOD))
+	{
+		LOD->Modules.push_back(ColorOverLife);
+	}
 
 	LOD->UpdateModuleLists();
 	Emitter->LODLevels.push_back(LOD);
@@ -430,9 +434,15 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 		Color->StartAlpha = 1.0f;
 		Color->StartAlphaMin = Color->StartAlpha;
 		Color->StartAlphaMax = Color->StartAlpha;
-		Color->EndColor = FVector(1.0f, 1.0f, 1.0f);
-		Color->EndAlpha = 0.0f;
 		return Color;
+	}
+	case EAddableModuleType::ColorOverLife:
+	{
+		UParticleModuleColorOverLife* ColorOverLife = GUObjectArray.CreateObject<UParticleModuleColorOverLife>(Outer);
+		ColorOverLife->bEnabled = true;
+		ColorOverLife->ColorOverLife = FVector(1.0f, 1.0f, 1.0f);
+		ColorOverLife->AlphaOverLife = 0.0f;
+		return ColorOverLife;
 	}
 	case EAddableModuleType::Collision:
 	{
@@ -782,6 +792,10 @@ FString FParticleEditorWidget::GetModuleDisplayName(UParticleModule* Module) con
 	}
 	if (Module->IsA<UParticleModuleColor>())
 	{
+		return "Initial Color";
+	}
+	if (Module->IsA<UParticleModuleColorOverLife>())
+	{
 		return "Color Over Life";
 	}
 	if (Module->IsA<UParticleModuleCollision>())
@@ -928,9 +942,9 @@ void FParticleEditorWidget::RenderToolbar()
 	ImGui::SameLine();
 
 	const int32 LODCount = GetLODCount();
-	if (DrawParticleToolbarButton("LowerLOD", L"Cascade_LowerLOD_512x.png", "Lower LOD", SelectedLODIndex >= LODCount - 1))
+	if (DrawParticleToolbarButton("LowerLOD", L"Cascade_LowerLOD_512x.png", "Lower LOD", SelectedLODIndex <= 0))
 	{
-		SetSelectedLODIndex(SelectedLODIndex + 1);
+		SetSelectedLODIndex(SelectedLODIndex - 1);
 	}
 	ImGui::SameLine();
 	if (DrawParticleToolbarButton("AddLODLeft", L"Cascade_AddLOD1_512x.png", "Add LOD", false))
@@ -952,9 +966,9 @@ void FParticleEditorWidget::RenderToolbar()
 		AddLOD();
 	}
 	ImGui::SameLine();
-	if (DrawParticleToolbarButton("HigherLOD", L"Cascade_HigherLOD_512x.png", "Higher LOD", SelectedLODIndex <= 0))
+	if (DrawParticleToolbarButton("HigherLOD", L"Cascade_HigherLOD_512x.png", "Higher LOD", SelectedLODIndex >= LODCount - 1))
 	{
-		SetSelectedLODIndex(SelectedLODIndex - 1);
+		SetSelectedLODIndex(SelectedLODIndex + 1);
 	}
 	ImGui::SameLine();
 	if (DrawParticleToolbarButton("DeleteLOD", L"Cascade_DeleteLOD_512x.png", "Delete LOD", SelectedLODIndex <= 0 || LODCount <= 1))
@@ -1073,9 +1087,13 @@ void FParticleEditorWidget::RenderEmitterList()
 			{
 				QueueAddModule(EmitterIndex, EAddableModuleType::Location);
 			}
-			if (ImGui::MenuItem("Color Over Life"))
+			if (ImGui::MenuItem("Initial Color"))
 			{
 				QueueAddModule(EmitterIndex, EAddableModuleType::Color);
+			}
+			if (ImGui::MenuItem("Color Over Life"))
+			{
+				QueueAddModule(EmitterIndex, EAddableModuleType::ColorOverLife);
 			}
 			if (ImGui::MenuItem("Collision"))
 			{
@@ -1389,18 +1407,20 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 			Color->StartAlpha = Color->StartAlphaMax;
 			bChanged = true;
 		}
-
-		float EndColor[3] = { Color->EndColor.X, Color->EndColor.Y, Color->EndColor.Z };
-		if (ImGui::ColorEdit3("End Color", EndColor))
+	}
+	else if (UParticleModuleColorOverLife* ColorOverLife = Cast<UParticleModuleColorOverLife>(Module))
+	{
+		float EndColor[3] = { ColorOverLife->ColorOverLife.X, ColorOverLife->ColorOverLife.Y, ColorOverLife->ColorOverLife.Z };
+		if (ImGui::ColorEdit3("Color Over Life", EndColor))
 		{
-			Color->EndColor = FVector(EndColor[0], EndColor[1], EndColor[2]);
+			ColorOverLife->ColorOverLife = FVector(EndColor[0], EndColor[1], EndColor[2]);
 			bChanged = true;
 		}
 
-		float EndAlpha = Color->EndAlpha;
-		if (ImGui::DragFloat("End Alpha", &EndAlpha, 0.01f, 0.0f, 1.0f))
+		float EndAlpha = ColorOverLife->AlphaOverLife;
+		if (ImGui::DragFloat("Alpha Over Life", &EndAlpha, 0.01f, 0.0f, 1.0f))
 		{
-			Color->EndAlpha = std::clamp(EndAlpha, 0.0f, 1.0f);
+			ColorOverLife->AlphaOverLife = std::clamp(EndAlpha, 0.0f, 1.0f);
 			bChanged = true;
 		}
 	}
