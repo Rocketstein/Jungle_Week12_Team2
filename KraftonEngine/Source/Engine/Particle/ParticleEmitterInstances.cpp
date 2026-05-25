@@ -174,7 +174,7 @@ float FParticleEmitterInstance::Tick_SpawnParticles(float DeltaTime, UParticleLO
 
 float FParticleEmitterInstance::Spawn(float DeltaTime)
 {
-	if (!CurrentLODLevel || !CurrentLODLevel->SpawnModule)
+	if (!CurrentLODLevel || !CurrentLODLevel->SpawnModule || !CurrentLODLevel->SpawnModule->bEnabled)
 	{
 		return SpawnFraction;
 	}
