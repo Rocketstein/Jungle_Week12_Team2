@@ -20,14 +20,14 @@ FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
 	case (PEB2M_Distance):
 	{
 		// TODO: Add "Use Local Space" branch that adds emitter transformation to Source
-		Source = Component->GetRelativeTransform().ToMatrix().TransformVector(BeamModule->SourcePoint);
+		Source = Component->GetWorldMatrix().TransformVector(BeamModule->SourcePoint);
 		FVector TargetDir = Component->GetForwardVector();
 		Target = TargetDir * BeamModule->Distance;
 		break;
 	}
 	case (PEB2M_Target):
 	{
-		Source = Component->GetRelativeTransform().ToMatrix().TransformVector(BeamModule->SourcePoint);
+		Source = Component->GetWorldMatrix().TransformVector(BeamModule->SourcePoint);
 		Target = BeamModule->TargetPoint;
 		break;	
 	}
