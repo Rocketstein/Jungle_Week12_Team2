@@ -483,6 +483,9 @@
     <FxCompile Include="Shaders\UI\SubUV.hlsl">
       <Filter>Shaders\UI</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\Particle\ParticleBeam.hlsl">
+      <Filter>Shaders\Particle</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Editor\EditorEngine.cpp">
