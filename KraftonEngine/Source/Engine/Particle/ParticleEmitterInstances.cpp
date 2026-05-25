@@ -28,8 +28,7 @@ FParticleEmitterInstance::~FParticleEmitterInstance()
 void FParticleEmitterInstance::InitParameters(UParticleEmitter* InTemplate)
 {
 	SpriteTemplate = InTemplate;
-	CurrentLODLevelIndex = 0;
-	CurrentLODLevel = SpriteTemplate ? SpriteTemplate->GetLODLevel(CurrentLODLevelIndex) : nullptr;
+	SetCurrentLODLevel(0);
 	PayloadOffset = sizeof(FBaseParticle);
 	ParticleSize = AlignParticleDataSize(sizeof(FBaseParticle), 16);
 	ParticleStride = ParticleSize;
@@ -96,7 +95,13 @@ bool FParticleEmitterInstance::Resize(int32 NewMaxActiveParticles, bool bSetMaxA
 	return true;
 }
 
-void FParticleEmitterInstance::Tick(float DeltaTime, bool bSuppressSpawning)
+void FParticleEmitterInstance::SetCurrentLODLevel(int32 LODLevel)
+{
+	CurrentLODLevelIndex = std::max(0, LODLevel);
+	CurrentLODLevel = SpriteTemplate ? SpriteTemplate->GetBestLODLevel(CurrentLODLevelIndex) : nullptr;
+}
+
+void FParticleEmitterInstance::Tick(float DeltaTime, int32 LODLevel, bool bSuppressSpawning)
 {
 	LastDeltaTime = DeltaTime;
 	SecondsSinceCreation += DeltaTime;
@@ -104,6 +109,7 @@ void FParticleEmitterInstance::Tick(float DeltaTime, bool bSuppressSpawning)
 	OldLocation = Location;
 	Location = Component ? Component->GetWorldLocation() : FVector::ZeroVector;
 
+	SetCurrentLODLevel(LODLevel);
 	if (!CurrentLODLevel)
 	{
 		return;

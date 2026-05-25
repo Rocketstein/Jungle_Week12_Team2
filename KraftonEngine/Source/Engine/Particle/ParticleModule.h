@@ -9,6 +9,7 @@ struct FParticleEmitterInstance;
 class UMaterialInterface;
 class UParticleModuleTypeDataBase;
 class UStaticMesh;
+class UParticleLODLevel;
 struct FBaseParticle;
 
 /** ModuleType
@@ -97,6 +98,10 @@ public:
 	virtual bool IsUpdateModule() const { return bUpdateModule != 0; }
 	virtual bool IsSizeMultiplyLife() { return false; }
 	virtual bool TouchesMeshRotation() const { return false; }
+	virtual UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const;
+
+protected:
+	void CopyModuleBaseTo(UParticleModule* Copy) const;
 };
 
 UCLASS()
@@ -106,6 +111,7 @@ public:
 	GENERATED_BODY(UParticleModuleRequired)
 
 	EModuleType GetModuleType() const override { return EPMT_Required; }
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
 
 	UMaterialInterface* Material = nullptr;
 	FVector EmitterOrigin = FVector::ZeroVector;
@@ -172,6 +178,7 @@ public:
 	bool GetSpawnAmount(const FContext& Context, int32 Offset, float OldLeftover, float DeltaTime, int32& Number, float& OutRate) override;
 	float GetMaximumSpawnRate() override { return Rate; }
 	float GetEstimatedSpawnRate() override { return Rate; }
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
 };
 
 UCLASS()
@@ -203,6 +210,7 @@ public:
 
 	void Spawn(const FSpawnContext& Context) override;
 	float GetMaxLifetime() override { return LifetimeMax; }
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
 };
 
 UCLASS()
@@ -226,6 +234,7 @@ public:
 	FVector StartLocationMax = FVector::ZeroVector;
 
 	void Spawn(const FSpawnContext& Context) override;
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
 };
 
 UCLASS()
@@ -252,6 +261,7 @@ public:
 	FVector StartVelocityMax = FVector::UpVector;
 
 	void Spawn(const FSpawnContext& Context) override;
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
 };
 
 UCLASS()
@@ -285,6 +295,7 @@ public:
 
 	void Spawn(const FSpawnContext& Context) override;
 	void Update(const FUpdateContext& Context) override;
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
 };
 
 UCLASS()
@@ -308,6 +319,7 @@ public:
 	FVector StartSizeMax = FVector::OneVector;
 
 	void Spawn(const FSpawnContext& Context) override;
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
 };
 
 UCLASS()
@@ -332,4 +344,5 @@ public:
 	UStaticMesh* Mesh = nullptr;
 
 	bool IsAMeshEmitter() const override { return true; }
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
 };

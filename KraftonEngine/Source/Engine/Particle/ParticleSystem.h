@@ -23,6 +23,18 @@ public:
 
 	TArray<UParticleEmitter*> Emitters;
 
+	//LOD Related
+	int32 GetLODCount() const;
+	int32 CreateLOD(float Distance = -1.0f);
+	bool RemoveLOD(int32 LODIndex);
+
+	float GetLODDistance(int32 LODIndex) const;
+	bool SetLODDistance(int32 LODIndex, float Distance);
+	const TArray<float>& GetLODDistances() const { return LODDistances; }
+
+	void NormalizeLODData();
+
 private:
+	TArray<float> LODDistances = { 0.0f };
 	FString AssetPathFileName;
 };

@@ -1064,6 +1064,9 @@
     <ClCompile Include="Source\Engine\Particle\ParticleEmitterInstances.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleLODContext.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleLODLevel.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
@@ -2085,6 +2088,9 @@
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleHelper.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleLODContext.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleLODLevel.h">

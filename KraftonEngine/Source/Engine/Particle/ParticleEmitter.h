@@ -71,9 +71,14 @@ public:
 	virtual void SetEmitterName(FName Name) { EmitterName = Name; }
 	virtual FName& GetEmitterName() { return EmitterName; }
 	virtual void SetLODCount(int32 LODCount);
+	virtual void SyncLODLevelsToSystemCount(int32 LODCount);
 	virtual UParticleLODLevel* GetLODLevel(int32 LODLevel);
+	virtual UParticleLODLevel* GetBestLODLevel(int32 LODLevel) const;
 	virtual bool CalculateMaxActiveParticleCount();
 	virtual void Build() {}
 	virtual void CacheEmitterModuleInfo() {}
 	virtual bool HasAnyEnabledLODs() const;
+
+private:
+	UParticleLODLevel* DuplicateLODLevelForEmitter(UParticleLODLevel* Source, int32 NewLevelIndex);
 };

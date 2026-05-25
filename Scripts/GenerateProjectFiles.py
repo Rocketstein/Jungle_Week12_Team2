@@ -87,6 +87,7 @@ INCLUDE_PATHS = [
 # Runs as a BeforeTargets="ClCompile" Exec; .gen.cpp files are added to the
 # ClCompile collection by the same target (wildcard evaluated at target time,
 # which is how MSBuild picks up files produced earlier in the build).
+CODEGEN_PYTHON       = "..\\Scripts\\python\\python.exe"
 CODEGEN_SCRIPT       = "..\\Scripts\\GenerateCode.py"
 CODEGEN_GENCPP_GLOB  = "Intermediate\\Generated\\Source\\*.gen.cpp"
 
@@ -118,6 +119,29 @@ FBX_CONFIGS        = {"Debug", "Release", "Game"}  # x64 와 결합되는 구성
 # Debug 구성은 debug\\bin, 그 외(Release/Game/Demo)는 release bin 사용.
 PHYSX_DEBUG_BIN   = "packages\\NVIDIA.PhysX.4.1.229882250\\installed\\x64-windows\\debug\\bin"
 PHYSX_RELEASE_BIN = "packages\\NVIDIA.PhysX.4.1.229882250\\installed\\x64-windows\\bin"
+PHYSX_INSTALLED_DIR = "packages\\NVIDIA.PhysX.4.1.229882250\\installed"
+PHYSX_TRIPLETS = {
+    "Win32": "x86-windows",
+    "x64": "x64-windows",
+}
+PHYSX_LIB_SUFFIXES = {
+    "Win32": "32",
+    "x64": "64",
+}
+PHYSX_LIB_BASENAMES = [
+    "PhysX",
+    "PhysXCommon",
+    "PhysXCooking",
+    "PhysXFoundation",
+    "PhysXExtensions_static",
+    "PhysXPvdSDK_static",
+    "PhysXTask_static",
+    "LowLevel_static",
+    "LowLevelAABB_static",
+    "LowLevelDynamics_static",
+    "SceneQuery_static",
+    "SimulationController_static",
+]
 
 # Lua (LuaJIT, 5.1 ABI) — lua51.dll 은 .gitignore 의 **/[Bb]in/* 에 걸려 있어
 # 팀원이 직접 ThirdParty\\lua\\bin\\lua51.dll 위치에 배치해야 한다 (LuaJIT 배포본).
@@ -289,7 +313,12 @@ def generate_vcxproj(files: dict[str, list[str]]):
         ET.SubElement(pg, "CharacterSet").text = "Unicode"
 
     ET.SubElement(proj, "Import", Project="$(VCTargetsPath)\\Microsoft.Cpp.props")
-    ET.SubElement(proj, "ImportGroup", Label="ExtensionSettings")
+    ext_settings = ET.SubElement(proj, "ImportGroup", Label="ExtensionSettings")
+    for pkg_id, pkg_ver in NUGET_PACKAGES:
+        props_path = f"packages\\{pkg_id}.{pkg_ver}\\build\\native\\{pkg_id}.props"
+        ET.SubElement(ext_settings, "Import",
+                      Project=props_path,
+                      Condition=f"Exists('{props_path}')")
     ET.SubElement(proj, "ImportGroup", Label="Shared")
 
     # PropertySheets
@@ -312,6 +341,9 @@ def generate_vcxproj(files: dict[str, list[str]]):
         include_paths = list(INCLUDE_PATHS)
         if has_fbx:
             include_paths.append(FBX_INC_DIR)
+        physx_triplet = PHYSX_TRIPLETS.get(plat)
+        if physx_triplet:
+            include_paths.append(f"{PHYSX_INSTALLED_DIR}\\{physx_triplet}\\include")
         include_path_value = ";".join(include_paths) + ";$(IncludePath)"
 
         rmlui_dir = RMLUI_DEBUG_DIR if cfg == "Debug" else RMLUI_RELEASE_DIR
@@ -320,6 +352,9 @@ def generate_vcxproj(files: dict[str, list[str]]):
             library_paths.append(FMOD_LIB_DIR)
         if has_fbx:
             library_paths.append(FBX_LIB_DIR_DEBUG if cfg == "Debug" else FBX_LIB_DIR_RELEASE)
+        if physx_triplet:
+            physx_config_dir = "debug\\lib" if cfg == "Debug" else "lib"
+            library_paths.append(f"{PHYSX_INSTALLED_DIR}\\{physx_triplet}\\{physx_config_dir}")
         library_path_value = ";".join(library_paths) + ";$(LibraryPath)" if library_paths else "$(LibraryPath)"
         pg = ET.SubElement(proj, "PropertyGroup", Condition=cond)
         ET.SubElement(pg, "OutDir").text = f"$(ProjectDir)Bin\\$(Configuration)\\"
@@ -387,6 +422,9 @@ def generate_vcxproj(files: dict[str, list[str]]):
             all_deps.append(FMOD_DEBUG_LIB if cfg == "Debug" else FMOD_RELEASE_LIB)
         if has_fbx:
             all_deps.append(FBX_LIB)
+        physx_suffix = PHYSX_LIB_SUFFIXES.get(plat)
+        if physx_suffix:
+            all_deps.extend(f"{lib}_{physx_suffix}.lib" for lib in PHYSX_LIB_BASENAMES)
         if all_deps:
             ET.SubElement(link, "AdditionalDependencies").text = (
                 ";".join(all_deps) + ";%(AdditionalDependencies)"
@@ -460,7 +498,7 @@ def generate_vcxproj(files: dict[str, list[str]]):
                                Name="GenerateCode",
                                BeforeTargets="ClCompile")
     ET.SubElement(gen_target, "Exec",
-                  Command=f'python "$(ProjectDir){CODEGEN_SCRIPT}"')
+                  Command=f'"$(ProjectDir){CODEGEN_PYTHON}" "$(ProjectDir){CODEGEN_SCRIPT}"')
     gen_ig = ET.SubElement(gen_target, "ItemGroup")
     ET.SubElement(gen_ig, "ClCompile", Include=CODEGEN_GENCPP_GLOB)
 

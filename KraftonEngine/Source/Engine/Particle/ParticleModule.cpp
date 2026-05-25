@@ -1,6 +1,7 @@
 #include "Particle/ParticleModule.h"
 
 #include "Particle/ParticleEmitterInstances.h"
+#include "Particle/ParticleLODLevel.h"
 
 #include <algorithm>
 #include <random>
@@ -28,6 +29,54 @@ namespace
 	}
 }
 
+void UParticleModule::CopyModuleBaseTo(UParticleModule* Copy) const
+{
+	if (!Copy)
+	{
+		return;
+	}
+
+	Copy->bSpawnModule = bSpawnModule;
+	Copy->bUpdateModule = bUpdateModule;
+	Copy->bFinalUpdateModule = bFinalUpdateModule;
+	Copy->bEnabled = bEnabled;
+	Copy->bEditable = bEditable;
+	Copy->LODValidity = LODValidity;
+}
+
+UParticleModule* UParticleModule::CloneForLOD(UParticleLODLevel* NewOuter) const
+{
+	UParticleModule* Copy = Cast<UParticleModule>(Duplicate(NewOuter));
+	CopyModuleBaseTo(Copy);
+	return Copy;
+}
+
+UParticleModule* UParticleModuleRequired::CloneForLOD(UParticleLODLevel* NewOuter) const
+{
+	UParticleModuleRequired* Copy = GUObjectArray.CreateObject<UParticleModuleRequired>(NewOuter);
+	CopyModuleBaseTo(Copy);
+	Copy->Material = Material;
+	Copy->EmitterOrigin = EmitterOrigin;
+	Copy->ScreenAlignment = ScreenAlignment;
+	Copy->SubImages_Horizontal = SubImages_Horizontal;
+	Copy->SubImages_Vertical = SubImages_Vertical;
+	Copy->AlphaSource = AlphaSource;
+	Copy->AlphaThreshold = AlphaThreshold;
+	Copy->AlphaPower = AlphaPower;
+	Copy->ColorIntensity = ColorIntensity;
+	Copy->bUseLocalSpace = bUseLocalSpace;
+	Copy->bKillOnDeactivate = bKillOnDeactivate;
+	Copy->bKillOnCompleted = bKillOnCompleted;
+	Copy->SortMode = SortMode;
+	Copy->EmitterDuration = EmitterDuration;
+	Copy->BurstList = BurstList;
+	Copy->EmitterDelay = EmitterDelay;
+	Copy->ParticleBurstMethod = ParticleBurstMethod;
+	Copy->EmitterLoops = EmitterLoops;
+	Copy->MaxDrawCount = MaxDrawCount;
+	return Copy;
+}
+
 bool UParticleModuleSpawn::GetSpawnAmount(const FContext& Context, int32 Offset, float OldLeftover, float DeltaTime,
 	int32& Number, float& OutRate)
 {
@@ -38,6 +87,14 @@ bool UParticleModuleSpawn::GetSpawnAmount(const FContext& Context, int32 Offset,
 	Number = 0;
 	OutRate = 0.0f;
 	return false;
+}
+
+UParticleModule* UParticleModuleSpawn::CloneForLOD(UParticleLODLevel* NewOuter) const
+{
+	UParticleModuleSpawn* Copy = GUObjectArray.CreateObject<UParticleModuleSpawn>(NewOuter);
+	CopyModuleBaseTo(Copy);
+	Copy->Rate = Rate;
+	return Copy;
 }
 
 UParticleModuleLifetime::UParticleModuleLifetime()
@@ -56,6 +113,16 @@ void UParticleModuleLifetime::Spawn(const FSpawnContext& Context)
 	Context.ParticleBase->OneOverMaxLifetime = 1.0f / SpawnLifetime;
 }
 
+UParticleModule* UParticleModuleLifetime::CloneForLOD(UParticleLODLevel* NewOuter) const
+{
+	UParticleModuleLifetime* Copy = GUObjectArray.CreateObject<UParticleModuleLifetime>(NewOuter);
+	CopyModuleBaseTo(Copy);
+	Copy->Lifetime = Lifetime;
+	Copy->LifetimeMin = LifetimeMin;
+	Copy->LifetimeMax = LifetimeMax;
+	return Copy;
+}
+
 UParticleModuleLocation::UParticleModuleLocation()
 {
 	bSpawnModule = true;
@@ -70,6 +137,16 @@ void UParticleModuleLocation::Spawn(const FSpawnContext& Context)
 
 	Context.ParticleBase->Location = Context.ParticleBase->Location + RandomRange(StartLocationMin, StartLocationMax);
 	Context.ParticleBase->OldLocation = Context.ParticleBase->Location;
+}
+
+UParticleModule* UParticleModuleLocation::CloneForLOD(UParticleLODLevel* NewOuter) const
+{
+	UParticleModuleLocation* Copy = GUObjectArray.CreateObject<UParticleModuleLocation>(NewOuter);
+	CopyModuleBaseTo(Copy);
+	Copy->StartLocation = StartLocation;
+	Copy->StartLocationMin = StartLocationMin;
+	Copy->StartLocationMax = StartLocationMax;
+	return Copy;
 }
 
 UParticleModuleVelocity::UParticleModuleVelocity()
@@ -87,6 +164,18 @@ void UParticleModuleVelocity::Spawn(const FSpawnContext& Context)
 	const FVector SpawnVelocity = RandomRange(StartVelocityMin, StartVelocityMax);
 	Context.ParticleBase->BaseVelocity = SpawnVelocity;
 	Context.ParticleBase->Velocity = SpawnVelocity;
+}
+
+UParticleModule* UParticleModuleVelocity::CloneForLOD(UParticleLODLevel* NewOuter) const
+{
+	UParticleModuleVelocity* Copy = GUObjectArray.CreateObject<UParticleModuleVelocity>(NewOuter);
+	CopyModuleBaseTo(Copy);
+	Copy->StartVelocity = StartVelocity;
+	Copy->StartVelocityMin = StartVelocityMin;
+	Copy->StartVelocityMax = StartVelocityMax;
+	Copy->bInWorldSpace = bInWorldSpace;
+	Copy->bApplyOwnerScale = bApplyOwnerScale;
+	return Copy;
 }
 
 UParticleModuleColor::UParticleModuleColor()
@@ -136,6 +225,17 @@ void UParticleModuleColor::Update(const FUpdateContext& Context)
 	}
 }
 
+UParticleModule* UParticleModuleColor::CloneForLOD(UParticleLODLevel* NewOuter) const
+{
+	UParticleModuleColor* Copy = GUObjectArray.CreateObject<UParticleModuleColor>(NewOuter);
+	CopyModuleBaseTo(Copy);
+	Copy->StartColor = StartColor;
+	Copy->StartAlpha = StartAlpha;
+	Copy->StartAlphaMin = StartAlphaMin;
+	Copy->StartAlphaMax = StartAlphaMax;
+	return Copy;
+}
+
 UParticleModuleSize::UParticleModuleSize()
 {
 	bSpawnModule = true;
@@ -151,4 +251,22 @@ void UParticleModuleSize::Spawn(const FSpawnContext& Context)
 	const FVector SpawnSize = RandomRange(StartSizeMin, StartSizeMax);
 	Context.ParticleBase->BaseSize = SpawnSize;
 	Context.ParticleBase->Size = SpawnSize;
+}
+
+UParticleModule* UParticleModuleSize::CloneForLOD(UParticleLODLevel* NewOuter) const
+{
+	UParticleModuleSize* Copy = GUObjectArray.CreateObject<UParticleModuleSize>(NewOuter);
+	CopyModuleBaseTo(Copy);
+	Copy->StartSize = StartSize;
+	Copy->StartSizeMin = StartSizeMin;
+	Copy->StartSizeMax = StartSizeMax;
+	return Copy;
+}
+
+UParticleModule* UParticleModuleTypeDataMesh::CloneForLOD(UParticleLODLevel* NewOuter) const
+{
+	UParticleModuleTypeDataMesh* Copy = GUObjectArray.CreateObject<UParticleModuleTypeDataMesh>(NewOuter);
+	CopyModuleBaseTo(Copy);
+	Copy->Mesh = Mesh;
+	return Copy;
 }

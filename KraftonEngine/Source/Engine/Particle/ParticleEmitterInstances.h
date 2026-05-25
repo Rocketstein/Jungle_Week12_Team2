@@ -52,7 +52,8 @@ struct FParticleEmitterInstance : FParticleEmitterInstanceFixLayout
 	virtual void InitParameters(UParticleEmitter* InTemplate);
 	virtual void Init();
 	virtual bool Resize(int32 NewMaxActiveParticles, bool bSetMaxActiveCount = true);
-	virtual void Tick(float DeltaTime, bool bSuppressSpawning);
+	virtual void SetCurrentLODLevel(int32 LODLevel);
+	virtual void Tick(float DeltaTime, int32 LODLevel, bool bSuppressSpawning);
 	virtual float Tick_SpawnParticles(float DeltaTime, UParticleLODLevel* CurrentLODLevel, bool bSuppressSpawning, bool bFirstTime);
 	virtual float Spawn(float DeltaTime);
 	virtual void SpawnParticles(int32 Count, float StartTime, float Increment, const FVector& InitialLocation,
