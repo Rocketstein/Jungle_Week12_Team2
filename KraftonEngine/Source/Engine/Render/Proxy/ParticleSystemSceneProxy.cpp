@@ -62,6 +62,15 @@ namespace {
 		return Value / Len;
 	}
 
+	static FVector RotateAroundAxis(const FVector& Value, const FVector& UnitAxis, float Radians)
+	{
+		const float C = std::cos(Radians);
+		const float S = std::sin(Radians);
+		return Value * C
+			+ UnitAxis.Cross(Value) * S
+			+ UnitAxis * (UnitAxis.Dot(Value) * (1.0f - C));
+	}
+
 }
 
 FParticleSystemSceneProxy::FParticleSystemSceneProxy(UParticleSystemComponent* InComponent)
@@ -637,60 +646,74 @@ void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(const FFrameCon
 	const FVector BeamDir = BeamDelta / BeamLength;
 	const int32 SegmentCount = std::max(1, Source.InterpolationPoints + 1);
 	const int32 PointCount = SegmentCount + 1;
-	const uint32 VertexStart = static_cast<uint32>(PackedVertices.size());
 	const uint32 IndexStart = static_cast<uint32>(PackedIndices.size());
+	const int32 SheetCount = std::max(1, Source.Sheets);
 	const FVector4 BeamColor(Source.Color.X, Source.Color.Y, Source.Color.Z, Source.Alpha);
 
-	PackedVertices.reserve(PackedVertices.size() + static_cast<size_t>(PointCount) * 2);
-	PackedIndices.reserve(PackedIndices.size() + static_cast<size_t>(SegmentCount) * 6);
+	PackedVertices.reserve(PackedVertices.size() + static_cast<size_t>(PointCount) * 2 * SheetCount);
+	PackedIndices.reserve(PackedIndices.size() + static_cast<size_t>(SegmentCount) * 6 * SheetCount);
 
-	for (int32 PointIndex = 0; PointIndex < PointCount; ++PointIndex)
+	for (int32 SheetIndex = 0; SheetIndex < SheetCount; ++SheetIndex)
 	{
-		const float T = static_cast<float>(PointIndex) / static_cast<float>(PointCount - 1);
-		const FVector Center = Source.Source + BeamDelta * T;
-		const float Width = std::max(0.0f, Source.Width * ApplyTaper(Source.TaperMethod, Source.TaperFactor, Source.TaperScale, T));
-		const float HalfWidth = Width * 0.5f;
-		const float U = Source.TextureTileDistance > 0.0f
-			? (BeamLength * T) / Source.TextureTileDistance
-			: T * static_cast<float>(std::max(1, Source.TextureTile));
+		const uint32 VertexStart = static_cast<uint32>(PackedVertices.size());
+		const float SheetAngle = 3.14159265358979323846f
+			* static_cast<float>(SheetIndex)
+			/ static_cast<float>(SheetCount);
 
-		const FVector ToCamera = SafeNormal(Frame.CameraPosition - Center, Frame.CameraForward * -1.0f);
-		FVector Side = ToCamera.Cross(BeamDir);
-		if (Side.Length() <= 1e-6f)
+		for (int32 PointIndex = 0; PointIndex < PointCount; ++PointIndex)
 		{
-			Side = Frame.CameraRight;
+			const float T = static_cast<float>(PointIndex) / static_cast<float>(PointCount - 1);
+			const FVector Center = Source.Source + BeamDelta * T;
+			const float Width = std::max(0.0f, Source.Width * ApplyTaper(Source.TaperMethod, Source.TaperFactor, Source.TaperScale, T));
+			const float HalfWidth = Width * 0.5f;
+			const float U = Source.TextureTileDistance > 0.0f
+				? (BeamLength * T) / Source.TextureTileDistance
+				: T * static_cast<float>(std::max(1, Source.TextureTile));
+
+			const FVector ToCamera = SafeNormal(Frame.CameraPosition - Center, Frame.CameraForward * -1.0f);
+			FVector Side = ToCamera.Cross(BeamDir);
+			if (Side.Length() <= 1e-6f)
+			{
+				Side = Frame.CameraRight;
+			}
+			else
+			{
+				Side.Normalize();
+			}
+
+			if (SheetIndex > 0)
+			{
+				Side = RotateAroundAxis(Side, BeamDir, SheetAngle);
+				Side = SafeNormal(Side, Frame.CameraRight);
+			}
+
+			FBeamParticleInstanceVertex Left;
+			Left.Position = Center - Side * HalfWidth;
+			Left.UV = FVector2(U, 0.0f);
+			Left.Color = BeamColor;
+			PackedVertices.push_back(Left);
+
+			FBeamParticleInstanceVertex Right;
+			Right.Position = Center + Side * HalfWidth;
+			Right.UV = FVector2(U, 1.0f);
+			Right.Color = BeamColor;
+			PackedVertices.push_back(Right);
 		}
-		else
+
+		for (int32 SegmentIndex = 0; SegmentIndex < SegmentCount; ++SegmentIndex)
 		{
-			Side.Normalize();
+			const uint32 V0 = VertexStart + static_cast<uint32>(SegmentIndex) * 2;
+			const uint32 V1 = V0 + 1;
+			const uint32 V2 = V0 + 2;
+			const uint32 V3 = V0 + 3;
+
+			PackedIndices.push_back(V0);
+			PackedIndices.push_back(V2);
+			PackedIndices.push_back(V1);
+			PackedIndices.push_back(V2);
+			PackedIndices.push_back(V3);
+			PackedIndices.push_back(V1);
 		}
-
-		FBeamParticleInstanceVertex Left;
-		Left.Position = Center - Side * HalfWidth;
-		Left.UV = FVector2(U, 0.0f);
-		Left.Color = BeamColor;
-		PackedVertices.push_back(Left);
-
-		FBeamParticleInstanceVertex Right;
-		Right.Position = Center + Side * HalfWidth;
-		Right.UV = FVector2(U, 1.0f);
-		Right.Color = BeamColor;
-		PackedVertices.push_back(Right);
-	}
-
-	for (int32 SegmentIndex = 0; SegmentIndex < SegmentCount; ++SegmentIndex)
-	{
-		const uint32 V0 = VertexStart + static_cast<uint32>(SegmentIndex) * 2;
-		const uint32 V1 = V0 + 1;
-		const uint32 V2 = V0 + 2;
-		const uint32 V3 = V0 + 3;
-
-		PackedIndices.push_back(V0);
-		PackedIndices.push_back(V2);
-		PackedIndices.push_back(V1);
-		PackedIndices.push_back(V2);
-		PackedIndices.push_back(V3);
-		PackedIndices.push_back(V1);
 	}
 
 	Draw.FirstIndex = IndexStart;

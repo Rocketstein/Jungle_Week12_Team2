@@ -65,6 +65,9 @@ void MoveBeamReplayData(FDynamicBeamEmitterReplayData& Dest, FDynamicBeamEmitter
 	Dest.Width = Source.Width;
 	Dest.InterpolationPoints = Source.InterpolationPoints;
 	Dest.Sheets = Source.Sheets;
+	Dest.MaxBeamCount = Source.MaxBeamCount;
+	Dest.Speed = Source.Speed;
+	Dest.UpVectorStepSize = Source.UpVectorStepSize;
 	Dest.TextureTile = Source.TextureTile;
 	Dest.TextureTileDistance = Source.TextureTileDistance;
 	Dest.TaperMethod = Source.TaperMethod;
@@ -74,6 +77,8 @@ void MoveBeamReplayData(FDynamicBeamEmitterReplayData& Dest, FDynamicBeamEmitter
 	Dest.bRenderDirectLine = Source.bRenderDirectLine;
 	Dest.bRenderLines = Source.bRenderLines;
 	Dest.bRenderTessellation = Source.bRenderTessellation;
+	Dest.BranchParentName = Source.BranchParentName;
+	Dest.TargetData = std::move(Source.TargetData);
 }
 
 FParticleEmitterInstance* CreateEmitterInstance(

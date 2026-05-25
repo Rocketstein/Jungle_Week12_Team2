@@ -4,6 +4,7 @@
   "RenderPass": "AlphaBlend",
   "BlendState": "Additive",
   "DepthStencilState": "DepthReadOnly",
+  "RasterizerState": "SolidNoCull",
   "Textures": {
     "DiffuseTexture": "Asset/Particle/Textures/T_Flare_A.PNG"
   },

@@ -1,4 +1,4 @@
-#include "Render/Particle/ParticleBeamSmokeTest.h"
+﻿#include "Render/Particle/ParticleBeamSmokeTest.h"
 
 #include "Component/ActorComponent.h"
 #include "Component/ParticleSystemComponent.h"
@@ -63,8 +63,8 @@ namespace
 		Src.Width = 4.0f;
 
 		Src.InterpolationPoints  = 8;
-		Src.Sheets               = 1;
-		Src.TextureTile          = 2;
+		Src.Sheets               = 5;
+		Src.TextureTile          = 5;
 		Src.TextureTileDistance  = 0.0f;
 
 		// Exercise the taper path on half the beams; leave the rest straight so a

@@ -86,14 +86,17 @@ struct FDynamicMeshEmitterReplayData : public FDynamicRenderableEmitterReplayDat
 
 struct FDynamicBeamEmitterReplayData : public FDynamicRenderableEmitterReplayDataBase
 {
-	FVector Source;							// World-space start point of the beam
-	FVector Target;							// World-space end point of the beam
-	FVector Color;							// Base RGB tint applied to the beam
+	FVector Source = FVector::ZeroVector;	// World-space start point of the beam
+	FVector Target = FVector::ZeroVector;	// World-space end point of the beam
+	FVector Color = FVector::OneVector;		// Base RGB tint applied to the beam
 	float Alpha = 1.0f;						// Opacity multiplier for the beam
 	float Width = 8.0f;						// Beam thickness in world units
 
 	int32 InterpolationPoints = 8;			// Number of subdivisions along the beam for curve interpolation
 	int32 Sheets = 1;						// Number of crossed quad sheets used to render the beam
+	int32 MaxBeamCount = 1;					// Max beam instances requested by type data
+	float Speed = 0.0f;						// Beam interpolation speed requested by type data
+	int32 UpVectorStepSize = 0;				// UE-compatible up-vector step hint
 
 	int32 TextureTile = 1;					// Number of times the texture tiles along the beam length
 	float TextureTileDistance = 0.0f;		// Distance per texture tile (overrides TextureTile when non-zero)
@@ -106,6 +109,8 @@ struct FDynamicBeamEmitterReplayData : public FDynamicRenderableEmitterReplayDat
 	bool bRenderDirectLine = false;			// Whether to render a debug straight line from Source to Target
 	bool bRenderLines = false;				// Whether to render debug lines along the interpolated path
 	bool bRenderTessellation = false;		// Whether to render debug tessellation wireframe
+	FName BranchParentName;					// Parent emitter requested by branch beams
+	TArray<FBeamTargetData> TargetData;		// Imported branch target metadata
 
 	FDynamicBeamEmitterReplayData()
 	{

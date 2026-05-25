@@ -78,6 +78,9 @@ FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
 	NewEmitterReplayData->Alpha = std::clamp(BeamModule->Alpha, 0.0f, 1.0f);
 	NewEmitterReplayData->InterpolationPoints = std::max(0, BeamModule->InterpolationPoints);
 	NewEmitterReplayData->Sheets = std::max(1, BeamModule->Sheets);
+	NewEmitterReplayData->MaxBeamCount = std::max(1, BeamModule->MaxBeamCount);
+	NewEmitterReplayData->Speed = std::max(0.0f, BeamModule->Speed);
+	NewEmitterReplayData->UpVectorStepSize = std::max(0, BeamModule->UpVectorStepSize);
 	NewEmitterReplayData->TaperFactor = BeamModule->TaperFactor;
 	NewEmitterReplayData->TaperMethod = BeamModule->TaperMethod;
 	NewEmitterReplayData->TaperScale = BeamModule->TaperScale;
@@ -87,6 +90,8 @@ FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
 	NewEmitterReplayData->bRenderGeometry = BeamModule->bRenderGeometry;
 	NewEmitterReplayData->bRenderLines = BeamModule->bRenderLines;
 	NewEmitterReplayData->bRenderTessellation = BeamModule->bRenderTessellation;
+	NewEmitterReplayData->BranchParentName = BeamModule->BranchParentName;
+	NewEmitterReplayData->TargetData = BeamModule->TargetData;
 
 	if (CurrentLODLevel->RequiredModule)
 	{
