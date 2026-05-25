@@ -242,6 +242,7 @@ const char* GetSerializableModuleType(UParticleModule* Module)
 	if (Module->IsA<UParticleModuleLocation>()) return "InitialLocation";
 	if (Module->IsA<UParticleModuleVelocity>()) return "InitialVelocity";
 	if (Module->IsA<UParticleModuleColor>()) return "InitialColor";
+	if (Module->IsA<UParticleModuleColorOverLife>()) return "ColorOverLife";
 	if (Module->IsA<UParticleModuleSize>()) return "InitialSize";
 	return nullptr;
 }
@@ -287,8 +288,11 @@ json::JSON SerializeModule(UParticleModule* Module)
 		Object[ParticleKeys::StartAlpha] = Color->StartAlpha;
 		Object[ParticleKeys::StartAlphaMin] = Color->StartAlphaMin;
 		Object[ParticleKeys::StartAlphaMax] = Color->StartAlphaMax;
-		Object[ParticleKeys::EndColor] = MakeVectorJSON(Color->EndColor);
-		Object[ParticleKeys::EndAlpha] = Color->EndAlpha;
+	}
+	else if (UParticleModuleColorOverLife* ColorOverLife = Cast<UParticleModuleColorOverLife>(Module))
+	{
+		Object[ParticleKeys::EndColor] = MakeVectorJSON(ColorOverLife->ColorOverLife);
+		Object[ParticleKeys::EndAlpha] = ColorOverLife->AlphaOverLife;
 	}
 	else if (UParticleModuleSize* Size = Cast<UParticleModuleSize>(Module))
 	{
@@ -548,9 +552,17 @@ UParticleModule* DeserializeModule(json::JSON& Object, UParticleLODLevel* Outer)
 		}
 		if (Object.hasKey(ParticleKeys::StartAlphaMin)) Color->StartAlphaMin = std::clamp(static_cast<float>(Object[ParticleKeys::StartAlphaMin].ToFloat()), 0.0f, 1.0f);
 		if (Object.hasKey(ParticleKeys::StartAlphaMax)) Color->StartAlphaMax = std::clamp(static_cast<float>(Object[ParticleKeys::StartAlphaMax].ToFloat()), 0.0f, 1.0f);
-		Color->EndColor = ReadVectorJSON(Object, ParticleKeys::EndColor, Color->EndColor);
-		if (Object.hasKey(ParticleKeys::EndAlpha)) Color->EndAlpha = std::clamp(static_cast<float>(Object[ParticleKeys::EndAlpha].ToFloat()), 0.0f, 1.0f);
 		Module = Color;
+	}
+	else if (Type == "ColorOverLife")
+	{
+		UParticleModuleColorOverLife* ColorOverLife = GUObjectArray.CreateObject<UParticleModuleColorOverLife>(Outer);
+		ColorOverLife->ColorOverLife = ReadVectorJSON(Object, ParticleKeys::EndColor, ColorOverLife->ColorOverLife);
+		if (Object.hasKey(ParticleKeys::EndAlpha))
+		{
+			ColorOverLife->AlphaOverLife = std::clamp(static_cast<float>(Object[ParticleKeys::EndAlpha].ToFloat()), 0.0f, 1.0f);
+		}
+		Module = ColorOverLife;
 	}
 	else if (Type == "InitialSize")
 	{
