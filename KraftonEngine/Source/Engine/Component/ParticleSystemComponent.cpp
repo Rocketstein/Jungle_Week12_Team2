@@ -230,8 +230,12 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 		InitializeSystem();
 	}
 
-	UWorld* World = GetWorld();
-	if (World)
+	if (ForcedLODLevel >= 0)
+	{
+		const int32 MaxLODIndex = LODDistances.empty() ? 0 : static_cast<int32>(LODDistances.size()) - 1;
+		LODLevel = std::clamp(ForcedLODLevel, 0, MaxLODIndex);
+	}
+	else if (UWorld* World = GetWorld())
 	{
 		LODLevel = DecideLODLevel(World->GetParticleLODContext());
 	}
@@ -293,6 +297,20 @@ int32 UParticleSystemComponent::DecideLODLevel(const FParticleLODContext& Contex
 	return std::clamp(SelectedLOD, 0, static_cast<int32>(LODDistances.size()) - 1);
 }
 
+void UParticleSystemComponent::SetForcedLODLevel(int32 InLODLevel)
+{
+	ForcedLODLevel = std::max(0, InLODLevel);
+	if (!LODDistances.empty())
+	{
+		LODLevel = std::clamp(ForcedLODLevel, 0, static_cast<int32>(LODDistances.size()) - 1);
+	}
+}
+
+void UParticleSystemComponent::ClearForcedLODLevel()
+{
+	ForcedLODLevel = -1;
+}
+
 void UParticleSystemComponent::InitParticles()
 {
 	ResetParticles(true);
@@ -304,6 +322,18 @@ void UParticleSystemComponent::InitParticles()
 	}
 
 	ParticleTemplate->NormalizeLODData();
+	LODDistances = ParticleTemplate->GetLODDistances();
+	if (ForcedLODLevel >= 0)
+	{
+		const int32 MaxLODIndex = LODDistances.empty() ? 0 : static_cast<int32>(LODDistances.size()) - 1;
+		LODLevel = std::clamp(ForcedLODLevel, 0, MaxLODIndex);
+	}
+	else
+	{
+		const int32 MaxLODIndex = LODDistances.empty() ? 0 : static_cast<int32>(LODDistances.size()) - 1;
+		LODLevel = std::clamp(LODLevel, 0, MaxLODIndex);
+	}
+
 	EmitterInstances.reserve(ParticleTemplate->Emitters.size());
 	for (UParticleEmitter* Emitter : ParticleTemplate->Emitters)
 	{
@@ -316,10 +346,9 @@ void UParticleSystemComponent::InitParticles()
 		FParticleEmitterInstance* Instance = CreateEmitterInstance(this, Emitter);
 		Instance->InitParameters(Emitter);
 		Instance->Init();
+		Instance->SetCurrentLODLevel(LODLevel);
 		EmitterInstances.push_back(Instance);
 	}
-
-	LODDistances = ParticleTemplate->GetLODDistances();
 }
 
 void UParticleSystemComponent::ResetParticles(bool bEmptyInstances)
