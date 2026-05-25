@@ -49,7 +49,7 @@ namespace
 		Src.ActiveParticleCount   = 1;
 		Src.ParticleStride        = AlignParticleDataSize(static_cast<int32>(sizeof(FBaseParticle)), 16);
 		Src.SortMode              = EParticleSortMode::PSORTMODE_None;
-		Src.BlendMode             = EBlendState::AlphaBlend;
+		Src.BlendMode             = Material ? Material->GetBlendState() : EBlendState::Additive;
 
 		const float t = (kTwoPi * static_cast<float>(EmitterIndex)) / static_cast<float>(N);
 		Src.Source = WorldCenter;

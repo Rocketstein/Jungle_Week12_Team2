@@ -1,0 +1,11 @@
+{
+  "PathFileName": "Asset/Materials/Editor/DefaultParticleBeam.mat",
+  "ShaderPath": "Shaders/Particle/ParticleBeam.hlsl",
+  "RenderPass": "AlphaBlend",
+  "BlendState": "Additive",
+  "DepthStencilState": "DepthReadOnly",
+  "Textures": {
+    "DiffuseTexture": "Asset/Particle/Textures/T_Flare_A.PNG"
+  },
+  "Origin": "Editor"
+}
