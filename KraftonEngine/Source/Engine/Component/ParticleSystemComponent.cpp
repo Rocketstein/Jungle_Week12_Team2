@@ -87,9 +87,11 @@ FParticleEmitterInstance* CreateEmitterInstance(
 
 	Emitter->UpdateModuleLists();
 	UParticleLODLevel* LOD = Emitter ? Emitter->GetLODLevel(0) : nullptr;
-	if (LOD && LOD->TypeDataModule && LOD->TypeDataModule->IsABeamEmitter())
+	if (LOD && LOD->TypeDataModule)
 	{
-		return new FBeam2EmitterInstance(Component);
+		if (LOD->TypeDataModule->IsABeamEmitter()) {
+			return new FBeam2EmitterInstance(Component);
+		}
 	}
 
 	return new FParticleEmitterInstance(Component);
