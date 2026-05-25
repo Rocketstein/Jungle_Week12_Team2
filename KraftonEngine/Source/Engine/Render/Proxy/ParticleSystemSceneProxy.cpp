@@ -687,13 +687,7 @@ void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(const FFrameCon
 	Draw.FirstIndex = static_cast<uint32>(PackedIndices.size());
 	Draw.IndexCount = 0;
 
-	// For beams, ActiveParticleCount is Cascade/stat accounting
-	// (logical beams * sheets), not a per-particle draw loop count.
-	if (!Source.bRenderGeometry || Source.ActiveParticleCount == 0)
-		return;
-
-	const FVector BeamDelta = Source.Target - Source.Source;
-	if (BeamDelta.Length() <= 1e-6f)
+	if (!Source.bRenderGeometry || Source.Beams.empty())
 		return;
 
 	const int32 SegmentCount = std::clamp(Source.InterpolationPoints + 1,
@@ -702,73 +696,85 @@ void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(const FFrameCon
 	const int32 SheetCount = std::clamp(Source.Sheets,
 		1, static_cast<int32>(MaxSheetsPerBeam));
 
-	const uint32 RequiredVertices = static_cast<uint32>(PointCount) * 2 * static_cast<uint32>(SheetCount);
-	const uint32 RequiredIndices = static_cast<uint32>(SegmentCount) * 6 * static_cast<uint32>(SheetCount);
-	PackedVertices.reserve(PackedVertices.size() + RequiredVertices);
-	PackedIndices.reserve(PackedIndices.size() + RequiredIndices);
+	const uint32 VertsPerBeam   = static_cast<uint32>(PointCount) * 2u * static_cast<uint32>(SheetCount);
+	const uint32 IndicesPerBeam = static_cast<uint32>(SegmentCount) * 6u * static_cast<uint32>(SheetCount);
+	PackedVertices.reserve(PackedVertices.size() + VertsPerBeam   * Source.Beams.size());
+	PackedIndices.reserve (PackedIndices.size()  + IndicesPerBeam * Source.Beams.size());
 
-	const float BeamLen = BeamDelta.Length();
-	const float Progress = std::clamp(Source.BeamProgress, 0.0f, 1.0f);
-	const float VisibleLen = BeamLen * Progress;
-	const FVector VisibleDelta = BeamDelta * Progress;
-	const FVector BeamDir = (BeamLen > 1e-6f) ? BeamDelta * (1.0f / BeamLen) : FVector::ForwardVector;
-	const FVector VertexColor(Source.Color.X, Source.Color.Y, Source.Color.Z);
-	const FVector4 PackedColor(VertexColor, std::clamp(Source.Alpha, 0.0f, 1.0f));
 	constexpr float Pi = 3.14159265358979323846f;
+	uint32 IndicesEmitted = 0;
 
-	for (int32 SheetIdx = 0; SheetIdx < SheetCount; ++SheetIdx)
+	for (const FBeamInstanceData& Beam : Source.Beams)
 	{
-		const uint32 SheetVertexBase = static_cast<uint32>(PackedVertices.size());
-		for (int32 PointIdx = 0; PointIdx < PointCount; ++PointIdx)
-		{
-			const float T = static_cast<float>(PointIdx) / static_cast<float>(std::max(PointCount - 1, 1));
-			const FVector Center = Source.Source + VisibleDelta * T;
-			const float Taper = ApplyBeamTaper(Source.TaperMethod, Source.TaperFactor, Source.TaperScale, T);
-			const float HalfWidth = std::max(0.0f, Source.Width * Taper) * 0.5f;
+		const FVector BeamDelta = Beam.Target - Beam.Source;
+		const float BeamLen = BeamDelta.Length();
+		if (BeamLen <= 1e-6f)
+			continue;
 
-			const FVector ToCamera = SafeNormalizeBeam(Frame.CameraPosition - Center, FVector::UpVector);
-			FVector SideAxis = SafeNormalizeBeam(ToCamera.Cross(BeamDir), FVector::ForwardVector);
-			if (SheetIdx > 0)
+		const float   Progress     = std::clamp(Beam.BeamProgress, 0.0f, 1.0f);
+		const float   VisibleLen   = BeamLen * Progress;
+		const FVector VisibleDelta = BeamDelta * Progress;
+		const FVector BeamDir      = BeamDelta * (1.0f / BeamLen);
+		const FVector4 PackedColor(Beam.Color.X, Beam.Color.Y, Beam.Color.Z,
+			std::clamp(Beam.Alpha, 0.0f, 1.0f));
+
+		for (int32 SheetIdx = 0; SheetIdx < SheetCount; ++SheetIdx)
+		{
+			const uint32 SheetVertexBase = static_cast<uint32>(PackedVertices.size());
+			for (int32 PointIdx = 0; PointIdx < PointCount; ++PointIdx)
 			{
-				const float SheetAngle = Pi * static_cast<float>(SheetIdx) / static_cast<float>(SheetCount);
-				SideAxis = SafeNormalizeBeam(RotateAroundAxis(SideAxis, BeamDir, SheetAngle), SideAxis);
+				const float T = static_cast<float>(PointIdx) / static_cast<float>(std::max(PointCount - 1, 1));
+				const FVector Center = Beam.Source + VisibleDelta * T;
+				const float Taper = ApplyBeamTaper(Beam.TaperMethod, Beam.TaperFactor, Beam.TaperScale, T);
+				const float HalfWidth = std::max(0.0f, Beam.Width * Taper) * 0.5f;
+
+				const FVector ToCamera = SafeNormalizeBeam(Frame.CameraPosition - Center, FVector::UpVector);
+				FVector SideAxis = SafeNormalizeBeam(ToCamera.Cross(BeamDir), FVector::ForwardVector);
+				if (SheetIdx > 0)
+				{
+					const float SheetAngle = Pi * static_cast<float>(SheetIdx) / static_cast<float>(SheetCount);
+					SideAxis = SafeNormalizeBeam(RotateAroundAxis(SideAxis, BeamDir, SheetAngle), SideAxis);
+				}
+
+				const float U = (Source.TextureTileDistance > 0.0f)
+					? (VisibleLen * T) / Source.TextureTileDistance
+					: T * static_cast<float>(std::max(1, Source.TextureTile));
+
+				FBeamParticleInstanceVertex Left;
+				Left.Position = Center - SideAxis * HalfWidth;
+				Left.UV       = FVector2(U, 0.0f);
+				Left.Color    = PackedColor;
+				PackedVertices.push_back(Left);
+
+				FBeamParticleInstanceVertex Right;
+				Right.Position = Center + SideAxis * HalfWidth;
+				Right.UV       = FVector2(U, 1.0f);
+				Right.Color    = PackedColor;
+				PackedVertices.push_back(Right);
 			}
 
-			const float U = (Source.TextureTileDistance > 0.0f)
-				? (VisibleLen * T) / Source.TextureTileDistance
-				: T * static_cast<float>(std::max(1, Source.TextureTile));
+			for (int32 SegIdx = 0; SegIdx < SegmentCount; ++SegIdx)
+			{
+				const uint32 P0Left  = SheetVertexBase + static_cast<uint32>(SegIdx) * 2u;
+				const uint32 P0Right = P0Left + 1u;
+				const uint32 P1Left  = P0Left + 2u;
+				const uint32 P1Right = P0Left + 3u;
 
-			FBeamParticleInstanceVertex Left;
-			Left.Position = Center - SideAxis * HalfWidth;
-			Left.UV = FVector2(U, 0.0f);
-			Left.Color = PackedColor;
-			PackedVertices.push_back(Left);
-
-			FBeamParticleInstanceVertex Right;
-			Right.Position = Center + SideAxis * HalfWidth;
-			Right.UV = FVector2(U, 1.0f);
-			Right.Color = PackedColor;
-			PackedVertices.push_back(Right);
+				PackedIndices.push_back(P0Left);
+				PackedIndices.push_back(P1Left);
+				PackedIndices.push_back(P0Right);
+				PackedIndices.push_back(P1Left);
+				PackedIndices.push_back(P1Right);
+				PackedIndices.push_back(P0Right);
+			}
 		}
 
-		for (int32 SegIdx = 0; SegIdx < SegmentCount; ++SegIdx)
-		{
-			const uint32 P0Left = SheetVertexBase + static_cast<uint32>(SegIdx) * 2;
-			const uint32 P0Right = P0Left + 1;
-			const uint32 P1Left = P0Left + 2;
-			const uint32 P1Right = P0Left + 3;
-
-			PackedIndices.push_back(P0Left);
-			PackedIndices.push_back(P1Left);
-			PackedIndices.push_back(P0Right);
-			PackedIndices.push_back(P1Left);
-			PackedIndices.push_back(P1Right);
-			PackedIndices.push_back(P0Right);
-		}
+		IndicesEmitted += IndicesPerBeam;
 	}
 
-	Draw.IndexCount = RequiredIndices;
-	bGpuBuffersDirty = true;
+	Draw.IndexCount = IndicesEmitted;
+	if (IndicesEmitted > 0)
+		bGpuBuffersDirty = true;
 }
 
 //============================================================================

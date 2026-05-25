@@ -58,21 +58,13 @@ FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
 		: 1.0f;
 
 	FDynamicBeamEmitterReplayData* NewEmitterReplayData = new FDynamicBeamEmitterReplayData();
-	NewEmitterReplayData->Source = ComponentToWorld.TransformPositionWithW(LocalSource);
-	NewEmitterReplayData->Target = ComponentToWorld.TransformPositionWithW(LocalTarget);
 	NewEmitterReplayData->LogicalBeamCount = LogicalBeamCount;
 	NewEmitterReplayData->ParticleStride = 0;
 	NewEmitterReplayData->Scale = FVector::OneVector;
-	NewEmitterReplayData->Width = BeamModule->Width;
-	NewEmitterReplayData->Color = BeamModule->Color;
-	NewEmitterReplayData->Alpha = std::clamp(BeamModule->Alpha, 0.0f, 1.0f);
 	NewEmitterReplayData->InterpolationPoints = std::max(0, BeamModule->InterpolationPoints);
 	NewEmitterReplayData->Sheets = SheetCount;
 	NewEmitterReplayData->MaxBeamCount = MaxBeamCount;
 	NewEmitterReplayData->UpVectorStepSize = std::max(0, BeamModule->UpVectorStepSize);
-	NewEmitterReplayData->TaperFactor = BeamModule->TaperFactor;
-	NewEmitterReplayData->TaperMethod = BeamModule->TaperMethod;
-	NewEmitterReplayData->TaperScale = BeamModule->TaperScale;
 	NewEmitterReplayData->TextureTile = std::max(1, BeamModule->TextureTile);
 	NewEmitterReplayData->TextureTileDistance = std::max(0.0f, BeamModule->TextureTileDistance);
 	NewEmitterReplayData->bRenderDirectLine = BeamModule->bRenderDirectLine;
@@ -81,10 +73,27 @@ FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
 	NewEmitterReplayData->bRenderTessellation = BeamModule->bRenderTessellation;
 	NewEmitterReplayData->BranchParentName = BeamModule->BranchParentName;
 	NewEmitterReplayData->TargetData = BeamModule->TargetData;
-	// Cascade reports active beam particles as logical beams multiplied by
-	// crossed sheets. The current renderer still expands one resolved beam path.
 	NewEmitterReplayData->ActiveParticleCount = LogicalBeamCount * SheetCount;
-	NewEmitterReplayData->BeamProgress = BeamProgress;
+
+	// Per-beam state. Until per-particle beam modules feed individual variation,
+	// every active beam shares the module's resolved Source/Target/Width/etc.
+	const FVector WorldSource = ComponentToWorld.TransformPositionWithW(LocalSource);
+	const FVector WorldTarget = ComponentToWorld.TransformPositionWithW(LocalTarget);
+	NewEmitterReplayData->Beams.reserve(LogicalBeamCount);
+	for (int32 i = 0; i < LogicalBeamCount; ++i)
+	{
+		FBeamInstanceData Beam;
+		Beam.Source       = WorldSource;
+		Beam.Target       = WorldTarget;
+		Beam.Color        = BeamModule->Color;
+		Beam.Alpha        = std::clamp(BeamModule->Alpha, 0.0f, 1.0f);
+		Beam.Width        = BeamModule->Width;
+		Beam.TaperMethod  = BeamModule->TaperMethod;
+		Beam.TaperFactor  = BeamModule->TaperFactor;
+		Beam.TaperScale   = BeamModule->TaperScale;
+		Beam.BeamProgress = BeamProgress;
+		NewEmitterReplayData->Beams.push_back(Beam);
+	}
 
 	if (CurrentLODLevel->RequiredModule)
 	{
