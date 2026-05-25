@@ -104,6 +104,7 @@ private:
 		bool HasPackedBeams() const { return !PackedVertices.empty() && !PackedIndices.empty(); }
 		void MarkGpuBuffersDirty() const { bGpuBuffersDirty = true; }
 		bool PrepareDrawBuffer(ID3D11Device*, ID3D11DeviceContext*, FDrawCommandBuffer&) const;
+		bool ApplyDrawBuffer(ID3D11Device*, ID3D11DeviceContext*, FDrawCommand&) const;
 		uint32 GetIndexCount() const { return static_cast<uint32>(PackedIndices.size()); }
 
 	private:
