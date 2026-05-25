@@ -83,6 +83,16 @@ struct FDynamicMeshEmitterReplayData : public FDynamicRenderableEmitterReplayDat
 	}
 };
 
+struct FDynamicBeamEmitterReplayData : public FDynamicRenderableEmitterReplayDataBase
+{
+	
+};
+
+struct FDynamicRibbonEmitterReplayData : public FDynamicRenderableEmitterReplayDataBase
+{
+	
+};
+
 
 // Render-side wrapper
 struct FDynamicEmitterDataBase
@@ -113,6 +123,16 @@ struct FDynamicMeshEmitterDataBase : public FDynamicEmitterDataBase
 		const uint8* ParticleData, int32 Stride) override;
 };
 
+struct FDynamicBeamEmitterDataBase : public FDynamicEmitterDataBase
+{
+
+};
+
+struct FDynamicRibbonEmitterDataBase : public FDynamicEmitterDataBase
+{
+
+};
+
 struct FDynamicSpriteEmitterData : public FDynamicSpriteEmitterDataBase
 {
 	FDynamicSpriteEmitterReplayData Source;
@@ -125,4 +145,14 @@ struct FDynamicMeshEmitterData : public FDynamicMeshEmitterDataBase
 	FDynamicMeshEmitterReplayData MeshSource;
 	const FDynamicEmitterReplayDataBase& GetSource() const override { return MeshSource; }
 	int32 GetDynamicVertexStride() const override { return sizeof(FMeshParticleInstanceVertex); }
+};
+
+struct FDynamicBeamEmitterData : public FDynamicBeamEmitterDataBase
+{
+
+};
+
+struct FDynamicRibbonEmitterData : public FDynamicRibbonEmitterDataBase 
+{
+	
 };
