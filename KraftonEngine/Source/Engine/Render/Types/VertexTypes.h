@@ -81,6 +81,7 @@ struct FBeamParticleInstanceVertex
 	FVector4 Color;
 };
 
+// Consider reusing FBeamParticleInstanceVertex
 struct FRibbonParticleInstanceVertex
 {
 	FVector Position;
