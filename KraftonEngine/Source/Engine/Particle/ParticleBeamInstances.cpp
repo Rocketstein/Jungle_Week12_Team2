@@ -8,31 +8,9 @@
 
 #include <algorithm>
 
-void FBeam2EmitterInstance::Tick(float DeltaTime, bool bSuppressSpawning)
+void FBeam2EmitterInstance::Tick(float DeltaTime, int32 LODLevel, bool bSuppressSpawning)
 {
-	(void)bSuppressSpawning;
-
-	LastDeltaTime = DeltaTime;
-	SecondsSinceCreation += DeltaTime;
-	EmitterTime += DeltaTime;
-	OldLocation = Location;
-	Location = Component ? Component->GetWorldLocation() : FVector::ZeroVector;
-
-	if (!CurrentLODLevel)
-	{
-		return;
-	}
-
-	for (UParticleModule* Module : CurrentLODLevel->UpdateModules)
-	{
-		if (!Module)
-		{
-			continue;
-		}
-
-		UParticleModule::FUpdateContext Context(*this, 0, DeltaTime);
-		Module->Update(Context);
-	}
+	FParticleEmitterInstance::Tick(DeltaTime, LODLevel, bSuppressSpawning);
 }
 
 FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
