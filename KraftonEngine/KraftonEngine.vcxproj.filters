@@ -139,6 +139,9 @@
     <Filter Include="Source\Engine\Particle">
       <UniqueIdentifier>{1613146e-ae48-8d4a-1d6a-1540318e1782}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Particle\TypeData">
+      <UniqueIdentifier>{93f42f96-b34c-0bcb-fc67-360ed85e628d}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Physics">
       <UniqueIdentifier>{c1985821-1144-9a46-639a-f7de31f4a1fa}</UniqueIdentifier>
     </Filter>
@@ -2107,6 +2110,9 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleSystemManager.h">
       <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\TypeData\ParticleModuleTypeDataBeam2.h">
+      <Filter>Source\Engine\Particle\TypeData</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Physics\IPhysicsScene.h">
       <Filter>Source\Engine\Physics</Filter>

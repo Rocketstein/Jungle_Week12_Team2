@@ -1,5 +1,7 @@
-﻿#pragma once
+#pragma once
+
 #include "Particle/ParticleModule.h"
+#include "ParticleModuleTypeDataBeam2.generated.h"
 
 UENUM()
 enum EBeam2Method : int
@@ -10,9 +12,6 @@ enum EBeam2Method : int
 	PEB2M_MAX,
 };
 
-//
-// Beam Tapering Variables.
-//
 UENUM()
 enum EBeamTaperMethod : int
 {
@@ -22,247 +21,99 @@ enum EBeamTaperMethod : int
 	PEBTM_MAX,
 };
 
-//
-// Beam Multi-target Variables.
-//
 USTRUCT()
 struct FBeamTargetData
 {
-	/** Name of the target.																	*/
-	UPROPERTY(EditAnywhere, Category = BeamTargetData)
+	GENERATED_BODY(FBeamTargetData)
+
+	UPROPERTY(Edit, Category="Beam")
 	FName TargetName;
 
-	/** Percentage chance the target will be selected (100 = always).						*/
-	UPROPERTY(EditAnywhere, Category = BeamTargetData)
-	float TargetPercentage;
-
-
-	FBeamTargetData()
-		: TargetPercentage(0)
-	{
-	}
-
+	UPROPERTY(Edit, Category="Beam", Min=0.0f, Max=100.0f, Speed=1.0f)
+	float TargetPercentage = 100.0f;
 };
 
-UCLASS(editinlinenew, dontcollapsecategories, hidecategories = Object, MinimalAPI, meta = (DisplayName = "Beam Data"))
+UCLASS()
 class UParticleModuleTypeDataBeam2 : public UParticleModuleTypeDataBase
 {
+public:
 	GENERATED_BODY(UParticleModuleTypeDataBeam2)
 
-	//
-	// General Beam Variables.
-	//
+	bool IsABeamEmitter() const override { return true; }
+	bool SupportsSpecificScreenAlignmentFlags() const override { return true; }
 
-	/**
-	 *	The method with which to form the beam(s). Must be one of the following:
-	 *		PEB2M_Distance	- Use the distance property to emit a beam along the X-axis of the emitter.
-	 *		PEB2M_Target	- Emit a beam from the source to the supplied target.
-	 *		PEB2M_Branch	- Currently unimplemented.
-	 */
-	UPROPERTY(EditAnywhere, Category = Beam)
-	EBeam2Method BeamMethod;
+	// Distance emits along local +X. Target emits from SourcePoint to TargetPoint.
+	// Branch is kept for asset compatibility, but should be treated as Target until
+	// parent-emitter beam branching exists in this engine.
+	UPROPERTY(Edit, Category="Beam")
+	EBeam2Method BeamMethod = PEB2M_Target;
 
-	/** The number of times to tile the texture along each beam.
-	 *  Overridden by TextureTilingDistance if it is > 0.0.
-	 *	1st UV set only. 2nd UV set does not Tile.
-	 */
-	UPROPERTY(EditAnywhere, Category = Beam)
-	int32 TextureTile;
+	UPROPERTY(Edit, Category="Beam", Min=1, Max=128, Speed=1.0f)
+	int32 InterpolationPoints = 8;
 
-	/** The distance per texture tile.
-	 *	1st UV set only. 2nd UV set does not Tile.
-	 */
-	UPROPERTY(EditAnywhere, Category = Beam)
-	float TextureTileDistance;
+	UPROPERTY(Edit, Category="Beam", Min=1, Max=16, Speed=1.0f)
+	int32 Sheets = 1;
 
-	/** The number of sheets to render															*/
-	UPROPERTY(EditAnywhere, Category = Beam)
-	int32 Sheets;
+	UPROPERTY(Edit, Category="Beam", Min=1, Max=64, Speed=1.0f)
+	int32 MaxBeamCount = 1;
 
-	/** The number of live beams																*/
-	UPROPERTY(EditAnywhere, Category = Beam)
-	int32 MaxBeamCount;
+	UPROPERTY(Edit, Category="Beam", Min=0.0f, Max=10000.0f, Speed=1.0f)
+	float Speed = 0.0f;
 
-	/** The speed at which the beam should move from source to target when firing up.
-	 *	'0' indicates instantaneous
-	 */
-	UPROPERTY(EditAnywhere, Category = Beam)
-	float Speed;
+	UPROPERTY(Edit, Category="Beam")
+	bool bAlwaysOn = true;
 
-	/**
-	 * Indicates whether the beam should be interpolated.
-	 *     <= 0 --> no
-	 *     >  0 --> yes (and is equal to the number of interpolation steps that should be taken.
-	 */
-	UPROPERTY(EditAnywhere, Category = Beam)
-	int32 InterpolationPoints;
+	UPROPERTY(Edit, Category="Beam", Min=0, Max=32, Speed=1.0f)
+	int32 UpVectorStepSize = 0;
 
-	/** If true, there will ALWAYS be a beam...													*/
-	UPROPERTY(EditAnywhere, Category = Beam)
-	uint32 bAlwaysOn : 1;
+	UPROPERTY(Edit, Category="Beam", Min=0.0f, Max=10000.0f, Speed=1.0f)
+	float Distance = 100.0f;
 
-	/**
-	 *	The approach to use for determining the Up vector(s) for the beam.
-	 *
-	 *	0 indicates that the Up FVector should be calculated at EVERY point in the beam.
-	 *	1 indicates a single Up FVector should be determined at the start of the beam and used at every point.
-	 *	N indicates an Up FVector should be calculated every N points of the beam and interpolated between them.
-	 *	    [NOTE: This mode is currently unsupported.]
-	 */
-	UPROPERTY(EditAnywhere, Category = Beam)
-	int32 UpVectorStepSize;
+	UPROPERTY(Edit, Category="Beam")
+	FVector SourcePoint = FVector::ZeroVector;
 
-	//
-	// Beam Branching Variables.
-	//
+	UPROPERTY(Edit, Category="Beam")
+	FVector TargetPoint = FVector(100.0f, 0.0f, 0.0f);
 
-	/** The name of the emitter to branch from (if mode is PEB2M_Branch)
-	 * MUST BE IN THE SAME PARTICLE SYSTEM!
-	 */
-	UPROPERTY(EditAnywhere, Category = Branching)
+	UPROPERTY(Edit, Category="Beam", Min=0.0f, Max=1000.0f, Speed=0.25f)
+	float Width = 8.0f;
+
+	UPROPERTY(Edit, Category="Beam", Min=1, Max=256, Speed=1.0f)
+	int32 TextureTile = 1;
+
+	UPROPERTY(Edit, Category="Beam", Min=0.0f, Max=10000.0f, Speed=1.0f)
+	float TextureTileDistance = 0.0f;
+
+	UPROPERTY(Edit, Category="Beam")
+	FVector Color = FVector::OneVector;
+
+	UPROPERTY(Edit, Category="Beam", Min=0.0f, Max=1.0f, Speed=0.01f)
+	float Alpha = 1.0f;
+
+	UPROPERTY(Edit, Category="Branching")
 	FName BranchParentName;
 
-	//
-	// Beam Distance Variables.
-	//
+	UPROPERTY(Edit, Category="Taper")
+	EBeamTaperMethod TaperMethod = PEBTM_None;
 
-	/**
-	 *	The distance along the X-axis to stretch the beam
-	 *	Distance is only used if BeamMethod is PEB2M_Distance
-	 */
-	UPROPERTY(EditAnywhere, Category = Distance)
-	struct FRawDistributionFloat Distance;
+	UPROPERTY(Edit, Category="Taper", Min=0.0f, Max=1.0f, Speed=0.01f)
+	float TaperFactor = 1.0f;
 
-	/**
-	 *	Tapering mode - one of the following:
-	 *	PEBTM_None		- No tapering is applied
-	 *	PEBTM_Full		- Taper the beam relative to source-->target, regardless of current beam length
-	 *	PEBTM_Partial	- Taper the beam relative to source-->location, 0=source,1=endpoint
-	 */
-	UPROPERTY(EditAnywhere, Category = Taper)
-	EBeamTaperMethod TaperMethod;
+	UPROPERTY(Edit, Category="Taper", Min=0.0f, Max=100.0f, Speed=0.01f)
+	float TaperScale = 1.0f;
 
-	/** Tapering factor, 0 = source of beam, 1 = target											*/
-	UPROPERTY(EditAnywhere, Category = Taper)
-	struct FRawDistributionFloat TaperFactor;
+	UPROPERTY(Edit, Category="Rendering")
+	bool bRenderGeometry = true;
 
-	/**
-	 *  Tapering scaling
-	 *	This is intended to be either a constant, uniform or a ParticleParam.
-	 *	If a curve is used, 0/1 mapping of source/target... which could be integrated into
-	 *	the taper factor itself, and therefore makes no sense.
-	 */
-	UPROPERTY(EditAnywhere, Category = Taper)
-	struct FRawDistributionFloat TaperScale;
+	UPROPERTY(Edit, Category="Rendering")
+	bool bRenderDirectLine = false;
 
-	//
-	// Beam Rendering Variables.
-	//
-	UPROPERTY(EditAnywhere, Category = Rendering)
-	uint32 RenderGeometry : 1;
+	UPROPERTY(Edit, Category="Rendering")
+	bool bRenderLines = false;
 
-	UPROPERTY(EditAnywhere, Category = Rendering)
-	uint32 RenderDirectLine : 1;
+	UPROPERTY(Edit, Category="Rendering")
+	bool bRenderTessellation = false;
 
-	UPROPERTY(EditAnywhere, Category = Rendering)
-	uint32 RenderLines : 1;
-
-	UPROPERTY(EditAnywhere, Category = Rendering)
-	uint32 RenderTessellation : 1;
-
-	//////////////////////////////////////////////////////////////////////////
-	TArray<UParticleModuleBeamSource*>		LOD_BeamModule_Source;
-	TArray<UParticleModuleBeamTarget*>		LOD_BeamModule_Target;
-	TArray<UParticleModuleBeamNoise*>		LOD_BeamModule_Noise;
-	TArray<UParticleModuleBeamModifier*>	LOD_BeamModule_SourceModifier;
-	TArray<UParticleModuleBeamModifier*>	LOD_BeamModule_TargetModifier;
-	//////////////////////////////////////////////////////////////////////////
-
-	/** Initializes the default values for this property */
-	void InitializeDefaults();
-
-	//~ Begin UObject Interface
-#if WITH_EDITOR
-	virtual void	PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
-#endif // WITH_EDITOR
-	virtual void	PostInitProperties() override;
-	//~ End UObject Interface
-
-
-	//~ Begin UParticleModule Interface
-	virtual void	Spawn(const FSpawnContext& Context) override;
-	virtual void	Update(const FUpdateContext& Context) override;
-	virtual uint32	RequiredBytes(UParticleModuleTypeDataBase* TypeData) override;
-	virtual	bool	AddModuleCurvesToEditor(UInterpCurveEdSetup* EdSetup, TArray<const FCurveEdEntry*>& OutCurveEntries) override;
-	virtual bool CanTickInAnyThread() override
-	{
-		return true;
-	}
-	//~ End UParticleModule Interface
-
-
-	//~ Begin UParticleModuleTypeDataBase Interface
-	virtual FParticleEmitterInstance* CreateInstance(UParticleEmitter* InEmitterParent, IParticleEmitterInstanceOwner& InComponent) override;
-	virtual void CacheModuleInfo(UParticleEmitter* Emitter) override;
-	virtual const FVertexFactoryType* GetVertexFactoryType() const override;
-	virtual EPrimitiveType GetPrimitiveType() const { return PT_TriangleStrip; }
-	virtual void CollectPSOPrecacheData(const UParticleEmitter* Emitter, FPSOPrecacheParams& OutParams) override;
-	//~ End UParticleModuleTypeDataBase Interface
-
-
-	/**
-	 *	GetDataPointers
-	 *	Retrieves the data pointers stored in the particle payload.
-	 *
-	 *	@param	Owner				The owning emitter instance of the particle.
-	 *	@param	ParticleBase		Pointer to the particle of interest
-	 *	@param	CurrentOffset		The offset to the particle payload
-	 *	@param	BeamData			The FBeam2TypeDataPayload pointer - output
-	 *	@param	InterpolatedPoints	The FVector interpolated points pointer - output
-	 *	@param	NoiseRate			The float NoiseRate pointer - output
-	 *	@param	NoiseDeltaTime		The float NoiseDeltaTime pointer - output
-	 *	@param	TargetNoisePoints	The FVector TargetNoisePoints pointer - output
-	 *	@param	NextNoisePoints		The FVector NextNoisePoints pointer - output
-	 *	@param	TaperValues			The float TaperValues pointer - output
-	 *	@param	NoiseDistanceScale	The float NoiseDistanceScale pointer - output
-	 *	@param	SourceModifier		The FBeamParticleModifierPayloadData for the source - output
-	 *	@param	TargetModifier		The FBeamParticleModifierPayloadData for the target - output
-	 */
-	virtual void	GetDataPointers(FParticleEmitterInstance* Owner, const uint8* ParticleBase,
-		int32& CurrentOffset, FBeam2TypeDataPayload*& BeamData, FVector*& InterpolatedPoints,
-		float*& NoiseRate, float*& NoiseDeltaTime, FVector*& TargetNoisePoints,
-		FVector*& NextNoisePoints, float*& TaperValues, float*& NoiseDistanceScale,
-		FBeamParticleModifierPayloadData*& SourceModifier,
-		FBeamParticleModifierPayloadData*& TargetModifier);
-
-	/**
-	 *	GetDataPointerOffsets
-	 *	Retrieves the offsets to the data stored in the particle payload.
-	 *
-	 *	@param	Owner						The owning emitter instance of the particle.
-	 *	@param	ParticleBase				Pointer to the particle of interest
-	 *	@param	CurrentOffset				The offset to the particle payload
-	 *	@param	BeamDataOffset				The FBeam2TypeDataPayload pointer - output
-	 *	@param	InterpolatedPointsOffset	The FVector interpolated points pointer - output
-	 *	@param	NoiseRateOffset				The float NoiseRate pointer - output
-	 *	@param	NoiseDeltaTimeOffset		The float NoiseDeltaTime pointer - output
-	 *	@param	TargetNoisePointsOffset		The FVector TargetNoisePoints pointer - output
-	 *	@param	NextNoisePointsOffset		The FVector NextNoisePoints pointer - output
-	 *	@param	TaperCount					The int32 TaperCount - output
-	 *	@param	TaperValuesOffset			The float TaperValues pointer - output
-	 *	@param	NoiseDistanceScaleOffset	The float NoiseDistanceScale pointer - output
-	 */
-	virtual void	GetDataPointerOffsets(FParticleEmitterInstance* Owner, const uint8* ParticleBase,
-		int32& CurrentOffset, int32& BeamDataOffset, int32& InterpolatedPointsOffset, int32& NoiseRateOffset,
-		int32& NoiseDeltaTimeOffset, int32& TargetNoisePointsOffset, int32& NextNoisePointsOffset,
-		int32& TaperCount, int32& TaperValuesOffset, int32& NoiseDistanceScaleOffset);
-
-	/**
-	 *	GetNoiseRange
-	 *	Retrieves the range of noise
-	 *
-	 *	@param	NoiseMin		The minimum noise - output
-	 *	@param	NoiseMax		The maximum noise - output
-	 */
-	void	GetNoiseRange(FVector& NoiseMin, FVector& NoiseMax);
+	UPROPERTY(Edit, Category="Targets")
+	TArray<FBeamTargetData> TargetData;
 };
