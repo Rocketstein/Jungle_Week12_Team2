@@ -2,6 +2,7 @@
 
 #include "Component/ParticleSystemComponent.h"
 #include "Materials/Material.h"
+#include "Particle/ParticleHelper.h"
 #include "Particle/ParticleLODLevel.h"
 #include "Particle/ParticleModule.h"
 #include "Particle/TypeData/ParticleModuleTypeDataBeam2.h"
@@ -75,19 +76,32 @@ FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
 	NewEmitterReplayData->TargetData = BeamModule->TargetData;
 	NewEmitterReplayData->ActiveParticleCount = LogicalBeamCount * SheetCount;
 
-	// Per-beam state. Until per-particle beam modules feed individual variation,
-	// every active beam shares the module's resolved Source/Target/Width/etc.
 	const FVector WorldSource = ComponentToWorld.TransformPositionWithW(LocalSource);
 	const FVector WorldTarget = ComponentToWorld.TransformPositionWithW(LocalTarget);
+	const FVector WorldBeamDelta = WorldTarget - WorldSource;
 	NewEmitterReplayData->Beams.reserve(LogicalBeamCount);
 	for (int32 i = 0; i < LogicalBeamCount; ++i)
 	{
+		const FBaseParticle* Particle = (i < ActiveParticles && ParticleIndices)
+			? GetParticleDirect(ParticleIndices[i])
+			: nullptr;
+		const FVector BeamOffset = Particle ? (Particle->Location - Location) : FVector::ZeroVector;
+		const FVector BeamColor = Particle
+			? FVector(Particle->Color.R * BeamModule->Color.X,
+			          Particle->Color.G * BeamModule->Color.Y,
+			          Particle->Color.B * BeamModule->Color.Z)
+			: BeamModule->Color;
+		const float BeamAlpha = Particle
+			? Particle->Color.A * BeamModule->Alpha
+			: BeamModule->Alpha;
+		const float WidthScale = Particle ? std::max(0.0f, Particle->Size.X) : 1.0f;
+
 		FBeamInstanceData Beam;
-		Beam.Source       = WorldSource;
-		Beam.Target       = WorldTarget;
-		Beam.Color        = BeamModule->Color;
-		Beam.Alpha        = std::clamp(BeamModule->Alpha, 0.0f, 1.0f);
-		Beam.Width        = BeamModule->Width;
+		Beam.Source       = WorldSource + BeamOffset;
+		Beam.Target       = Beam.Source + WorldBeamDelta;
+		Beam.Color        = BeamColor;
+		Beam.Alpha        = std::clamp(BeamAlpha, 0.0f, 1.0f);
+		Beam.Width        = BeamModule->Width * WidthScale;
 		Beam.TaperMethod  = BeamModule->TaperMethod;
 		Beam.TaperFactor  = BeamModule->TaperFactor;
 		Beam.TaperScale   = BeamModule->TaperScale;

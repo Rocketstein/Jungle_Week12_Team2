@@ -9,16 +9,15 @@ class UMaterial;
 // Renderer-side smoke test for BEAM particles.
 //
 // Parallel to ParticleSpriteSmokeTest / ParticleMeshSmokeTest. Validates
-// FParticleSystemSceneProxy's beam-path plumbing: UpdateMaterial → per-emitter
-// material binding, FBeamParticlePacker::PackEmitter → view-dependent side
+// FParticleSystemSceneProxy's beam-path plumbing: UpdateMaterial -> per-emitter
+// material binding, FBeamParticlePacker::PackEmitter -> view-dependent side
 // vector + segment expansion + taper / texture-tile math, PrepareDrawBuffer /
-// ApplyDrawBuffer → shared beam VB/IB upload and DrawIndexed submission.
+// ApplyDrawBuffer -> shared beam VB/IB upload and DrawIndexed submission.
 //
-// Independent of the teammate's UParticleSystem / FParticleEmitterInstance —
-// the smoke test hand-builds N FDynamicBeamEmitterData snapshots and pushes
-// them directly into the proxy via UpdateDynamicData. Each FDynamicBeam emitter
-// corresponds to ONE beam (Source → Target), so a "ring" of N beams means
-// N emitter snapshots in the same proxy's DynamicData array.
+// Independent of the teammate's UParticleSystem / FParticleEmitterInstance:
+// the smoke test hand-builds one FDynamicBeamEmitterData snapshot containing
+// N FBeamInstanceData entries, then pushes it directly into the proxy via
+// UpdateDynamicData.
 //
 // Transient. Delete this file (and the toolbar button + .mat asset) once
 // the teammate's CPU simulation can feed the proxy on its own.
@@ -36,6 +35,6 @@ namespace ParticleBeamSmokeTest
 	// Resolves Asset/Materials/Editor/DefaultParticleBeam.mat via FMaterialManager.
 	// The material binds the ParticleBeam shader at AlphaBlend / Additive with a
 	// streak atlas at DiffuseTexture (t0). Returns nullptr if the .mat is missing
-	// or fails to parse — the inject step logs a clear failure in that case.
+	// or fails to parse; the inject step logs a clear failure in that case.
 	UMaterial* GetDefaultMaterial();
 }
