@@ -240,19 +240,33 @@ UParticleEmitter* FParticleEditorWidget::CreateDefaultEmitter(const FString& Emi
 
 	UParticleModuleLifetime* Lifetime = GUObjectArray.CreateObject<UParticleModuleLifetime>(LOD);
 	Lifetime->Lifetime = 1.0f;
+	Lifetime->LifetimeMin = Lifetime->Lifetime;
+	Lifetime->LifetimeMax = Lifetime->Lifetime;
 	LOD->Modules.push_back(Lifetime);
 
 	UParticleModuleVelocity* Velocity = GUObjectArray.CreateObject<UParticleModuleVelocity>(LOD);
 	Velocity->StartVelocity = FVector(0.0f, 0.0f, 35.0f);
+	Velocity->StartVelocityMin = Velocity->StartVelocity;
+	Velocity->StartVelocityMax = Velocity->StartVelocity;
 
 	UParticleModuleSize* Size = GUObjectArray.CreateObject<UParticleModuleSize>(LOD);
 	Size->StartSize = FVector(12.0f, 12.0f, 1.0f);
+	Size->StartSizeMin = Size->StartSize;
+	Size->StartSizeMax = Size->StartSize;
 	LOD->Modules.push_back(Size);
 	LOD->Modules.push_back(Velocity);
+
+	UParticleModuleLocation* Location = GUObjectArray.CreateObject<UParticleModuleLocation>(LOD);
+	Location->StartLocation = FVector::ZeroVector;
+	Location->StartLocationMin = Location->StartLocation;
+	Location->StartLocationMax = Location->StartLocation;
+	LOD->Modules.push_back(Location);
 
 	UParticleModuleColor* Color = GUObjectArray.CreateObject<UParticleModuleColor>(LOD);
 	Color->StartColor = FVector(1.0f, 1.0f, 1.0f);
 	Color->StartAlpha = 1.0f;
+	Color->StartAlphaMin = Color->StartAlpha;
+	Color->StartAlphaMax = Color->StartAlpha;
 	LOD->Modules.push_back(Color);
 
 	LOD->UpdateModuleLists();
@@ -806,37 +820,73 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 	}
 	else if (UParticleModuleLifetime* Lifetime = Cast<UParticleModuleLifetime>(Module))
 	{
-		float LifetimeValue = Lifetime->Lifetime;
-		if (ImGui::DragFloat("Lifetime", &LifetimeValue, 0.05f, 0.0f, 1000.0f))
+		float LifetimeMin = Lifetime->LifetimeMin;
+		if (ImGui::DragFloat("Lifetime Min", &LifetimeMin, 0.05f, 0.0f, 1000.0f))
 		{
-			Lifetime->Lifetime = (std::max)(0.0f, LifetimeValue);
+			Lifetime->LifetimeMin = (std::max)(0.0f, LifetimeMin);
+			Lifetime->Lifetime = Lifetime->LifetimeMax;
+			bChanged = true;
+		}
+
+		float LifetimeMax = Lifetime->LifetimeMax;
+		if (ImGui::DragFloat("Lifetime Max", &LifetimeMax, 0.05f, 0.0f, 1000.0f))
+		{
+			Lifetime->LifetimeMax = (std::max)(0.0f, LifetimeMax);
+			Lifetime->Lifetime = Lifetime->LifetimeMax;
 			bChanged = true;
 		}
 	}
 	else if (UParticleModuleSize* Size = Cast<UParticleModuleSize>(Module))
 	{
-		FVector StartSize = Size->StartSize;
-		if (ImGui::DragFloat3("Start Size", &StartSize.X, 0.25f, 0.0f, 10000.0f))
+		FVector StartSizeMin = Size->StartSizeMin;
+		if (ImGui::DragFloat3("Start Size Min", &StartSizeMin.X, 0.25f, 0.0f, 10000.0f))
 		{
-			Size->StartSize = StartSize;
+			Size->StartSizeMin = StartSizeMin;
+			Size->StartSize = Size->StartSizeMax;
+			bChanged = true;
+		}
+
+		FVector StartSizeMax = Size->StartSizeMax;
+		if (ImGui::DragFloat3("Start Size Max", &StartSizeMax.X, 0.25f, 0.0f, 10000.0f))
+		{
+			Size->StartSizeMax = StartSizeMax;
+			Size->StartSize = Size->StartSizeMax;
 			bChanged = true;
 		}
 	}
 	else if (UParticleModuleVelocity* Velocity = Cast<UParticleModuleVelocity>(Module))
 	{
-		FVector StartVelocity = Velocity->StartVelocity;
-		if (ImGui::DragFloat3("Start Velocity", &StartVelocity.X, 0.5f, -10000.0f, 10000.0f))
+		FVector StartVelocityMin = Velocity->StartVelocityMin;
+		if (ImGui::DragFloat3("Start Velocity Min", &StartVelocityMin.X, 0.5f, -10000.0f, 10000.0f))
 		{
-			Velocity->StartVelocity = StartVelocity;
+			Velocity->StartVelocityMin = StartVelocityMin;
+			Velocity->StartVelocity = Velocity->StartVelocityMax;
+			bChanged = true;
+		}
+
+		FVector StartVelocityMax = Velocity->StartVelocityMax;
+		if (ImGui::DragFloat3("Start Velocity Max", &StartVelocityMax.X, 0.5f, -10000.0f, 10000.0f))
+		{
+			Velocity->StartVelocityMax = StartVelocityMax;
+			Velocity->StartVelocity = Velocity->StartVelocityMax;
 			bChanged = true;
 		}
 	}
 	else if (UParticleModuleLocation* Location = Cast<UParticleModuleLocation>(Module))
 	{
-		FVector StartLocation = Location->StartLocation;
-		if (ImGui::DragFloat3("Start Location", &StartLocation.X, 0.25f))
+		FVector StartLocationMin = Location->StartLocationMin;
+		if (ImGui::DragFloat3("Start Location Min", &StartLocationMin.X, 0.25f))
 		{
-			Location->StartLocation = StartLocation;
+			Location->StartLocationMin = StartLocationMin;
+			Location->StartLocation = Location->StartLocationMax;
+			bChanged = true;
+		}
+
+		FVector StartLocationMax = Location->StartLocationMax;
+		if (ImGui::DragFloat3("Start Location Max", &StartLocationMax.X, 0.25f))
+		{
+			Location->StartLocationMax = StartLocationMax;
+			Location->StartLocation = Location->StartLocationMax;
 			bChanged = true;
 		}
 	}
@@ -849,10 +899,19 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 			bChanged = true;
 		}
 
-		float StartAlpha = Color->StartAlpha;
-		if (ImGui::DragFloat("Start Alpha", &StartAlpha, 0.01f, 0.0f, 1.0f))
+		float StartAlphaMin = Color->StartAlphaMin;
+		if (ImGui::DragFloat("Start Alpha Min", &StartAlphaMin, 0.01f, 0.0f, 1.0f))
 		{
-			Color->StartAlpha = std::clamp(StartAlpha, 0.0f, 1.0f);
+			Color->StartAlphaMin = std::clamp(StartAlphaMin, 0.0f, 1.0f);
+			Color->StartAlpha = Color->StartAlphaMax;
+			bChanged = true;
+		}
+
+		float StartAlphaMax = Color->StartAlphaMax;
+		if (ImGui::DragFloat("Start Alpha Max", &StartAlphaMax, 0.01f, 0.0f, 1.0f))
+		{
+			Color->StartAlphaMax = std::clamp(StartAlphaMax, 0.0f, 1.0f);
+			Color->StartAlpha = Color->StartAlphaMax;
 			bChanged = true;
 		}
 	}

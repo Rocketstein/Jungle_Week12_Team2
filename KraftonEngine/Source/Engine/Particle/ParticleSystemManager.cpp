@@ -48,11 +48,21 @@ namespace ParticleKeys
 	static constexpr const char* bKillOnCompleted = "bKillOnCompleted";
 	static constexpr const char* Rate = "Rate";
 	static constexpr const char* Lifetime = "Lifetime";
+	static constexpr const char* LifetimeMin = "LifetimeMin";
+	static constexpr const char* LifetimeMax = "LifetimeMax";
 	static constexpr const char* StartLocation = "StartLocation";
+	static constexpr const char* StartLocationMin = "StartLocationMin";
+	static constexpr const char* StartLocationMax = "StartLocationMax";
 	static constexpr const char* StartVelocity = "StartVelocity";
+	static constexpr const char* StartVelocityMin = "StartVelocityMin";
+	static constexpr const char* StartVelocityMax = "StartVelocityMax";
 	static constexpr const char* StartColor = "StartColor";
 	static constexpr const char* StartAlpha = "StartAlpha";
+	static constexpr const char* StartAlphaMin = "StartAlphaMin";
+	static constexpr const char* StartAlphaMax = "StartAlphaMax";
 	static constexpr const char* StartSize = "StartSize";
+	static constexpr const char* StartSizeMin = "StartSizeMin";
+	static constexpr const char* StartSizeMax = "StartSizeMax";
 }
 
 json::JSON MakeVectorJSON(const FVector& Value)
@@ -151,23 +161,33 @@ json::JSON SerializeModule(UParticleModule* Module)
 	if (UParticleModuleLifetime* Lifetime = Cast<UParticleModuleLifetime>(Module))
 	{
 		Object[ParticleKeys::Lifetime] = Lifetime->Lifetime;
+		Object[ParticleKeys::LifetimeMin] = Lifetime->LifetimeMin;
+		Object[ParticleKeys::LifetimeMax] = Lifetime->LifetimeMax;
 	}
 	else if (UParticleModuleLocation* Location = Cast<UParticleModuleLocation>(Module))
 	{
 		Object[ParticleKeys::StartLocation] = MakeVectorJSON(Location->StartLocation);
+		Object[ParticleKeys::StartLocationMin] = MakeVectorJSON(Location->StartLocationMin);
+		Object[ParticleKeys::StartLocationMax] = MakeVectorJSON(Location->StartLocationMax);
 	}
 	else if (UParticleModuleVelocity* Velocity = Cast<UParticleModuleVelocity>(Module))
 	{
 		Object[ParticleKeys::StartVelocity] = MakeVectorJSON(Velocity->StartVelocity);
+		Object[ParticleKeys::StartVelocityMin] = MakeVectorJSON(Velocity->StartVelocityMin);
+		Object[ParticleKeys::StartVelocityMax] = MakeVectorJSON(Velocity->StartVelocityMax);
 	}
 	else if (UParticleModuleColor* Color = Cast<UParticleModuleColor>(Module))
 	{
 		Object[ParticleKeys::StartColor] = MakeVectorJSON(Color->StartColor);
 		Object[ParticleKeys::StartAlpha] = Color->StartAlpha;
+		Object[ParticleKeys::StartAlphaMin] = Color->StartAlphaMin;
+		Object[ParticleKeys::StartAlphaMax] = Color->StartAlphaMax;
 	}
 	else if (UParticleModuleSize* Size = Cast<UParticleModuleSize>(Module))
 	{
 		Object[ParticleKeys::StartSize] = MakeVectorJSON(Size->StartSize);
+		Object[ParticleKeys::StartSizeMin] = MakeVectorJSON(Size->StartSizeMin);
+		Object[ParticleKeys::StartSizeMax] = MakeVectorJSON(Size->StartSizeMax);
 	}
 
 	return Object;
@@ -299,19 +319,27 @@ UParticleModule* DeserializeModule(json::JSON& Object, UParticleLODLevel* Outer)
 		if (Object.hasKey(ParticleKeys::Lifetime))
 		{
 			Lifetime->Lifetime = std::max(0.0f, static_cast<float>(Object[ParticleKeys::Lifetime].ToFloat()));
+			Lifetime->LifetimeMin = Lifetime->Lifetime;
+			Lifetime->LifetimeMax = Lifetime->Lifetime;
 		}
+		if (Object.hasKey(ParticleKeys::LifetimeMin)) Lifetime->LifetimeMin = std::max(0.0f, static_cast<float>(Object[ParticleKeys::LifetimeMin].ToFloat()));
+		if (Object.hasKey(ParticleKeys::LifetimeMax)) Lifetime->LifetimeMax = std::max(0.0f, static_cast<float>(Object[ParticleKeys::LifetimeMax].ToFloat()));
 		Module = Lifetime;
 	}
 	else if (Type == "InitialLocation")
 	{
 		UParticleModuleLocation* Location = GUObjectArray.CreateObject<UParticleModuleLocation>(Outer);
 		Location->StartLocation = ReadVectorJSON(Object, ParticleKeys::StartLocation, Location->StartLocation);
+		Location->StartLocationMin = ReadVectorJSON(Object, ParticleKeys::StartLocationMin, Location->StartLocation);
+		Location->StartLocationMax = ReadVectorJSON(Object, ParticleKeys::StartLocationMax, Location->StartLocation);
 		Module = Location;
 	}
 	else if (Type == "InitialVelocity")
 	{
 		UParticleModuleVelocity* Velocity = GUObjectArray.CreateObject<UParticleModuleVelocity>(Outer);
 		Velocity->StartVelocity = ReadVectorJSON(Object, ParticleKeys::StartVelocity, Velocity->StartVelocity);
+		Velocity->StartVelocityMin = ReadVectorJSON(Object, ParticleKeys::StartVelocityMin, Velocity->StartVelocity);
+		Velocity->StartVelocityMax = ReadVectorJSON(Object, ParticleKeys::StartVelocityMax, Velocity->StartVelocity);
 		Module = Velocity;
 	}
 	else if (Type == "InitialColor")
@@ -321,13 +349,19 @@ UParticleModule* DeserializeModule(json::JSON& Object, UParticleLODLevel* Outer)
 		if (Object.hasKey(ParticleKeys::StartAlpha))
 		{
 			Color->StartAlpha = std::clamp(static_cast<float>(Object[ParticleKeys::StartAlpha].ToFloat()), 0.0f, 1.0f);
+			Color->StartAlphaMin = Color->StartAlpha;
+			Color->StartAlphaMax = Color->StartAlpha;
 		}
+		if (Object.hasKey(ParticleKeys::StartAlphaMin)) Color->StartAlphaMin = std::clamp(static_cast<float>(Object[ParticleKeys::StartAlphaMin].ToFloat()), 0.0f, 1.0f);
+		if (Object.hasKey(ParticleKeys::StartAlphaMax)) Color->StartAlphaMax = std::clamp(static_cast<float>(Object[ParticleKeys::StartAlphaMax].ToFloat()), 0.0f, 1.0f);
 		Module = Color;
 	}
 	else if (Type == "InitialSize")
 	{
 		UParticleModuleSize* Size = GUObjectArray.CreateObject<UParticleModuleSize>(Outer);
 		Size->StartSize = ReadVectorJSON(Object, ParticleKeys::StartSize, Size->StartSize);
+		Size->StartSizeMin = ReadVectorJSON(Object, ParticleKeys::StartSizeMin, Size->StartSize);
+		Size->StartSizeMax = ReadVectorJSON(Object, ParticleKeys::StartSizeMax, Size->StartSize);
 		Module = Size;
 	}
 
