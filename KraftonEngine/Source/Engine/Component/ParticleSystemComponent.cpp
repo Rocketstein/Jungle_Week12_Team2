@@ -120,6 +120,10 @@ FDynamicEmitterDataBase* CreateDynamicEmitterData(int32 EmitterIndex, FDynamicEm
 		MoveBeamReplayData(BeamDynamicData->BeamSource, *static_cast<FDynamicBeamEmitterReplayData*>(ReplayData));
 		DynamicData = BeamDynamicData;
 	}
+	else if (ReplayData->eEmitterType == DET_Ribbon)
+	{
+		// TODO
+	}
 	else
 	{
 		FDynamicSpriteEmitterData* SpriteDynamicData = new FDynamicSpriteEmitterData();
