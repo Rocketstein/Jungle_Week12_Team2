@@ -59,11 +59,6 @@ private:
 		mutable bool bParticleParamCBDirty = true;
 		FParticleParamConstants ParticleParams;
 
-		// Beam path: per-emitter b3 CB driving VS-side procedural geometry.
-		mutable FConstantBuffer BeamParamCB;
-		mutable bool bBeamParamCBDirty = true;
-		FBeamParamConstants BeamParams;
-
 	public:
 		uint16 GetSortingPriority() const { return SortingPriority; }
 		void SetParticleBlendRoute(EBlendState Mode);
@@ -101,24 +96,27 @@ private:
 		bool HasPackedInstances(const TArray<FEmitterDraw>& EmitterDraws) const;
 	};
 
-	// Beam: VS generates the camera-facing quad strip from a per-emitter CB.
-	// All beams in this proxy share a single static IB containing 0..MaxIndexCount-1
-	// so SV_VertexID under DrawIndexed yields the per-vertex index the VS expects.
+	// Beam: CPU expands the camera-facing quad strip into dynamic geometry.
+	// All beams in this proxy share one dynamic VB/IB; each emitter draw stores
+	// its section range into that shared index stream.
 	struct FBeamParticlePacker
 	{
 		static constexpr uint32 MaxSegmentsPerBeam = 256;
 		static constexpr uint32 MaxSheetsPerBeam   = 16;
-		static constexpr uint32 MaxIndexCount      = MaxSegmentsPerBeam * 6 * MaxSheetsPerBeam;
 
-		void ResetFrame() { bAnyBeamReady = false; }
-		void PackEmitter(FDynamicBeamEmitterData& Emitter, FEmitterDraw& Draw);
-		bool HasReadyBeams() const { return bAnyBeamReady; }
-		bool EnsureStaticIndexBuffer(ID3D11Device* InDevice) const;
-		ID3D11Buffer* GetStaticIndexBuffer() const { return StaticIB.GetBuffer(); }
+		void ResetFrame();
+		void PackEmitter(const FFrameContext& Frame, FDynamicBeamEmitterData& Emitter, FEmitterDraw& Draw);
+		bool HasPackedBeams() const { return !PackedVertices.empty() && !PackedIndices.empty(); }
+		bool PrepareDrawBuffer(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FDrawCommandBuffer& Out) const;
+		ID3D11Buffer* GetVertexBuffer() const { return VertexBuffer.GetBuffer(); }
+		ID3D11Buffer* GetIndexBuffer() const { return IndexBuffer.GetBuffer(); }
 
 	private:
-		mutable FIndexBuffer StaticIB;
-		bool bAnyBeamReady = false;
+		TArray<FBeamParticleInstanceVertex> PackedVertices;
+		TArray<uint32>                      PackedIndices;
+		mutable FDynamicVertexBuffer        VertexBuffer;
+		mutable FDynamicIndexBuffer         IndexBuffer;
+		mutable bool                        bGpuBuffersDirty = true;
 	};
 
 	// Sorts EmitterData according to its Sorting Priority, which should be a user-defined numeric value
