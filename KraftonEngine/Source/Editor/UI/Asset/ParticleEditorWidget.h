@@ -38,7 +38,8 @@ private:
 		Size,
 		Velocity,
 		Location,
-		Color
+		Color,
+		ColorOverLife
 	};
 
 	void EnsureDefaultSystem();

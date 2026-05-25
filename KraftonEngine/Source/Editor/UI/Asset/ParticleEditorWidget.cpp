@@ -353,6 +353,10 @@ UParticleEmitter* FParticleEditorWidget::CreateDefaultEmitter(const FString& Emi
 	{
 		LOD->Modules.push_back(Color);
 	}
+	if (UParticleModule* ColorOverLife = CreateModule(EAddableModuleType::ColorOverLife, LOD))
+	{
+		LOD->Modules.push_back(ColorOverLife);
+	}
 
 	LOD->UpdateModuleLists();
 	Emitter->LODLevels.push_back(LOD);
@@ -413,9 +417,15 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 		Color->StartAlpha = 1.0f;
 		Color->StartAlphaMin = Color->StartAlpha;
 		Color->StartAlphaMax = Color->StartAlpha;
-		Color->EndColor = FVector(1.0f, 1.0f, 1.0f);
-		Color->EndAlpha = 0.0f;
 		return Color;
+	}
+	case EAddableModuleType::ColorOverLife:
+	{
+		UParticleModuleColorOverLife* ColorOverLife = GUObjectArray.CreateObject<UParticleModuleColorOverLife>(Outer);
+		ColorOverLife->bEnabled = true;
+		ColorOverLife->ColorOverLife = FVector(1.0f, 1.0f, 1.0f);
+		ColorOverLife->AlphaOverLife = 0.0f;
+		return ColorOverLife;
 	}
 	}
 
@@ -759,6 +769,10 @@ FString FParticleEditorWidget::GetModuleDisplayName(UParticleModule* Module) con
 	}
 	if (Module->IsA<UParticleModuleColor>())
 	{
+		return "Initial Color";
+	}
+	if (Module->IsA<UParticleModuleColorOverLife>())
+	{
 		return "Color Over Life";
 	}
 	return Module->GetClass()->GetName();
@@ -1046,9 +1060,13 @@ void FParticleEditorWidget::RenderEmitterList()
 			{
 				QueueAddModule(EmitterIndex, EAddableModuleType::Location);
 			}
-			if (ImGui::MenuItem("Color Over Life"))
+			if (ImGui::MenuItem("Initial Color"))
 			{
 				QueueAddModule(EmitterIndex, EAddableModuleType::Color);
+			}
+			if (ImGui::MenuItem("Color Over Life"))
+			{
+				QueueAddModule(EmitterIndex, EAddableModuleType::ColorOverLife);
 			}
 			ImGui::EndMenu();
 		}
@@ -1358,18 +1376,20 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 			Color->StartAlpha = Color->StartAlphaMax;
 			bChanged = true;
 		}
-
-		float EndColor[3] = { Color->EndColor.X, Color->EndColor.Y, Color->EndColor.Z };
-		if (ImGui::ColorEdit3("End Color", EndColor))
+	}
+	else if (UParticleModuleColorOverLife* ColorOverLife = Cast<UParticleModuleColorOverLife>(Module))
+	{
+		float EndColor[3] = { ColorOverLife->ColorOverLife.X, ColorOverLife->ColorOverLife.Y, ColorOverLife->ColorOverLife.Z };
+		if (ImGui::ColorEdit3("Color Over Life", EndColor))
 		{
-			Color->EndColor = FVector(EndColor[0], EndColor[1], EndColor[2]);
+			ColorOverLife->ColorOverLife = FVector(EndColor[0], EndColor[1], EndColor[2]);
 			bChanged = true;
 		}
 
-		float EndAlpha = Color->EndAlpha;
-		if (ImGui::DragFloat("End Alpha", &EndAlpha, 0.01f, 0.0f, 1.0f))
+		float EndAlpha = ColorOverLife->AlphaOverLife;
+		if (ImGui::DragFloat("Alpha Over Life", &EndAlpha, 0.01f, 0.0f, 1.0f))
 		{
-			Color->EndAlpha = std::clamp(EndAlpha, 0.0f, 1.0f);
+			ColorOverLife->AlphaOverLife = std::clamp(EndAlpha, 0.0f, 1.0f);
 			bChanged = true;
 		}
 	}

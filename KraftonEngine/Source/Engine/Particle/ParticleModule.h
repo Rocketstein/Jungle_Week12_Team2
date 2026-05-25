@@ -289,11 +289,23 @@ public:
 	float StartAlphaMin = 1.0f;
 	float StartAlphaMax = 1.0f;
 
-	UPROPERTY(Edit, Category="Color", DisplayName="End Color")
-	FVector EndColor = FVector::OneVector;
+	void Spawn(const FSpawnContext& Context) override;
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
+};
 
-	UPROPERTY(Edit, Category="Color", DisplayName="End Alpha", Min=0.0f, Max=1.0f, Speed=0.01f)
-	float EndAlpha = 0.0f;
+UCLASS()
+class UParticleModuleColorOverLife : public UParticleModuleColorBase
+{
+public:
+	GENERATED_BODY(UParticleModuleColorOverLife)
+
+	UParticleModuleColorOverLife();
+
+	UPROPERTY(Edit, Category="Color", DisplayName="Color Over Life")
+	FVector ColorOverLife = FVector::OneVector;
+
+	UPROPERTY(Edit, Category="Color", DisplayName="Alpha Over Life", Min=0.0f, Max=1.0f, Speed=0.01f)
+	float AlphaOverLife = 0.0f;
 
 	void Spawn(const FSpawnContext& Context) override;
 	void Update(const FUpdateContext& Context) override;
