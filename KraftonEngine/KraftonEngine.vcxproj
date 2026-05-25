@@ -520,7 +520,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Engine\Particle\ParticleEmitterInstances.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleLODContext.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleLODLevel.cpp" />
-    <ClCompile Include="Source\Engine\Particle\ParticleModule.cpp" />
+    <ClCompile Include="Source\Engine\Particle\ParticleModules.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleSpriteEmitter.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleSystem.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleSystemManager.cpp" />

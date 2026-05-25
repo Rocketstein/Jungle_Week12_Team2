@@ -77,6 +77,11 @@ UParticleModule* UParticleModuleRequired::CloneForLOD(UParticleLODLevel* NewOute
 	return Copy;
 }
 
+UParticleModuleSpawn::UParticleModuleSpawn()
+{
+	bEnabled = true;
+}
+
 bool UParticleModuleSpawn::GetSpawnAmount(const FContext& Context, int32 Offset, float OldLeftover, float DeltaTime,
 	int32& Number, float& OutRate)
 {
@@ -85,8 +90,8 @@ bool UParticleModuleSpawn::GetSpawnAmount(const FContext& Context, int32 Offset,
 	(void)OldLeftover;
 	(void)DeltaTime;
 	Number = 0;
-	OutRate = 0.0f;
-	return false;
+	OutRate = std::max(0.0f, Rate);
+	return true;
 }
 
 UParticleModule* UParticleModuleSpawn::CloneForLOD(UParticleLODLevel* NewOuter) const

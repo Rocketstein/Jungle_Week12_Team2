@@ -1076,7 +1076,7 @@
     <ClCompile Include="Source\Engine\Particle\ParticleLODLevel.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Particle\ParticleModule.cpp">
+    <ClCompile Include="Source\Engine\Particle\ParticleModules.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleSpriteEmitter.cpp">

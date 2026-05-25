@@ -172,6 +172,8 @@ class UParticleModuleSpawn : public UParticleModuleSpawnBase
 public:
 	GENERATED_BODY(UParticleModuleSpawn)
 
+	UParticleModuleSpawn();
+
 	UPROPERTY(Edit, Category="Spawn", DisplayName="Rate", Min=0.0f, Max=10000.0f, Speed=1.0f)
 	float Rate = 10.0f;
 
