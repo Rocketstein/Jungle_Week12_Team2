@@ -345,10 +345,12 @@ void UParticleSystemComponent::InitParticles()
 
 		FParticleEmitterInstance* Instance = CreateEmitterInstance(this, Emitter);
 		Instance->InitParameters(Emitter);
-		Instance->Init();
 		Instance->SetCurrentLODLevel(LODLevel);
+		Instance->RebuildTemplateModuleList();
 		EmitterInstances.push_back(Instance);
 	}
+
+	LODDistances = ParticleTemplate->GetLODDistances();
 }
 
 void UParticleSystemComponent::ResetParticles(bool bEmptyInstances)

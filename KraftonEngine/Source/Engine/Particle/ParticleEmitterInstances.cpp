@@ -91,7 +91,7 @@ void FParticleEmitterInstance::InitParameters(UParticleEmitter* InTemplate)
 	Resize(InitialCount);
 }
 
-void FParticleEmitterInstance::Init()
+void FParticleEmitterInstance::RebuildTemplateModuleList()
 {
 	if (SpriteTemplate)
 	{
@@ -277,7 +277,7 @@ float FParticleEmitterInstance::Tick_SpawnParticles(float DeltaTime, UParticleLO
 
 float FParticleEmitterInstance::Spawn(float DeltaTime)
 {
-	if (!CurrentLODLevel || !CurrentLODLevel->SpawnModule || !CurrentLODLevel->SpawnModule->bEnabled)
+	if (!CurrentLODLevel || !CurrentLODLevel->SpawnModule)
 	{
 		return SpawnFraction;
 	}
