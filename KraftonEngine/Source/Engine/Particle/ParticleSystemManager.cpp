@@ -70,6 +70,12 @@ namespace ParticleKeys
 	static constexpr const char* StartSize = "StartSize";
 	static constexpr const char* StartSizeMin = "StartSizeMin";
 	static constexpr const char* StartSizeMax = "StartSizeMax";
+	static constexpr const char* Collision = "Collision";
+	static constexpr const char* TraceChannel = "TraceChannel";
+	static constexpr const char* ResponseMode = "ResponseMode";
+	static constexpr const char* DampingFactor = "DampingFactor";
+	static constexpr const char* CollisionOffset = "CollisionOffset";
+	static constexpr const char* MaxCollisions = "MaxCollisions";
 	static constexpr const char* Beam2 = "Beam2";
 	static constexpr const char* BeamMethod = "BeamMethod";
 	static constexpr const char* InterpolationPoints = "InterpolationPoints";
@@ -243,6 +249,7 @@ const char* GetSerializableModuleType(UParticleModule* Module)
 	if (Module->IsA<UParticleModuleVelocity>()) return "InitialVelocity";
 	if (Module->IsA<UParticleModuleColor>()) return "InitialColor";
 	if (Module->IsA<UParticleModuleSize>()) return "InitialSize";
+	if (Module->IsA<UParticleModuleCollision>()) return ParticleKeys::Collision;
 	return nullptr;
 }
 
@@ -295,6 +302,14 @@ json::JSON SerializeModule(UParticleModule* Module)
 		Object[ParticleKeys::StartSize] = MakeVectorJSON(Size->StartSize);
 		Object[ParticleKeys::StartSizeMin] = MakeVectorJSON(Size->StartSizeMin);
 		Object[ParticleKeys::StartSizeMax] = MakeVectorJSON(Size->StartSizeMax);
+	}
+	else if (UParticleModuleCollision* Collision = Cast<UParticleModuleCollision>(Module))
+	{
+		Object[ParticleKeys::TraceChannel] = static_cast<int32>(Collision->TraceChannel);
+		Object[ParticleKeys::ResponseMode] = static_cast<int32>(Collision->ResponseMode);
+		Object[ParticleKeys::DampingFactor] = Collision->DampingFactor;
+		Object[ParticleKeys::CollisionOffset] = Collision->CollisionOffset;
+		Object[ParticleKeys::MaxCollisions] = Collision->MaxCollisions;
 	}
 
 	return Object;
@@ -559,6 +574,33 @@ UParticleModule* DeserializeModule(json::JSON& Object, UParticleLODLevel* Outer)
 		Size->StartSizeMin = ReadVectorJSON(Object, ParticleKeys::StartSizeMin, Size->StartSize);
 		Size->StartSizeMax = ReadVectorJSON(Object, ParticleKeys::StartSizeMax, Size->StartSize);
 		Module = Size;
+	}
+	else if (Type == ParticleKeys::Collision)
+	{
+		UParticleModuleCollision* Collision = GUObjectArray.CreateObject<UParticleModuleCollision>(Outer);
+		if (Object.hasKey(ParticleKeys::TraceChannel))
+		{
+			const int32 Value = static_cast<int32>(Object[ParticleKeys::TraceChannel].ToInt());
+			Collision->TraceChannel = static_cast<ECollisionChannel>(std::clamp(Value, 0, NumActiveCollisionChannels - 1));
+		}
+		if (Object.hasKey(ParticleKeys::ResponseMode))
+		{
+			const int32 Value = static_cast<int32>(Object[ParticleKeys::ResponseMode].ToInt());
+			Collision->ResponseMode = static_cast<EParticleCollisionResponseMode>(std::clamp(Value, 0, 2));
+		}
+		if (Object.hasKey(ParticleKeys::DampingFactor))
+		{
+			Collision->DampingFactor = std::clamp(static_cast<float>(Object[ParticleKeys::DampingFactor].ToFloat()), 0.0f, 1.0f);
+		}
+		if (Object.hasKey(ParticleKeys::CollisionOffset))
+		{
+			Collision->CollisionOffset = std::max(0.0f, static_cast<float>(Object[ParticleKeys::CollisionOffset].ToFloat()));
+		}
+		if (Object.hasKey(ParticleKeys::MaxCollisions))
+		{
+			Collision->MaxCollisions = std::max(0, static_cast<int32>(Object[ParticleKeys::MaxCollisions].ToInt()));
+		}
+		Module = Collision;
 	}
 
 	if (Module && Object.hasKey(ParticleKeys::bEnabled))

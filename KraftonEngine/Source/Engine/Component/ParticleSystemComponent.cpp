@@ -178,6 +178,11 @@ void UParticleSystemComponent::PostEditProperty(const char* PropertyName)
 			ParticleSceneProxy->SetTranslucencySortPriority(ToTranslucencySortPriority(SortPriority));
 		}
 	}
+	else if (std::strcmp(PropertyName, "Template") == 0)
+	{
+		ResetParticles(true);
+		InitializeSystem();
+	}
 }
 
 void UParticleSystemComponent::EndPlay()
@@ -227,7 +232,8 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 
 	if (EmitterInstances.empty())
 	{
-		InitializeSystem();
+		InitParticles();
+		//InitializeSystem();
 	}
 
 	if (ForcedLODLevel >= 0)
@@ -311,6 +317,7 @@ void UParticleSystemComponent::ClearForcedLODLevel()
 	ForcedLODLevel = -1;
 }
 
+//각 Instance를 채워넣는다
 void UParticleSystemComponent::InitParticles()
 {
 	ResetParticles(true);
@@ -320,7 +327,7 @@ void UParticleSystemComponent::InitParticles()
 	{
 		return;
 	}
-
+	//ParticleSystem과 Emitter가 가지는 LODLevels의 갯수를 맞춘다
 	ParticleTemplate->NormalizeLODData();
 	LODDistances = ParticleTemplate->GetLODDistances();
 	if (ForcedLODLevel >= 0)
@@ -346,7 +353,7 @@ void UParticleSystemComponent::InitParticles()
 		FParticleEmitterInstance* Instance = CreateEmitterInstance(this, Emitter);
 		Instance->InitParameters(Emitter);
 		Instance->SetCurrentLODLevel(LODLevel);
-		Instance->RebuildTemplateModuleList();
+//		Instance->RebuildTemplateModuleList(); //InitParameters에서 이미 한번하는데 왜 굳이?
 		EmitterInstances.push_back(Instance);
 	}
 

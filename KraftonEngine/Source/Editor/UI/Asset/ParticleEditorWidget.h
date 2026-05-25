@@ -38,7 +38,8 @@ private:
 		Size,
 		Velocity,
 		Location,
-		Color
+		Color,
+		Collision
 	};
 
 	void EnsureDefaultSystem();

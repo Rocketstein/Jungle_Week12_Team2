@@ -58,6 +58,7 @@ UParticleLODLevel* UParticleEmitter::DuplicateLODLevelForEmitter(UParticleLODLev
 	return NewLOD;
 }
 
+//기존 Asset을 보고 런타임때 참고할 Module배열을 만든다.
 void UParticleEmitter::UpdateModuleLists()
 {
 	for (UParticleLODLevel* LODLevel : LODLevels)
@@ -158,6 +159,7 @@ bool UParticleEmitter::CalculateMaxActiveParticleCount()
 	return true;
 }
 
+//각 모듈의 per-particle payload offset과 per-instance payload offset구하는과정
 void UParticleEmitter::CacheEmitterModuleInfo()
 {
 	ModuleOffsetMap.clear();
