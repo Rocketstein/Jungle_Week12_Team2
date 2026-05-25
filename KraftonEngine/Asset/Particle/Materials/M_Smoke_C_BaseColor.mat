@@ -1,5 +1,5 @@
 {
-  "BlendState" : "Additive",
+  "BlendState" : "AlphaBlend",
   "DepthStencilState" : "DepthReadOnly",
   "Origin" : "Particle",
   "Parameters" : {
@@ -15,15 +15,15 @@
     "_Pad1" : 0.000000
   },
   "Particle" : {
-    "SubUVColumns" : 6,
-    "SubUVRows" : 6,
+    "SubUVColumns" : 8,
+    "SubUVRows" : 8,
     "UseSubUV" : true
   },
-  "PathFileName" : "Asset/Particle/Materials/M_Fire_B.mat",
+  "PathFileName" : "Asset/Particle/Materials/M_Smoke_C_BaseColor.mat",
   "RasterizerState" : "SolidNoCull",
   "RenderPass" : "AlphaBlend",
   "ShaderPath" : "Shaders/Particle/ParticleSprite.hlsl",
   "Textures" : {
-    "DiffuseTexture" : "Asset/Particle/Textures/T_Fire_F.PNG"
+    "DiffuseTexture" : "Asset/Particle/Textures/T_Smoke_C_BaseColor.png"
   }
 }

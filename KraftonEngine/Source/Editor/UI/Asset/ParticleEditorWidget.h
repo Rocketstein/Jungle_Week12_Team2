@@ -31,8 +31,21 @@ public:
 	bool AllowsMultipleInstances() const override { return true; }
 
 private:
+	enum class EAddableModuleType
+	{
+		Lifetime,
+		Size,
+		Velocity,
+		Location,
+		Color
+	};
+
 	void EnsureDefaultSystem();
 	UParticleEmitter* CreateDefaultEmitter(const FString& EmitterName);
+	UParticleModule* CreateModule(EAddableModuleType ModuleType, UObject* Outer);
+	void AddModuleToEmitter(int32 EmitterIndex, EAddableModuleType ModuleType);
+	void DeleteModuleFromEmitter(int32 EmitterIndex, UParticleModule* Module);
+	void DeleteEmitter(int32 EmitterIndex);
 	void InitializePreviewWorld();
 	void ReleasePreviewWorld();
 	void RestartPreviewSystem();
