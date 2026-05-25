@@ -54,7 +54,7 @@ FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
 	FDynamicBeamEmitterReplayData* NewEmitterReplayData = new FDynamicBeamEmitterReplayData();
 	NewEmitterReplayData->Source = ComponentToWorld.TransformPositionWithW(LocalSource);
 	NewEmitterReplayData->Target = ComponentToWorld.TransformPositionWithW(LocalTarget);
-	NewEmitterReplayData->BeamCount = static_cast<uint32>(LogicalBeamCount);
+	NewEmitterReplayData->LogicalBeamCount = LogicalBeamCount;
 	NewEmitterReplayData->ParticleStride = 0;
 	NewEmitterReplayData->Scale = FVector::OneVector;
 	NewEmitterReplayData->Width = BeamModule->Width;
@@ -76,6 +76,8 @@ FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
 	NewEmitterReplayData->bRenderTessellation = BeamModule->bRenderTessellation;
 	NewEmitterReplayData->BranchParentName = BeamModule->BranchParentName;
 	NewEmitterReplayData->TargetData = BeamModule->TargetData;
+	// Cascade reports active beam particles as logical beams multiplied by
+	// crossed sheets. The current renderer still expands one resolved beam path.
 	NewEmitterReplayData->ActiveParticleCount = LogicalBeamCount * SheetCount;
 
 	if (CurrentLODLevel->RequiredModule)

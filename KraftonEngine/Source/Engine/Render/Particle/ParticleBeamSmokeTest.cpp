@@ -63,8 +63,8 @@ namespace
 
 		Src.InterpolationPoints  = 8;
 		Src.Sheets               = 1;
-		Src.BeamCount            = 1;
-		Src.ActiveParticleCount  = static_cast<int32>(Src.BeamCount) * Src.Sheets;
+		Src.LogicalBeamCount     = 1;
+		Src.ActiveParticleCount  = Src.LogicalBeamCount * Src.Sheets;
 		Src.TextureTile          = 20;
 		Src.TextureTileDistance  = 0.0f;
 

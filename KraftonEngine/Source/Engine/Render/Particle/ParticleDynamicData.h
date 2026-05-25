@@ -112,7 +112,9 @@ struct FDynamicBeamEmitterReplayData : public FDynamicRenderableEmitterReplayDat
 	FName BranchParentName;					// Parent emitter requested by branch beams
 	TArray<FBeamTargetData> TargetData;		// Imported branch target metadata
 
-	uint32 BeamCount = 1;
+	// Number of logical beam instances. ActiveParticleCount mirrors Cascade's
+	// accounting convention: LogicalBeamCount * Sheets.
+	int32 LogicalBeamCount = 1;
 
 	FDynamicBeamEmitterReplayData()
 	{

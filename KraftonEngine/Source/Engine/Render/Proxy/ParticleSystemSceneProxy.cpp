@@ -597,6 +597,8 @@ void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(FDynamicBeamEmi
 	Draw.FirstIndex = 0;
 	Draw.IndexCount = 0;
 
+	// For beams, ActiveParticleCount is Cascade/stat accounting
+	// (logical beams * sheets), not a per-particle draw loop count.
 	if (!Source.bRenderGeometry || Source.ActiveParticleCount == 0)
 		return;
 
