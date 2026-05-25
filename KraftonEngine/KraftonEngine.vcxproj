@@ -360,6 +360,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Editor\UI\Asset\FloatCurveEditorWidget.cpp" />
     <ClCompile Include="Source\Editor\UI\Asset\MaterialEditorWidget.cpp" />
     <ClCompile Include="Source\Editor\UI\Asset\MeshEditorWidget.cpp" />
+    <ClCompile Include="Source\Editor\UI\Asset\ParticleEditorWidget.cpp" />
     <ClCompile Include="Source\Editor\UI\Asset\StaticMeshEditorWidget.cpp" />
     <ClCompile Include="Source\Editor\UI\ContentBrowser\ContentBrowser.cpp" />
     <ClCompile Include="Source\Editor\UI\ContentBrowser\ContentBrowserElement.cpp" />
@@ -517,6 +518,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Engine\Particle\ParticleModule.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleSpriteEmitter.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleSystem.cpp" />
+    <ClCompile Include="Source\Engine\Particle\ParticleSystemManager.cpp" />
     <ClCompile Include="Source\Engine\Physics\NativePhysicsScene.cpp" />
     <ClCompile Include="Source\Engine\Physics\PhysXPhysicsScene.cpp" />
     <ClCompile Include="Source\Engine\Platform\CrashDump.cpp" />
@@ -663,6 +665,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Editor\UI\Asset\FloatCurveEditorWidget.h" />
     <ClInclude Include="Source\Editor\UI\Asset\MaterialEditorWidget.h" />
     <ClInclude Include="Source\Editor\UI\Asset\MeshEditorWidget.h" />
+    <ClInclude Include="Source\Editor\UI\Asset\ParticleEditorWidget.h" />
     <ClInclude Include="Source\Editor\UI\Asset\StaticMeshEditorWidget.h" />
     <ClInclude Include="Source\Editor\UI\ContentBrowser\ContentBrowser.h" />
     <ClInclude Include="Source\Editor\UI\ContentBrowser\ContentBrowserContext.h" />
@@ -858,6 +861,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\Particle\ParticleModule.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleSpriteEmitter.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleSystem.h" />
+    <ClInclude Include="Source\Engine\Particle\ParticleSystemManager.h" />
     <ClInclude Include="Source\Engine\Physics\IPhysicsScene.h" />
     <ClInclude Include="Source\Engine\Physics\NativePhysicsScene.h" />
     <ClInclude Include="Source\Engine\Physics\PhysXPhysicsScene.h" />

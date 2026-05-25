@@ -8,6 +8,7 @@
 #include "Mesh/StaticMesh.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace {
 	bool ShouldSortEmitter(EBlendState BlendState) 
@@ -260,7 +261,7 @@ void FParticleSystemSceneProxy::PackParticles(const FFrameContext& Frame)
 		{
 			const uint32 IndexBefore = IndexCursor;
 			SpritePacker.PackEmitter(Frame,
-				static_cast<FDynamicSpriteEmitterData&>(*DynamicData[DrawIndex]), IndexCursor);
+				static_cast<FDynamicSpriteEmitterData&>(*DynamicData[DrawIndex]), Draw, IndexCursor);
 
 			// Refresh section range so DrawCommandBuilder sees the right slice
 			// even if ActiveParticleCount shrank since UpdateMesh.
@@ -402,7 +403,7 @@ bool FParticleSystemSceneProxy::FSpriteParticlePacker::PrepareDrawBuffer(
 	return Out.VB != nullptr && Out.IB != nullptr;
 }
 
-void FParticleSystemSceneProxy::FSpriteParticlePacker::PackEmitter(const FFrameContext& Frame, FDynamicSpriteEmitterData& Emitter, uint32& IndexCursor)
+void FParticleSystemSceneProxy::FSpriteParticlePacker::PackEmitter(const FFrameContext& Frame, FDynamicSpriteEmitterData& Emitter, const FEmitterDraw& Draw, uint32& IndexCursor)
 {
 	const FDynamicSpriteEmitterReplayData& Source = Emitter.Source;
 	const int32 Count = Source.ActiveParticleCount;
@@ -425,12 +426,21 @@ void FParticleSystemSceneProxy::FSpriteParticlePacker::PackEmitter(const FFrameC
 	const uint32 FirstParticle = IndexCursor / 6;
 	EnsureIndexPattern(FirstParticle + ParticleCount);
 
+	const int32 SubImageColumns = std::max(1, static_cast<int32>(Draw.ParticleParams.SubUVCols));
+	const int32 SubImageRows = std::max(1, static_cast<int32>(Draw.ParticleParams.SubUVRows));
+	const int32 SubImageCount = std::max(1, SubImageColumns * SubImageRows);
+
 	PackedVertices.reserve(PackedVertices.size() + Count * 4);
 	for (int32 i = 0; i < Count; ++i)
 	{
 		const uint16 Idx = SortedParticleIndices[i];
 		const uint8* Bytes = Source.DataContainer.ParticleData + Idx * Source.ParticleStride;
 		const FBaseParticle& P = *reinterpret_cast<const FBaseParticle*>(Bytes);
+		const float NormalizedAge = std::clamp(P.RelativeTime, 0.0f, 1.0f);
+		const int32 SubImageIndex = std::clamp(
+			static_cast<int32>(std::floor(NormalizedAge * static_cast<float>(SubImageCount))),
+			0,
+			SubImageCount - 1);
 
 		for (int corner = 0; corner < 4; ++corner)
 		{
@@ -440,7 +450,7 @@ void FParticleSystemSceneProxy::FSpriteParticlePacker::PackEmitter(const FFrameC
 			V.UV = FVector2{ float(corner & 1), float((corner >> 1) & 1) };  // 0,0..1,1
 			V.Color = FVector4(P.Color.R, P.Color.G, P.Color.B, P.Color.A);
 			V.Rotation = P.Rotation;
-			V.SubImageIndex = 0.0f;
+			V.SubImageIndex = static_cast<float>(SubImageIndex);
 			V.Velocity = P.Velocity;
 			PackedVertices.push_back(V);
 		}
@@ -520,17 +530,35 @@ void FParticleSystemSceneProxy::FMeshParticlePacker::PackEmitter(const FFrameCon
 void FParticleSystemSceneProxy::UpdateCB(FEmitterDraw& EmitterDraw, const FDynamicEmitterReplayDataBase& Source)
 {
 	const FDynamicSpriteEmitterReplayData* SpriteSource = dynamic_cast<const FDynamicSpriteEmitterReplayData*>(&Source);
-	const uint32 SubUVCols = SpriteSource ? static_cast<uint32>(SpriteSource->SubImages_Horizontal) : 1;
-	const uint32 SubUVRows = SpriteSource ? static_cast<uint32>(SpriteSource->SubImages_Vertical) : 1;
+	uint32 SubUVCols = SpriteSource ? static_cast<uint32>(SpriteSource->SubImages_Horizontal) : 1;
+	uint32 SubUVRows = SpriteSource ? static_cast<uint32>(SpriteSource->SubImages_Vertical) : 1;
 	const uint32 ScreenAlignment = SpriteSource ? static_cast<uint32>(SpriteSource->ScreenAlignment) : 0;
 	const FVector EmitterOrigin = SpriteSource ? SpriteSource->EmitterOrigin : FVector::ZeroVector;
+	const uint32 AlphaSource = SpriteSource ? SpriteSource->AlphaSource : 0;
+	const float AlphaThreshold = SpriteSource ? SpriteSource->AlphaThreshold : 0.0f;
+	const float AlphaPower = SpriteSource ? SpriteSource->AlphaPower : 1.0f;
+	const float ColorIntensity = SpriteSource ? SpriteSource->ColorIntensity : 1.0f;
+
+	if (EmitterDraw.Material)
+	{
+		const FMaterialParticleSettings& ParticleSettings = EmitterDraw.Material->GetParticleSettings();
+		if (ParticleSettings.bUseSubUV)
+		{
+			SubUVCols = std::max(1u, ParticleSettings.SubUVColumns);
+			SubUVRows = std::max(1u, ParticleSettings.SubUVRows);
+		}
+	}
 
 	if (EmitterDraw.ParticleParams.SubUVCols == SubUVCols &&
 		EmitterDraw.ParticleParams.SubUVRows == SubUVRows &&
 		EmitterDraw.ParticleParams.ScreenAlignment == ScreenAlignment &&
 		EmitterDraw.ParticleParams.EmitterOrigin.X == EmitterOrigin.X &&
 		EmitterDraw.ParticleParams.EmitterOrigin.Y == EmitterOrigin.Y &&
-		EmitterDraw.ParticleParams.EmitterOrigin.Z == EmitterOrigin.Z)
+		EmitterDraw.ParticleParams.EmitterOrigin.Z == EmitterOrigin.Z &&
+		EmitterDraw.ParticleParams.AlphaSource == AlphaSource &&
+		EmitterDraw.ParticleParams.AlphaThreshold == AlphaThreshold &&
+		EmitterDraw.ParticleParams.AlphaPower == AlphaPower &&
+		EmitterDraw.ParticleParams.ColorIntensity == ColorIntensity)
 	{
 		return;
 	}
@@ -539,6 +567,10 @@ void FParticleSystemSceneProxy::UpdateCB(FEmitterDraw& EmitterDraw, const FDynam
 	EmitterDraw.ParticleParams.SubUVRows = SubUVRows;
 	EmitterDraw.ParticleParams.ScreenAlignment = ScreenAlignment;
 	EmitterDraw.ParticleParams.EmitterOrigin = EmitterOrigin;
+	EmitterDraw.ParticleParams.AlphaSource = AlphaSource;
+	EmitterDraw.ParticleParams.AlphaThreshold = AlphaThreshold;
+	EmitterDraw.ParticleParams.AlphaPower = AlphaPower;
+	EmitterDraw.ParticleParams.ColorIntensity = ColorIntensity;
 	EmitterDraw.bParticleParamCBDirty = true;
 }
 

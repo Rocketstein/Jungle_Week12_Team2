@@ -61,6 +61,10 @@ struct FDynamicSpriteEmitterReplayData : public FDynamicRenderableEmitterReplayD
 	int32 SubImages_Vertical = 1;
 	uint8 ScreenAlignment = 0;
 	FVector EmitterOrigin = FVector::ZeroVector;
+	uint32 AlphaSource = 0;
+	float AlphaThreshold = 0.0f;
+	float AlphaPower = 1.0f;
+	float ColorIntensity = 1.0f;
 
 	FDynamicSpriteEmitterReplayData()
 	{

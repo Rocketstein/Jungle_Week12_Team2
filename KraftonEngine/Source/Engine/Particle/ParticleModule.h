@@ -110,6 +110,12 @@ public:
 	UMaterialInterface* Material = nullptr;
 	FVector EmitterOrigin = FVector::ZeroVector;
 	EParticleScreenAlignment ScreenAlignment = PSA_FacingCameraPosition;
+	int32 SubImages_Horizontal = 1;
+	int32 SubImages_Vertical = 1;
+	int32 AlphaSource = 0; // 0: texture alpha, 1: texture luminance
+	float AlphaThreshold = 0.0f;
+	float AlphaPower = 1.0f;
+	float ColorIntensity = 1.0f;
 	uint8 bUseLocalSpace : 1 = false;
 	uint8 bKillOnDeactivate : 1 = false;
 	uint8 bKillOnCompleted : 1 = false;
@@ -192,9 +198,11 @@ public:
 
 	UPROPERTY(Edit, Category="Lifetime", DisplayName="Lifetime", Min=0.0f, Max=1000.0f, Speed=0.1f)
 	float Lifetime = 1.0f;
+	float LifetimeMin = 1.0f;
+	float LifetimeMax = 1.0f;
 
 	void Spawn(const FSpawnContext& Context) override;
-	float GetMaxLifetime() override { return Lifetime; }
+	float GetMaxLifetime() override { return LifetimeMax; }
 };
 
 UCLASS()
@@ -214,6 +222,8 @@ public:
 
 	UPROPERTY(Edit, Category="Location", DisplayName="Start Location")
 	FVector StartLocation = FVector::ZeroVector;
+	FVector StartLocationMin = FVector::ZeroVector;
+	FVector StartLocationMax = FVector::ZeroVector;
 
 	void Spawn(const FSpawnContext& Context) override;
 };
@@ -238,6 +248,8 @@ public:
 
 	UPROPERTY(Edit, Category="Velocity", DisplayName="Start Velocity")
 	FVector StartVelocity = FVector::UpVector;
+	FVector StartVelocityMin = FVector::UpVector;
+	FVector StartVelocityMax = FVector::UpVector;
 
 	void Spawn(const FSpawnContext& Context) override;
 };
@@ -262,6 +274,8 @@ public:
 
 	UPROPERTY(Edit, Category="Color", DisplayName="Start Alpha", Min=0.0f, Max=1.0f, Speed=0.01f)
 	float StartAlpha = 1.0f;
+	float StartAlphaMin = 1.0f;
+	float StartAlphaMax = 1.0f;
 
 	void Spawn(const FSpawnContext& Context) override;
 };
@@ -283,6 +297,8 @@ public:
 
 	UPROPERTY(Edit, Category="Size", DisplayName="Start Size")
 	FVector StartSize = FVector::OneVector;
+	FVector StartSizeMin = FVector::OneVector;
+	FVector StartSizeMax = FVector::OneVector;
 
 	void Spawn(const FSpawnContext& Context) override;
 };

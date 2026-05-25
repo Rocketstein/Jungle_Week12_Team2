@@ -3,6 +3,30 @@
 #include "Particle/ParticleEmitterInstances.h"
 
 #include <algorithm>
+#include <random>
+
+namespace
+{
+	float RandomRange(float MinValue, float MaxValue)
+	{
+		if (MaxValue < MinValue)
+		{
+			std::swap(MinValue, MaxValue);
+		}
+
+		static thread_local std::mt19937 Generator{ std::random_device{}() };
+		std::uniform_real_distribution<float> Distribution(MinValue, MaxValue);
+		return Distribution(Generator);
+	}
+
+	FVector RandomRange(const FVector& MinValue, const FVector& MaxValue)
+	{
+		return FVector(
+			RandomRange(MinValue.X, MaxValue.X),
+			RandomRange(MinValue.Y, MaxValue.Y),
+			RandomRange(MinValue.Z, MaxValue.Z));
+	}
+}
 
 bool UParticleModuleSpawn::GetSpawnAmount(const FContext& Context, int32 Offset, float OldLeftover, float DeltaTime,
 	int32& Number, float& OutRate)
@@ -28,7 +52,7 @@ void UParticleModuleLifetime::Spawn(const FSpawnContext& Context)
 		return;
 	}
 
-	const float SpawnLifetime = std::max(Lifetime, 0.0001f);
+	const float SpawnLifetime = std::max(RandomRange(LifetimeMin, LifetimeMax), 0.0001f);
 	Context.ParticleBase->OneOverMaxLifetime = 1.0f / SpawnLifetime;
 }
 
@@ -44,7 +68,7 @@ void UParticleModuleLocation::Spawn(const FSpawnContext& Context)
 		return;
 	}
 
-	Context.ParticleBase->Location = Context.ParticleBase->Location + StartLocation;
+	Context.ParticleBase->Location = Context.ParticleBase->Location + RandomRange(StartLocationMin, StartLocationMax);
 	Context.ParticleBase->OldLocation = Context.ParticleBase->Location;
 }
 
@@ -60,8 +84,9 @@ void UParticleModuleVelocity::Spawn(const FSpawnContext& Context)
 		return;
 	}
 
-	Context.ParticleBase->BaseVelocity = StartVelocity;
-	Context.ParticleBase->Velocity = StartVelocity;
+	const FVector SpawnVelocity = RandomRange(StartVelocityMin, StartVelocityMax);
+	Context.ParticleBase->BaseVelocity = SpawnVelocity;
+	Context.ParticleBase->Velocity = SpawnVelocity;
 }
 
 UParticleModuleColor::UParticleModuleColor()
@@ -76,7 +101,7 @@ void UParticleModuleColor::Spawn(const FSpawnContext& Context)
 		return;
 	}
 
-	const float Alpha = std::max(0.0f, std::min(StartAlpha, 1.0f));
+	const float Alpha = std::max(0.0f, std::min(RandomRange(StartAlphaMin, StartAlphaMax), 1.0f));
 	Context.ParticleBase->BaseColor = FLinearColor(StartColor.X, StartColor.Y, StartColor.Z, Alpha);
 	Context.ParticleBase->Color = Context.ParticleBase->BaseColor;
 }
@@ -93,6 +118,7 @@ void UParticleModuleSize::Spawn(const FSpawnContext& Context)
 		return;
 	}
 
-	Context.ParticleBase->BaseSize = StartSize;
-	Context.ParticleBase->Size = StartSize;
+	const FVector SpawnSize = RandomRange(StartSizeMin, StartSizeMax);
+	Context.ParticleBase->BaseSize = SpawnSize;
+	Context.ParticleBase->Size = SpawnSize;
 }

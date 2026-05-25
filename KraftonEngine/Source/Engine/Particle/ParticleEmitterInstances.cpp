@@ -1,6 +1,7 @@
 ﻿#include "Particle/ParticleEmitterInstances.h"
 
 #include "Component/ParticleSystemComponent.h"
+#include "Materials/Material.h"
 #include "Particle/ParticleEmitter.h"
 #include "Particle/ParticleLODLevel.h"
 #include "Particle/ParticleModule.h"
@@ -304,11 +305,23 @@ bool FParticleEmitterInstance::FillReplayData(FDynamicEmitterReplayDataBase& Out
 		if (FDynamicRenderableEmitterReplayDataBase* RenderableData = dynamic_cast<FDynamicRenderableEmitterReplayDataBase*>(&OutData))
 		{
 			RenderableData->MaterialInterface = CurrentLODLevel->RequiredModule->Material;
+			if (UMaterial* Material = CurrentLODLevel->RequiredModule->Material
+				? CurrentLODLevel->RequiredModule->Material->GetMaterial()
+				: nullptr)
+			{
+				RenderableData->BlendMode = Material->GetBlendState();
+			}
 		}
 		if (FDynamicSpriteEmitterReplayData* SpriteData = dynamic_cast<FDynamicSpriteEmitterReplayData*>(&OutData))
 		{
 			SpriteData->ScreenAlignment = static_cast<uint8>(CurrentLODLevel->RequiredModule->ScreenAlignment);
 			SpriteData->EmitterOrigin = Location + CurrentLODLevel->RequiredModule->EmitterOrigin;
+			SpriteData->SubImages_Horizontal = std::max(1, CurrentLODLevel->RequiredModule->SubImages_Horizontal);
+			SpriteData->SubImages_Vertical = std::max(1, CurrentLODLevel->RequiredModule->SubImages_Vertical);
+			SpriteData->AlphaSource = static_cast<uint32>(std::clamp(CurrentLODLevel->RequiredModule->AlphaSource, 0, 1));
+			SpriteData->AlphaThreshold = std::clamp(CurrentLODLevel->RequiredModule->AlphaThreshold, 0.0f, 1.0f);
+			SpriteData->AlphaPower = std::max(0.001f, CurrentLODLevel->RequiredModule->AlphaPower);
+			SpriteData->ColorIntensity = std::max(0.0f, CurrentLODLevel->RequiredModule->ColorIntensity);
 		}
 	}
 

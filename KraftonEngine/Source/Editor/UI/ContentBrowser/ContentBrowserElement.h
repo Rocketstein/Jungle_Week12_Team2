@@ -160,3 +160,14 @@ protected:
 	const char* GetTypeLabel() const override { return "Material"; }
 	uint32 GetAccentColor() const override { return IM_COL32(210, 170, 70, 255); }
 };
+
+class ParticleSystemElement final : public ContentBrowserElement
+{
+public:
+	virtual const char* GetDragItemType() override { return "ParticleSystemContentItem"; }
+	void OnDoubleLeftClicked(ContentBrowserContext& Context) override;
+
+protected:
+	const char* GetTypeLabel() const override { return "Particle"; }
+	uint32 GetAccentColor() const override { return IM_COL32(255, 105, 45, 255); }
+};

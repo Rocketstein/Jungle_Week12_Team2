@@ -139,7 +139,8 @@ void FStaticMeshEditorViewportClient::TickInput(float DeltaTime)
 		ViewTransform.Rotate(DeltaYaw, DeltaPitch);
 	}
 
-	const float ScrollNotches = InputSystem::Get().GetScrollNotches();
+	const float ScrollNotches = InputSystem::Get().GetScrollNotches() + PendingScrollNotches;
+	PendingScrollNotches = 0.0f;
 	if (ScrollNotches != 0.0f)
 	{
 		if (InputSystem::Get().GetKey(VK_RBUTTON))

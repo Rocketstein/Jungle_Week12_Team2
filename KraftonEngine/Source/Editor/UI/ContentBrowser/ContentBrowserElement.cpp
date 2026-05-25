@@ -20,6 +20,8 @@
 #include "Mesh/SkeletalMesh.h"
 #include "Mesh/MeshManager.h"
 #include "Object/Object.h"
+#include "Particle/ParticleSystem.h"
+#include "Particle/ParticleSystemManager.h"
 
 #include <algorithm>
 #include <cctype>
@@ -578,5 +580,20 @@ void MaterialElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
 	if (UMaterial* Material = FMaterialManager::Get().GetOrCreateMaterial(MaterialPath))
 	{
 		Context.EditorEngine->OpenAssetEditorForObject(Material);
+	}
+}
+
+void ParticleSystemElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
+{
+	if (!Context.EditorEngine)
+	{
+		ShellExecuteW(nullptr, L"open", ContentItem.Path.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+		return;
+	}
+
+	const FString FilePath = FPaths::ToUtf8(ContentItem.Path.wstring());
+	if (UParticleSystem* ParticleSystem = FParticleSystemManager::Get().Load(FilePath))
+	{
+		Context.EditorEngine->OpenAssetEditorForObject(ParticleSystem);
 	}
 }

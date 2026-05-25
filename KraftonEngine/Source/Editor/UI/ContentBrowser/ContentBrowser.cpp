@@ -18,6 +18,8 @@
 #include "Materials/MaterialManager.h"
 #include "Mesh/MeshImportOptions.h"
 #include "Mesh/MeshManager.h"
+#include "Particle/ParticleSystem.h"
+#include "Particle/ParticleSystemManager.h"
 #include "EditorEngine.h"
 
 #include <Windows.h>
@@ -371,6 +373,9 @@ void FEditorContentBrowserWidget::RefreshContent()
 				case EAssetPackageType::CameraShake:
 					Element = std::make_shared<CameraShakeElement>();
 					break;
+				case EAssetPackageType::ParticleSystem:
+					Element = std::make_shared<ParticleSystemElement>();
+					break;
 				default:
 					Element = std::make_shared<ContentBrowserElement>();
 					break;
@@ -520,6 +525,21 @@ void FEditorContentBrowserWidget::DrawContents()
 						if (UAnimInstanceAsset* AnimInstanceAsset = FAnimInstanceAssetManager::Get().Load(CreatedPath))
 						{
 							BrowserContext.EditorEngine->OpenAssetEditorForObject(AnimInstanceAsset);
+						}
+					}
+				}
+			}
+			if (ImGui::MenuItem("Particle"))
+			{
+				FString CreatedPath;
+				if (FAssetFactory::CreateParticleSystem(FPaths::ToUtf8(BrowserContext.CurrentPath), "NewParticleSystem", CreatedPath))
+				{
+					Refresh();
+					if (BrowserContext.EditorEngine)
+					{
+						if (UParticleSystem* ParticleSystem = FParticleSystemManager::Get().Load(CreatedPath))
+						{
+							BrowserContext.EditorEngine->OpenAssetEditorForObject(ParticleSystem);
 						}
 					}
 				}

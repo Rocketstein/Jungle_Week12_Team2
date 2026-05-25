@@ -37,6 +37,10 @@ void MoveSpriteReplayData(FDynamicSpriteEmitterReplayData& Dest, FDynamicSpriteE
 	Dest.SubImages_Vertical = Source.SubImages_Vertical;
 	Dest.ScreenAlignment = Source.ScreenAlignment;
 	Dest.EmitterOrigin = Source.EmitterOrigin;
+	Dest.AlphaSource = Source.AlphaSource;
+	Dest.AlphaThreshold = Source.AlphaThreshold;
+	Dest.AlphaPower = Source.AlphaPower;
+	Dest.ColorIntensity = Source.ColorIntensity;
 }
 
 void MoveMeshReplayData(FDynamicMeshEmitterReplayData& Dest, FDynamicMeshEmitterReplayData& Source)
