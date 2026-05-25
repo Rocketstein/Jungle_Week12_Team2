@@ -222,6 +222,24 @@ struct FParticleParamConstants
 };
 static_assert(sizeof(FParticleParamConstants) == 48);
 
+struct FBeamParamConstants
+{
+	FVector Source = FVector::ZeroVector;
+	float   Width = 8.0f;
+	FVector Target = FVector::ZeroVector;
+	float   Alpha = 1.0f;
+	FVector Color = FVector::OneVector;
+	float   TaperFactor = 1.0f;
+	float   TaperScale = 1.0f;
+	uint32  TaperMethod = 0;
+	uint32  PointCount = 2;
+	uint32  TextureTile = 1;
+	float   TextureTileDistance = 0.0f;
+	uint32  SheetCount = 1;
+	float   _Pad[2] = {};
+};
+static_assert(sizeof(FBeamParamConstants) == 80);
+
 struct FGizmoConstants
 {
 	FVector4 ColorTint;

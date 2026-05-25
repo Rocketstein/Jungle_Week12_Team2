@@ -32,7 +32,8 @@ struct FDrawCommandBuffer
 	uint32 VertexCount = 0;              // IB 없을 때 Draw(VertexCount, 0)
 	int32  BaseVertex  = 0;              // DrawIndexed BaseVertexLocation
 
-	bool HasBuffers() const { return VB != nullptr; }
+	// IB-only path supports VS-driven geometry (SV_VertexID indexed via a static IB).
+	bool HasBuffers() const { return VB != nullptr || IB != nullptr; }
 };
 
 // 렌더 상태 — DepthStencil / Blend / Rasterizer를 한 단위로 묶어 비교·복사

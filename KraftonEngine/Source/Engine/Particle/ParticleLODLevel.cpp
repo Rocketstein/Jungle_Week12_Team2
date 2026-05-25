@@ -7,15 +7,16 @@ void UParticleLODLevel::UpdateModuleLists()
 	SpawningModules.clear();
 	SpawnModules.clear();
 	UpdateModules.clear();
+	TypeDataModule = nullptr;
 
-	if (SpawnModule)
+	if (SpawnModule && SpawnModule->bEnabled)
 	{
 		SpawningModules.push_back(SpawnModule);
 	}
 
 	for (UParticleModule* Module : Modules)
 	{
-		if (!Module)
+		if (!Module || !Module->bEnabled)
 		{
 			continue;
 		}
@@ -23,6 +24,11 @@ void UParticleLODLevel::UpdateModuleLists()
 		if (UParticleModuleSpawnBase* SpawnBase = Cast<UParticleModuleSpawnBase>(Module))
 		{
 			SpawningModules.push_back(SpawnBase);
+		}
+
+		if (UParticleModuleTypeDataBase* TypeData = Cast<UParticleModuleTypeDataBase>(Module))
+		{
+			TypeDataModule = TypeData;
 		}
 
 		if (Module->IsSpawnModule())

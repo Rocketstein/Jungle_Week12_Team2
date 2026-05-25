@@ -3,6 +3,8 @@
 #include "Particle/ParticleEmitter.h"
 #include "Particle/ParticleEmitterInstances.h"
 #include "Particle/ParticleSystem.h"
+#include "Particle/ParticleLODLevel.h"
+#include "Particle/ParticleBeamInstances.h"
 #include "Render/Particle/ParticleDynamicData.h"
 #include "Render/Proxy/ParticleSystemSceneProxy.h"
 
@@ -53,6 +55,53 @@ void MoveMeshReplayData(FDynamicMeshEmitterReplayData& Dest, FDynamicMeshEmitter
 	Dest.StaticMesh = Source.StaticMesh;
 }
 
+void MoveBeamReplayData(FDynamicBeamEmitterReplayData& Dest, FDynamicBeamEmitterReplayData& Source)
+{
+	MoveRenderableReplayData(Dest, Source);
+	Dest.Source = Source.Source;
+	Dest.Target = Source.Target;
+	Dest.Color = Source.Color;
+	Dest.Alpha = Source.Alpha;
+	Dest.Width = Source.Width;
+	Dest.InterpolationPoints = Source.InterpolationPoints;
+	Dest.Sheets = Source.Sheets;
+	Dest.MaxBeamCount = Source.MaxBeamCount;
+	Dest.Speed = Source.Speed;
+	Dest.UpVectorStepSize = Source.UpVectorStepSize;
+	Dest.TextureTile = Source.TextureTile;
+	Dest.TextureTileDistance = Source.TextureTileDistance;
+	Dest.TaperMethod = Source.TaperMethod;
+	Dest.TaperFactor = Source.TaperFactor;
+	Dest.TaperScale = Source.TaperScale;
+	Dest.bRenderGeometry = Source.bRenderGeometry;
+	Dest.bRenderDirectLine = Source.bRenderDirectLine;
+	Dest.bRenderLines = Source.bRenderLines;
+	Dest.bRenderTessellation = Source.bRenderTessellation;
+	Dest.BranchParentName = Source.BranchParentName;
+	Dest.TargetData = std::move(Source.TargetData);
+}
+
+FParticleEmitterInstance* CreateEmitterInstance(
+	UParticleSystemComponent* Component,
+	UParticleEmitter* Emitter)
+{
+	if (!Emitter)
+	{
+		return nullptr;
+	}
+
+	Emitter->UpdateModuleLists();
+	UParticleLODLevel* LOD = Emitter ? Emitter->GetLODLevel(0) : nullptr;
+	if (LOD && LOD->TypeDataModule)
+	{
+		if (LOD->TypeDataModule->IsABeamEmitter()) {
+			return new FBeam2EmitterInstance(Component);
+		}
+	}
+
+	return new FParticleEmitterInstance(Component);
+}
+
 FDynamicEmitterDataBase* CreateDynamicEmitterData(int32 EmitterIndex, FDynamicEmitterReplayDataBase* ReplayData)
 {
 	if (!ReplayData)
@@ -68,6 +117,17 @@ FDynamicEmitterDataBase* CreateDynamicEmitterData(int32 EmitterIndex, FDynamicEm
 		MeshDynamicData->EmitterIndex = EmitterIndex;
 		MoveMeshReplayData(MeshDynamicData->MeshSource, *static_cast<FDynamicMeshEmitterReplayData*>(ReplayData));
 		DynamicData = MeshDynamicData;
+	}
+	else if (ReplayData->eEmitterType == DET_Beam2)
+	{
+		FDynamicBeamEmitterData* BeamDynamicData = new FDynamicBeamEmitterData();
+		BeamDynamicData->EmitterIndex = EmitterIndex;
+		MoveBeamReplayData(BeamDynamicData->BeamSource, *static_cast<FDynamicBeamEmitterReplayData*>(ReplayData));
+		DynamicData = BeamDynamicData;
+	}
+	else if (ReplayData->eEmitterType == DET_Ribbon)
+	{
+		// TODO
 	}
 	else
 	{
@@ -253,7 +313,7 @@ void UParticleSystemComponent::InitParticles()
 			continue;
 		}
 
-		FParticleEmitterInstance* Instance = new FParticleEmitterInstance(this);
+		FParticleEmitterInstance* Instance = CreateEmitterInstance(this, Emitter);
 		Instance->InitParameters(Emitter);
 		Instance->Init();
 		EmitterInstances.push_back(Instance);
