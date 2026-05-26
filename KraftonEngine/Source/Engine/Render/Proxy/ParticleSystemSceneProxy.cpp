@@ -165,6 +165,12 @@ void FParticleSystemSceneProxy::UpdateMesh()
 			Draw.IndexCount = 0;
 			break;
 		}
+		case (DET_Ribbon):
+		{
+			Draw.FirstIndex = 0;
+			Draw.IndexCount = 0;
+			break;
+		}
 		case (DET_Mesh):
 		{
 			const auto& Source = static_cast<const FDynamicMeshEmitterReplayData&>(
@@ -196,6 +202,7 @@ void FParticleSystemSceneProxy::UpdatePerViewport(const FFrameContext& Frame)
 	SpritePacker.ResetFrame();
 	MeshPacker.ResetFrame(EmitterDraws);
 	BeamPacker.ResetFrame();
+	RibbonPacker.ResetFrame();
 
 	if (DynamicData.empty())
 	{
@@ -224,6 +231,9 @@ bool FParticleSystemSceneProxy::PrepareDrawBuffer(
 	FDrawCommandBuffer BeamBuffer;
 	const bool bHasBeamBuffer = BeamPacker.PrepareDrawBuffer(InDevice, InDeviceContext, BeamBuffer);
 
+	FDrawCommandBuffer RibbonBuffer;
+	const bool bHasRibbonBuffer = RibbonPacker.PrepareDrawBuffer(InDevice, InDeviceContext, RibbonBuffer);
+
 	if (SpritePacker.HasPackedSprites())
 	{
 		if (bHasSpriteBuffer)
@@ -236,6 +246,12 @@ bool FParticleSystemSceneProxy::PrepareDrawBuffer(
 	if (bHasBeamBuffer)
 	{
 		Out = BeamBuffer;
+		return true;
+	}
+
+	if (bHasRibbonBuffer)
+	{
+		Out = RibbonBuffer;
 		return true;
 	}
 
@@ -350,11 +366,19 @@ void FParticleSystemSceneProxy::PackParticles(const FFrameContext& Frame)
 			BeamPacker.PackEmitter(Frame, static_cast<FDynamicBeamEmitterData&>(*DynamicData[DrawIndex]), Draw);
 			break;
 		}
+		case DET_Ribbon:
+		{
+			RibbonPacker.PackEmitter(Frame, static_cast<FDynamicRibbonEmitterData&>(*DynamicData[DrawIndex]), Draw);
+			break;
+		}
 		default:
 			break;
 		}
 
-		if (!Draw.PackedInstances.empty() || SpritePacker.HasPackedSprites() || (Draw.Type == DET_Beam2 && Draw.IndexCount > 0))
+		if (!Draw.PackedInstances.empty()
+			|| SpritePacker.HasPackedSprites()
+			|| (Draw.Type == DET_Beam2 && Draw.IndexCount > 0)
+			|| (Draw.Type == DET_Ribbon && Draw.IndexCount > 0))
 		{
 			bInstancePacked = true;
 		}
@@ -431,6 +455,19 @@ bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevic
 		Cmd.Buffer.VB         = BeamPacker.GetVertexBuffer();
 		Cmd.Buffer.VBStride   = sizeof(FBeamParticleInstanceVertex);
 		Cmd.Buffer.IB         = BeamPacker.GetIndexBuffer();
+		Cmd.Buffer.FirstIndex = Hit.FirstIndex;
+		Cmd.Buffer.IndexCount = Hit.IndexCount;
+		Cmd.Buffer.BaseVertex = 0;
+		if (!Cmd.Buffer.VB || !Cmd.Buffer.IB)
+		{
+			return false;
+		}
+	}
+	else if (Hit.Type == DET_Ribbon && Hit.IndexCount > 0)
+	{
+		Cmd.Buffer.VB         = RibbonPacker.GetVertexBuffer();
+		Cmd.Buffer.VBStride   = sizeof(FRibbonParticleInstanceVertex);
+		Cmd.Buffer.IB         = RibbonPacker.GetIndexBuffer();
 		Cmd.Buffer.FirstIndex = Hit.FirstIndex;
 		Cmd.Buffer.IndexCount = Hit.IndexCount;
 		Cmd.Buffer.BaseVertex = 0;
@@ -775,6 +812,180 @@ void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(const FFrameCon
 	Draw.IndexCount = IndicesEmitted;
 	if (IndicesEmitted > 0)
 		bGpuBuffersDirty = true;
+}
+
+//============================================================================
+//	Ribbon Packer - CPU-expanded trail geometry.
+//============================================================================
+void FParticleSystemSceneProxy::FRibbonParticlePacker::ResetFrame()
+{
+	PackedVertices.clear();
+	PackedIndices.clear();
+	bGpuBuffersDirty = true;
+}
+
+bool FParticleSystemSceneProxy::FRibbonParticlePacker::PrepareDrawBuffer(
+	ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FDrawCommandBuffer& Out) const
+{
+	if (!HasPackedRibbons())
+	{
+		return false;
+	}
+
+	const uint32 VertCount = static_cast<uint32>(PackedVertices.size());
+	const uint32 IndexCount = static_cast<uint32>(PackedIndices.size());
+
+	if (VertexBuffer.GetMaxCount() == 0)
+	{
+		VertexBuffer.Create(InDevice, VertCount, sizeof(FRibbonParticleInstanceVertex));
+	}
+	else
+	{
+		VertexBuffer.EnsureCapacity(InDevice, VertCount);
+	}
+
+	if (IndexBuffer.GetMaxCount() == 0)
+	{
+		IndexBuffer.Create(InDevice, IndexCount);
+	}
+	else
+	{
+		IndexBuffer.EnsureCapacity(InDevice, IndexCount);
+	}
+
+	if (bGpuBuffersDirty)
+	{
+		if (!VertexBuffer.Update(InDeviceContext, PackedVertices.data(), VertCount))
+		{
+			return false;
+		}
+		if (!IndexBuffer.Update(InDeviceContext, PackedIndices.data(), IndexCount))
+		{
+			return false;
+		}
+		bGpuBuffersDirty = false;
+	}
+
+	Out.VB = VertexBuffer.GetBuffer();
+	Out.VBStride = sizeof(FRibbonParticleInstanceVertex);
+	Out.IB = IndexBuffer.GetBuffer();
+	Out.BaseVertex = 0;
+	return Out.VB != nullptr && Out.IB != nullptr;
+}
+
+void FParticleSystemSceneProxy::FRibbonParticlePacker::PackEmitter(const FFrameContext& Frame, FDynamicRibbonEmitterData& Emitter, FEmitterDraw& Draw)
+{
+	const FDynamicRibbonEmitterReplayData& Source = Emitter.RibbonSource;
+	Draw.FirstIndex = static_cast<uint32>(PackedIndices.size());
+	Draw.IndexCount = 0;
+
+	if (!Source.bRenderGeometry || Source.Points.empty() || Source.Trails.empty())
+	{
+		return;
+	}
+
+	const int32 SheetCount = std::clamp(Source.SheetsPerTrail,
+		1, static_cast<int32>(MaxSheetsPerTrail));
+
+	uint32 ReserveVertexCount = 0;
+	uint32 ReserveIndexCount = 0;
+	for (const FRibbonTrailData& Trail : Source.Trails)
+	{
+		if (Trail.PointCount < 2)
+		{
+			continue;
+		}
+		const uint32 PointCount = static_cast<uint32>(Trail.PointCount);
+		ReserveVertexCount += PointCount * 2u * static_cast<uint32>(SheetCount);
+		ReserveIndexCount += (PointCount - 1u) * 6u * static_cast<uint32>(SheetCount);
+	}
+
+	PackedVertices.reserve(PackedVertices.size() + ReserveVertexCount);
+	PackedIndices.reserve(PackedIndices.size() + ReserveIndexCount);
+
+	constexpr float Pi = 3.14159265358979323846f;
+	uint32 IndicesEmitted = 0;
+
+	for (const FRibbonTrailData& Trail : Source.Trails)
+	{
+		if (Trail.PointCount < 2 || Trail.FirstPoint < 0)
+		{
+			continue;
+		}
+
+		const int32 TrailEnd = Trail.FirstPoint + Trail.PointCount;
+		if (TrailEnd > static_cast<int32>(Source.Points.size()))
+		{
+			continue;
+		}
+
+		for (int32 SheetIdx = 0; SheetIdx < SheetCount; ++SheetIdx)
+		{
+			const uint32 SheetVertexBase = static_cast<uint32>(PackedVertices.size());
+			FVector PreviousTangent = FVector::ForwardVector;
+
+			for (int32 PointIdx = 0; PointIdx < Trail.PointCount; ++PointIdx)
+			{
+				const int32 SourcePointIndex = Trail.FirstPoint + PointIdx;
+				const FRibbonPointData& Point = Source.Points[SourcePointIndex];
+				const FRibbonPointData& PrevPoint = Source.Points[Trail.FirstPoint + std::max(PointIdx - 1, 0)];
+				const FRibbonPointData& NextPoint = Source.Points[Trail.FirstPoint + std::min(PointIdx + 1, Trail.PointCount - 1)];
+
+				FVector Tangent = SafeNormalizeBeam(NextPoint.Position - PrevPoint.Position, PreviousTangent);
+				PreviousTangent = Tangent;
+
+				const FVector ToCamera = SafeNormalizeBeam(Frame.CameraPosition - Point.Position, FVector::UpVector);
+				FVector SideAxis = SafeNormalizeBeam(ToCamera.Cross(Tangent), FVector::RightVector);
+				if (SheetIdx > 0)
+				{
+					const float SheetAngle = Pi * static_cast<float>(SheetIdx) / static_cast<float>(SheetCount);
+					SideAxis = SafeNormalizeBeam(RotateAroundAxis(SideAxis, Tangent, SheetAngle), SideAxis);
+				}
+
+				const float HalfWidth = std::max(0.0f, Point.Width) * 0.5f;
+				const float U = (Source.TilingDistance > 0.0f)
+					? Point.DistanceFromStart / Source.TilingDistance
+					: static_cast<float>(PointIdx) / static_cast<float>(std::max(Trail.PointCount - 1, 1));
+				const FVector4 PackedColor = Point.Color.ToVector4();
+
+				FRibbonParticleInstanceVertex Left;
+				Left.Position = Point.Position - SideAxis * HalfWidth;
+				Left.UV = FVector2(U, 0.0f);
+				Left.Color = PackedColor;
+				PackedVertices.push_back(Left);
+
+				FRibbonParticleInstanceVertex Right;
+				Right.Position = Point.Position + SideAxis * HalfWidth;
+				Right.UV = FVector2(U, 1.0f);
+				Right.Color = PackedColor;
+				PackedVertices.push_back(Right);
+			}
+
+			const int32 SegmentCount = Trail.PointCount - 1;
+			for (int32 SegIdx = 0; SegIdx < SegmentCount; ++SegIdx)
+			{
+				const uint32 P0Left = SheetVertexBase + static_cast<uint32>(SegIdx) * 2u;
+				const uint32 P0Right = P0Left + 1u;
+				const uint32 P1Left = P0Left + 2u;
+				const uint32 P1Right = P0Left + 3u;
+
+				PackedIndices.push_back(P0Left);
+				PackedIndices.push_back(P1Left);
+				PackedIndices.push_back(P0Right);
+				PackedIndices.push_back(P1Left);
+				PackedIndices.push_back(P1Right);
+				PackedIndices.push_back(P0Right);
+			}
+
+			IndicesEmitted += static_cast<uint32>(SegmentCount) * 6u;
+		}
+	}
+
+	Draw.IndexCount = IndicesEmitted;
+	if (IndicesEmitted > 0)
+	{
+		bGpuBuffersDirty = true;
+	}
 }
 
 //============================================================================

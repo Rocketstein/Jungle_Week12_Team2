@@ -43,10 +43,17 @@ private:
 		Collision
 	};
 
+	enum class EAddableTypeDataType
+	{
+		Ribbon
+	};
+
 	void EnsureDefaultSystem();
 	UParticleEmitter* CreateDefaultEmitter(const FString& EmitterName);
 	UParticleModule* CreateModule(EAddableModuleType ModuleType, UObject* Outer);
+	UParticleModule* CreateTypeDataModule(EAddableTypeDataType TypeDataType, UObject* Outer);
 	void AddModuleToEmitter(int32 EmitterIndex, EAddableModuleType ModuleType);
+	void SetTypeDataOnEmitter(int32 EmitterIndex, EAddableTypeDataType TypeDataType);
 	void DeleteModuleFromEmitter(int32 EmitterIndex, UParticleModule* Module);
 	void DeleteEmitter(int32 EmitterIndex);
 	int32 GetLODCount() const;

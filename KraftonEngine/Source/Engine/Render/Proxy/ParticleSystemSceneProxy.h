@@ -117,6 +117,26 @@ private:
 		mutable bool                        bGpuBuffersDirty = true;
 	};
 
+	// Ribbon: active particles are grouped into trail strips and expanded into dynamic geometry.
+	struct FRibbonParticlePacker
+	{
+		static constexpr uint32 MaxSheetsPerTrail = 16;
+
+		void ResetFrame();
+		void PackEmitter(const FFrameContext& Frame, FDynamicRibbonEmitterData& Emitter, FEmitterDraw& Draw);
+		bool HasPackedRibbons() const { return !PackedVertices.empty() && !PackedIndices.empty(); }
+		bool PrepareDrawBuffer(ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FDrawCommandBuffer& Out) const;
+		ID3D11Buffer* GetVertexBuffer() const { return VertexBuffer.GetBuffer(); }
+		ID3D11Buffer* GetIndexBuffer() const { return IndexBuffer.GetBuffer(); }
+
+	private:
+		TArray<FRibbonParticleInstanceVertex> PackedVertices;
+		TArray<uint32>                        PackedIndices;
+		mutable FDynamicVertexBuffer          VertexBuffer;
+		mutable FDynamicIndexBuffer           IndexBuffer;
+		mutable bool                          bGpuBuffersDirty = true;
+	};
+
 	// Sorts EmitterData according to its Sorting Priority, which should be a user-defined numeric value
 	// Does NOT reorder the physical array of EmitterDraws. Fills SectionToEmitterDrawIndex instead.
 	void SortEmitters();
@@ -137,6 +157,7 @@ private:
 	FSpriteParticlePacker SpritePacker;
 	FMeshParticlePacker MeshPacker;
 	FBeamParticlePacker BeamPacker;
+	FRibbonParticlePacker RibbonPacker;
 
 	bool bInstancePacked	  = false;
 

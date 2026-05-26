@@ -58,6 +58,7 @@ FDynamicEmitterReplayDataBase* FRibbonEmitterInstance::GetReplayData()
 		return nullptr;
 	}
 
+	//Particle들을 모음
 	TArray<FRibbonBuildPoint> BuildPoints;
 	BuildPoints.reserve(ActiveParticles);
 	for (int32 ActiveIndex = 0; ActiveIndex < ActiveParticles; ++ActiveIndex)
@@ -83,6 +84,7 @@ FDynamicEmitterReplayDataBase* FRibbonEmitterInstance::GetReplayData()
 		return nullptr;
 	}
 
+	//모은 Particle들을 SpawnSequence에 따라 정렬함
 	std::stable_sort(BuildPoints.begin(), BuildPoints.end(),
 		[](const FRibbonBuildPoint& A, const FRibbonBuildPoint& B)
 		{
@@ -109,11 +111,12 @@ FDynamicEmitterReplayDataBase* FRibbonEmitterInstance::GetReplayData()
 	ReplayData->bRenderTessellation = RibbonModule->bRenderTessellation;
 
 	int32 ConsumedTrailCount = 0;
-	for (int32 StartIndex = 0; StartIndex < static_cast<int32>(BuildPoints.size()) && ConsumedTrailCount < MaxTrailCount;)
+	for (int32 StartIndex = 0; StartIndex < BuildPoints.size() && ConsumedTrailCount < MaxTrailCount;)
 	{
+		//[Trail 0] : p0 , [Trail ] : p1 , [Trail 0] : p2 ..몇개인지 찾는다.
 		const int32 TrailIndex = BuildPoints[StartIndex].TrailIndex;
 		int32 EndIndex = StartIndex + 1;
-		while (EndIndex < static_cast<int32>(BuildPoints.size()) && BuildPoints[EndIndex].TrailIndex == TrailIndex)
+		while (EndIndex < BuildPoints.size() && BuildPoints[EndIndex].TrailIndex == TrailIndex)
 		{
 			++EndIndex;
 		}
@@ -121,9 +124,11 @@ FDynamicEmitterReplayDataBase* FRibbonEmitterInstance::GetReplayData()
 		const int32 AvailablePointCount = EndIndex - StartIndex;
 		if (AvailablePointCount >= 2)
 		{
+			//최신 MaxPointsPerTrail개만쓴다
+			//MaxPointPerTrail이 4개고 AvailablePointCount가 10이면 6 7 8 9만쓴다
 			const int32 CopyStartIndex = EndIndex - std::min(AvailablePointCount, MaxPointsPerTrail);
 			FRibbonTrailData TrailData;
-			TrailData.FirstPoint = static_cast<int32>(ReplayData->Points.size());
+			TrailData.FirstPoint = ReplayData->Points.size();
 
 			float DistanceFromStart = 0.0f;
 			FVector PreviousPosition = FVector::ZeroVector;
@@ -151,7 +156,7 @@ FDynamicEmitterReplayDataBase* FRibbonEmitterInstance::GetReplayData()
 				PointData.Width = std::max(0.0f, RibbonModule->Width * std::max(0.0f, Particle->Size.X));
 				PointData.DistanceFromStart = DistanceFromStart;
 				PointData.SpawnSequence = Payload->SpawnSequence;
-				ReplayData->Points.push_back(PointData);
+				ReplayData->Points.push_back(PointData); //Point들 모음집에 넣는다
 
 				PreviousPosition = Particle->Location;
 				++TrailData.PointCount;
@@ -159,7 +164,7 @@ FDynamicEmitterReplayDataBase* FRibbonEmitterInstance::GetReplayData()
 
 			if (TrailData.PointCount >= 2)
 			{
-				ReplayData->Trails.push_back(TrailData);
+				ReplayData->Trails.push_back(TrailData);//Point들을 어떻게 쓸지 section데이터에 넣는다
 				++ConsumedTrailCount;
 			}
 			else

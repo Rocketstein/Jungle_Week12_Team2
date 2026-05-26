@@ -15,6 +15,7 @@
 #include "Particle/ParticleSpriteEmitter.h"
 #include "Particle/ParticleSystem.h"
 #include "Particle/ParticleSystemManager.h"
+#include "Particle/TypeData/ParticleModuleTypeDataRibbon.h"
 #include "Platform/Paths.h"
 #include "Runtime/Engine.h"
 #include "Settings/EditorSettings.h"
@@ -70,6 +71,13 @@ namespace
 		"Bounce",
 		"Stop",
 		"Kill"
+	};
+
+	const char* GTrailRenderAxisNames[] =
+	{
+		"Camera Up",
+		"Source Up",
+		"World Up"
 	};
 
 	FString GetParticleEditorIconPath(const wchar_t* FileName)
@@ -455,6 +463,33 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 	return nullptr;
 }
 
+UParticleModule* FParticleEditorWidget::CreateTypeDataModule(EAddableTypeDataType TypeDataType, UObject* Outer)
+{
+	if (!Outer)
+	{
+		return nullptr;
+	}
+
+	switch (TypeDataType)
+	{
+	case EAddableTypeDataType::Ribbon:
+	{
+		UParticleModuleTypeDataRibbon* Ribbon = GUObjectArray.CreateObject<UParticleModuleTypeDataRibbon>(Outer);
+		Ribbon->bEnabled = true;
+		Ribbon->bRenderGeometry = true;
+		Ribbon->SheetsPerTrail = 1;
+		Ribbon->MaxTrailCount = 1;
+		Ribbon->MaxParticleInTrailCount = 64;
+		Ribbon->Width = 12.0f;
+		Ribbon->Color = FVector::OneVector;
+		Ribbon->Alpha = 1.0f;
+		return Ribbon;
+	}
+	}
+
+	return nullptr;
+}
+
 void FParticleEditorWidget::AddModuleToEmitter(int32 EmitterIndex, EAddableModuleType ModuleType)
 {
 	if (!EditingParticleSystem || EmitterIndex < 0 || EmitterIndex >= static_cast<int32>(EditingParticleSystem->Emitters.size()))
@@ -478,6 +513,63 @@ void FParticleEditorWidget::AddModuleToEmitter(int32 EmitterIndex, EAddableModul
 	LOD->Modules.push_back(NewModule);
 	SelectedEmitterIndex = EmitterIndex;
 	SelectedModule = NewModule;
+	ApplyEmitterEdit();
+}
+
+void FParticleEditorWidget::SetTypeDataOnEmitter(int32 EmitterIndex, EAddableTypeDataType TypeDataType)
+{
+	if (!EditingParticleSystem || EmitterIndex < 0 || EmitterIndex >= static_cast<int32>(EditingParticleSystem->Emitters.size()))
+	{
+		return;
+	}
+
+	UParticleEmitter* Emitter = EditingParticleSystem->Emitters[EmitterIndex];
+	UParticleLODLevel* LOD = GetSelectedLODLevel(Emitter);
+	if (!LOD)
+	{
+		return;
+	}
+
+	UParticleModule* NewTypeData = CreateTypeDataModule(TypeDataType, LOD);
+	if (!NewTypeData)
+	{
+		return;
+	}
+
+	for (auto It = LOD->Modules.begin(); It != LOD->Modules.end();)
+	{
+		UParticleModule* ExistingModule = *It;
+		if (Cast<UParticleModuleTypeDataBase>(ExistingModule))
+		{
+			if (SelectedModule == ExistingModule)
+			{
+				SelectedModule = nullptr;
+			}
+			It = LOD->Modules.erase(It);
+			GUObjectArray.DestroyObject(ExistingModule);
+			continue;
+		}
+		++It;
+	}
+
+	LOD->Modules.push_back(NewTypeData);
+	LOD->TypeDataModule = Cast<UParticleModuleTypeDataBase>(NewTypeData);
+
+	if (LOD->RequiredModule)
+	{
+		LOD->RequiredModule->ScreenAlignment = PSA_TypeSpecific;
+		if (!LOD->RequiredModule->Material ||
+			GetMaterialPath(LOD->RequiredModule->Material) == "Asset/Particle/Materials/M_Fire_B.mat")
+		{
+			if (UMaterial* RibbonMaterial = FMaterialManager::Get().GetOrCreateMaterial("Asset/Materials/Editor/DefaultParticleRibbon.mat"))
+			{
+				LOD->RequiredModule->Material = RibbonMaterial;
+			}
+		}
+	}
+
+	SelectedEmitterIndex = EmitterIndex;
+	SelectedModule = NewTypeData;
 	ApplyEmitterEdit();
 }
 
@@ -802,6 +894,10 @@ FString FParticleEditorWidget::GetModuleDisplayName(UParticleModule* Module) con
 	{
 		return "Collision";
 	}
+	if (Module->IsA<UParticleModuleTypeDataRibbon>())
+	{
+		return "TypeData Ribbon";
+	}
 	return Module->GetClass()->GetName();
 }
 
@@ -1059,13 +1155,20 @@ void FParticleEditorWidget::RenderEmitterList()
 
 	int32 EmitterToDelete = -1;
 	int32 EmitterToAddModule = -1;
+	int32 EmitterToSetTypeData = -1;
 	int32 EmitterToDeleteModule = -1;
 	UParticleModule* ModuleToDelete = nullptr;
 	EAddableModuleType ModuleTypeToAdd = EAddableModuleType::Lifetime;
+	EAddableTypeDataType TypeDataTypeToSet = EAddableTypeDataType::Ribbon;
 	auto QueueAddModule = [&](int32 EmitterIndex, EAddableModuleType ModuleType)
 	{
 		EmitterToAddModule = EmitterIndex;
 		ModuleTypeToAdd = ModuleType;
+	};
+	auto QueueSetTypeData = [&](int32 EmitterIndex, EAddableTypeDataType TypeDataType)
+	{
+		EmitterToSetTypeData = EmitterIndex;
+		TypeDataTypeToSet = TypeDataType;
 	};
 	auto DrawEmitterContextMenu = [&](int32 EmitterIndex)
 	{
@@ -1098,6 +1201,22 @@ void FParticleEditorWidget::RenderEmitterList()
 			if (ImGui::MenuItem("Collision"))
 			{
 				QueueAddModule(EmitterIndex, EAddableModuleType::Collision);
+			}
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu("Type Data"))
+		{
+			UParticleLODLevel* LOD = nullptr;
+			if (EditingParticleSystem && EmitterIndex >= 0 && EmitterIndex < static_cast<int32>(EditingParticleSystem->Emitters.size()))
+			{
+				LOD = GetSelectedLODLevel(EditingParticleSystem->Emitters[EmitterIndex]);
+			}
+
+			const bool bIsRibbon = LOD && Cast<UParticleModuleTypeDataRibbon>(LOD->TypeDataModule);
+			if (ImGui::MenuItem("Ribbon", nullptr, bIsRibbon))
+			{
+				QueueSetTypeData(EmitterIndex, EAddableTypeDataType::Ribbon);
 			}
 			ImGui::EndMenu();
 		}
@@ -1223,6 +1342,10 @@ void FParticleEditorWidget::RenderEmitterList()
 	else if (EmitterToAddModule >= 0)
 	{
 		AddModuleToEmitter(EmitterToAddModule, ModuleTypeToAdd);
+	}
+	else if (EmitterToSetTypeData >= 0)
+	{
+		SetTypeDataOnEmitter(EmitterToSetTypeData, TypeDataTypeToSet);
 	}
 }
 
@@ -1459,6 +1582,118 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		if (ImGui::DragInt("Max Collisions", &MaxCollisions, 1.0f, 0, 128))
 		{
 			Collision->MaxCollisions = (std::max)(0, MaxCollisions);
+			bChanged = true;
+		}
+	}
+	else if (UParticleModuleTypeDataRibbon* Ribbon = Cast<UParticleModuleTypeDataRibbon>(Module))
+	{
+		int MaxTessellationBetweenParticles = Ribbon->MaxTessellationBetweenParticles;
+		if (ImGui::DragInt("Max Tessellation Between Particles", &MaxTessellationBetweenParticles, 1.0f, 0, 32))
+		{
+			Ribbon->MaxTessellationBetweenParticles = std::clamp(MaxTessellationBetweenParticles, 0, 32);
+			bChanged = true;
+		}
+
+		int SheetsPerTrail = Ribbon->SheetsPerTrail;
+		if (ImGui::DragInt("Sheets Per Trail", &SheetsPerTrail, 1.0f, 1, 16))
+		{
+			Ribbon->SheetsPerTrail = std::clamp(SheetsPerTrail, 1, 16);
+			bChanged = true;
+		}
+
+		int MaxTrailCount = Ribbon->MaxTrailCount;
+		if (ImGui::DragInt("Max Trail Count", &MaxTrailCount, 1.0f, 1, 64))
+		{
+			Ribbon->MaxTrailCount = std::clamp(MaxTrailCount, 1, 64);
+			bChanged = true;
+		}
+
+		int MaxParticleInTrailCount = Ribbon->MaxParticleInTrailCount;
+		if (ImGui::DragInt("Max Particles In Trail", &MaxParticleInTrailCount, 1.0f, 2, 1024))
+		{
+			Ribbon->MaxParticleInTrailCount = std::clamp(MaxParticleInTrailCount, 2, 1024);
+			bChanged = true;
+		}
+
+		int RenderAxis = static_cast<int>(Ribbon->RenderAxis);
+		if (ImGui::Combo("Render Axis", &RenderAxis, GTrailRenderAxisNames, IM_ARRAYSIZE(GTrailRenderAxisNames)))
+		{
+			Ribbon->RenderAxis = static_cast<ETrailsRenderAxisOption>(std::clamp(RenderAxis, 0, static_cast<int>(Trails_MAX) - 1));
+			bChanged = true;
+		}
+
+		if (ImGui::Checkbox("Spawn Initial Particle", &Ribbon->bSpawnInitialParticle))
+		{
+			bChanged = true;
+		}
+
+		if (ImGui::Checkbox("Dead Trails On Deactivate", &Ribbon->bDeadTrailsOnDeactivate))
+		{
+			bChanged = true;
+		}
+
+		if (ImGui::Checkbox("Dead Trails On Source Loss", &Ribbon->bDeadTrailsOnSourceLoss))
+		{
+			bChanged = true;
+		}
+
+		if (ImGui::Checkbox("Clip Source Segment", &Ribbon->bClipSourceSegment))
+		{
+			bChanged = true;
+		}
+
+		if (ImGui::Checkbox("Render Geometry", &Ribbon->bRenderGeometry))
+		{
+			bChanged = true;
+		}
+
+		if (ImGui::Checkbox("Render Spawn Points", &Ribbon->bRenderSpawnPoints))
+		{
+			bChanged = true;
+		}
+
+		if (ImGui::Checkbox("Render Tangents", &Ribbon->bRenderTangents))
+		{
+			bChanged = true;
+		}
+
+		if (ImGui::Checkbox("Render Tessellation", &Ribbon->bRenderTessellation))
+		{
+			bChanged = true;
+		}
+
+		float TilingDistance = Ribbon->TilingDistance;
+		if (ImGui::DragFloat("Tiling Distance", &TilingDistance, 1.0f, 0.0f, 10000.0f))
+		{
+			Ribbon->TilingDistance = (std::max)(0.0f, TilingDistance);
+			bChanged = true;
+		}
+
+		float DistanceTessellationStepSize = Ribbon->DistanceTessellationStepSize;
+		if (ImGui::DragFloat("Distance Tessellation Step", &DistanceTessellationStepSize, 1.0f, 0.0f, 10000.0f))
+		{
+			Ribbon->DistanceTessellationStepSize = (std::max)(0.0f, DistanceTessellationStepSize);
+			bChanged = true;
+		}
+
+		float Width = Ribbon->Width;
+		if (ImGui::DragFloat("Width", &Width, 0.25f, 0.0f, 1000.0f))
+		{
+			Ribbon->Width = (std::max)(0.0f, Width);
+			bChanged = true;
+		}
+
+		float RibbonColor[3] = { Ribbon->Color.X, Ribbon->Color.Y, Ribbon->Color.Z };
+		if (ImGui::ColorEdit3("Color", RibbonColor))
+		{
+			Ribbon->Color = FVector(RibbonColor[0], RibbonColor[1], RibbonColor[2]);
+			bChanged = true;
+		}
+
+		float Alpha = Ribbon->Alpha;
+		if (ImGui::DragFloat("Alpha", &Alpha, 0.01f, 0.0f, 1.0f))
+		{
+			Ribbon->Alpha = std::clamp(Alpha, 0.0f, 1.0f);
 			bChanged = true;
 		}
 	}

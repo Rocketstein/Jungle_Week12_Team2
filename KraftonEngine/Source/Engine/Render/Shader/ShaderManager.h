@@ -115,6 +115,7 @@ namespace EShaderPath
 	inline constexpr const char* ParticleSprite = "Shaders/Particle/ParticleSprite.hlsl";
 	inline constexpr const char* ParticleMesh = "Shaders/Particle/ParticleMesh.hlsl";
 	inline constexpr const char* ParticleBeam = "Shaders/Particle/ParticleBeam.hlsl";
+	inline constexpr const char* ParticleRibbon = "Shaders/Particle/ParticleRibbon.hlsl";
 
 	inline constexpr const char* ShadowDepth = "Shaders/Lighting/ShadowDepth.hlsl";
 	inline constexpr const char* VSMBlur = "Shaders/Lighting/VSMBlur.hlsl";

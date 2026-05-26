@@ -47,6 +47,7 @@ void FShaderManager::Initialize(ID3D11Device* InDevice)
 	GetOrCreate(EShaderPath::ParticleSprite, StartupError);
 	GetOrCreate(EShaderPath::ParticleMesh, StartupError);
 	GetOrCreate(EShaderPath::ParticleBeam, StartupError);
+	GetOrCreate(EShaderPath::ParticleRibbon, StartupError);
 	GetOrCreate(EShaderPath::HeightFog, StartupError);
 	GetOrCreate(EShaderPath::GammaCorrection, StartupError);
 	GetOrCreate(EShaderPath::ShadowDepth, StartupError);
