@@ -222,35 +222,9 @@ struct FParticleParamConstants
 };
 static_assert(sizeof(FParticleParamConstants) == 48);
 
-struct FBeamParamConstants
-{
-	FVector Source = FVector::ZeroVector;
-	float   Width = 8.0f;
-	FVector Target = FVector::ZeroVector;
-	float   Alpha = 1.0f;
-	FVector SourceTangent = FVector::ZeroVector;
-	uint32  UseTangents = 0;
-	FVector TargetTangent = FVector::ZeroVector;
-	float   NoiseSeed = 0.0f;
-	FVector Color = FVector::OneVector;
-	float   TaperFactor = 1.0f;
-	float   TaperScale = 1.0f;
-	uint32  TaperMethod = 0;
-	uint32  PointCount = 2;
-	uint32  TextureTile = 1;
-	float   TextureTileDistance = 0.0f;
-	uint32  SheetCount = 1;
-	float   NoiseAmplitude = 0.0f;
-	float   NoiseFrequency = 0.0f;
-	float   NoisePhase = 0.0f;
-	uint32  BeamCount = 1;
-	FVector NoiseRangeMin = FVector::ZeroVector;
-	float   _Pad1 = 0.0f;
-	FVector NoiseRangeMax = FVector::ZeroVector;
-	float   _Pad2 = 0.0f;
-	float   _Pad[2] = {};
-};
-static_assert(sizeof(FBeamParamConstants) == 160);
+// NOTE: Beams no longer use a per-emitter b3 constant buffer. Geometry is
+// expanded CPU-side into FBeamParticleInstanceVertex and uploaded via a shared
+// dynamic VB/IB (see FParticleSystemSceneProxy::FBeamParticlePacker).
 
 struct FGizmoConstants
 {

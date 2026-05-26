@@ -61,7 +61,7 @@ public:
 	TMap<UParticleModule*, uint32> ModuleInstanceOffsetMap;
 
 	int32 ParticleSize = 0;
-	int32 ReqInstanceBytes = 0;
+	int32 ReqInstanceBytes = 0; //Instance당 Byte
 	int32 TypeDataOffset = 0;
 	int32 TypeDataInstanceOffset = -1;
 

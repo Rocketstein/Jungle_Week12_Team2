@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Core/EngineTypes.h"
+#include "Core/CollisionTypes.h"
 #include "Object/Object.h"
 #include "Particle/ParticleEmitter.h"
 #include "ParticleModule.generated.h"
@@ -50,6 +51,14 @@ enum EBeamTangentMethod : int
 	PEBTANM_Direct,
 	PEBTANM_UserSet,
 	PEBTANM_MAX
+};
+
+UENUM()
+enum class EParticleCollisionResponseMode : uint8
+{
+	Bounce = 0,
+	Stop = 1,
+	Kill = 2,
 };
 
 UCLASS()
@@ -276,6 +285,39 @@ public:
 	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
 };
 
+struct FParticleCollisionPayload
+{
+	int32 CollisionCount = 0;
+};
+
+UCLASS()
+class UParticleModuleCollision : public UParticleModule
+{
+public:
+	GENERATED_BODY(UParticleModuleCollision)
+
+	UParticleModuleCollision();
+
+	uint32 RequiredBytes(UParticleModuleTypeDataBase* TypeData) override;
+	void FinalUpdate(const FUpdateContext& Context) override;
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
+
+	UPROPERTY(Edit, Category="Collision", DisplayName="Trace Channel", Type=Enum, Enum=StaticEnum_ECollisionChannel())
+	ECollisionChannel TraceChannel = ECollisionChannel::WorldStatic;
+
+	UPROPERTY(Edit, Category="Collision", DisplayName="Response Mode", Type=Enum, Enum=StaticEnum_EParticleCollisionResponseMode())
+	EParticleCollisionResponseMode ResponseMode = EParticleCollisionResponseMode::Bounce;
+
+	UPROPERTY(Edit, Category="Collision", DisplayName="Damping Factor", Min=0.0f, Max=1.0f, Speed=0.01f)
+	float DampingFactor = 0.5f;
+
+	UPROPERTY(Edit, Category="Collision", DisplayName="Collision Offset", Min=0.0f, Max=100.0f, Speed=0.1f)
+	float CollisionOffset = 0.1f;
+
+	UPROPERTY(Edit, Category="Collision", DisplayName="Max Collisions", Min=0, Max=128, Speed=1.0f)
+	int32 MaxCollisions = 1;
+};
+
 UCLASS()
 class UParticleModuleColorBase : public UParticleModule
 {
@@ -433,6 +475,7 @@ public:
 	virtual bool SupportsSpecificScreenAlignmentFlags() const { return false; }
 	virtual bool IsAMeshEmitter() const { return false; }
 	virtual bool IsABeamEmitter() const { return false; }
+	virtual bool IsARibbonEmitter() const { return false; }
 };
 
 UCLASS()

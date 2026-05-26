@@ -30,6 +30,7 @@ public:
 	TArray<UParticleModuleSpawnBase*> SpawningModules;
 	TArray<UParticleModule*> SpawnModules;
 	TArray<UParticleModule*> UpdateModules;
+	TArray<UParticleModule*> FinalUpdateModules;
 	TArray<UParticleModuleEventReceiverBase*> EventReceiverModules;
 
 	uint32 ConvertedModules : 1 = false;

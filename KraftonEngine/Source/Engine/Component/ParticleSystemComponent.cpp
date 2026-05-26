@@ -58,18 +58,11 @@ void MoveMeshReplayData(FDynamicMeshEmitterReplayData& Dest, FDynamicMeshEmitter
 void MoveBeamReplayData(FDynamicBeamEmitterReplayData& Dest, FDynamicBeamEmitterReplayData& Source)
 {
 	MoveRenderableReplayData(Dest, Source);
-	Dest.Source = Source.Source;
-	Dest.Target = Source.Target;
-	Dest.SourceTangent = Source.SourceTangent;
-	Dest.TargetTangent = Source.TargetTangent;
-	Dest.bUseTangents = Source.bUseTangents;
-	Dest.Color = Source.Color;
-	Dest.Alpha = Source.Alpha;
-	Dest.Width = Source.Width;
+	Dest.Beams = std::move(Source.Beams);
 	Dest.InterpolationPoints = Source.InterpolationPoints;
 	Dest.Sheets = Source.Sheets;
+	Dest.LogicalBeamCount = Source.LogicalBeamCount;
 	Dest.MaxBeamCount = Source.MaxBeamCount;
-	Dest.Speed = Source.Speed;
 	Dest.UpVectorStepSize = Source.UpVectorStepSize;
 	Dest.TextureTile = Source.TextureTile;
 	Dest.TextureTileDistance = Source.TextureTileDistance;
@@ -79,9 +72,6 @@ void MoveBeamReplayData(FDynamicBeamEmitterReplayData& Dest, FDynamicBeamEmitter
 	Dest.NoiseSeed = Source.NoiseSeed;
 	Dest.NoiseRangeMin = Source.NoiseRangeMin;
 	Dest.NoiseRangeMax = Source.NoiseRangeMax;
-	Dest.TaperMethod = Source.TaperMethod;
-	Dest.TaperFactor = Source.TaperFactor;
-	Dest.TaperScale = Source.TaperScale;
 	Dest.bRenderGeometry = Source.bRenderGeometry;
 	Dest.bRenderDirectLine = Source.bRenderDirectLine;
 	Dest.bRenderLines = Source.bRenderLines;
@@ -187,6 +177,11 @@ void UParticleSystemComponent::PostEditProperty(const char* PropertyName)
 			ParticleSceneProxy->SetTranslucencySortPriority(ToTranslucencySortPriority(SortPriority));
 		}
 	}
+	else if (std::strcmp(PropertyName, "Template") == 0)
+	{
+		ResetParticles(true);
+		InitializeSystem();
+	}
 }
 
 void UParticleSystemComponent::EndPlay()
@@ -236,7 +231,8 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 
 	if (EmitterInstances.empty())
 	{
-		InitializeSystem();
+		InitParticles();
+		//InitializeSystem();
 	}
 
 	if (ForcedLODLevel >= 0)
@@ -320,6 +316,7 @@ void UParticleSystemComponent::ClearForcedLODLevel()
 	ForcedLODLevel = -1;
 }
 
+//각 Instance를 채워넣는다
 void UParticleSystemComponent::InitParticles()
 {
 	ResetParticles(true);
@@ -329,7 +326,7 @@ void UParticleSystemComponent::InitParticles()
 	{
 		return;
 	}
-
+	//ParticleSystem과 Emitter가 가지는 LODLevels의 갯수를 맞춘다
 	ParticleTemplate->NormalizeLODData();
 	LODDistances = ParticleTemplate->GetLODDistances();
 	if (ForcedLODLevel >= 0)
@@ -356,7 +353,7 @@ void UParticleSystemComponent::InitParticles()
 		FParticleEmitterInstance* Instance = CreateEmitterInstance(this, Emitter);
 		Instance->InitParameters(Emitter);
 		Instance->SetCurrentLODLevel(LODLevel);
-		Instance->RebuildTemplateModuleList();
+//		Instance->RebuildTemplateModuleList(); //InitParameters에서 이미 한번하는데 왜 굳이?
 		EmitterInstances.push_back(Instance);
 	}
 

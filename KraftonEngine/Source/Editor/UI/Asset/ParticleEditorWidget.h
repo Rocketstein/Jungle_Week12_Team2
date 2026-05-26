@@ -43,7 +43,8 @@ private:
 		ColorOverLife,
 		BeamSource,
 		BeamTarget,
-		BeamNoise
+		BeamNoise,
+		Collision
 	};
 
 	enum class EEmitterTypeData

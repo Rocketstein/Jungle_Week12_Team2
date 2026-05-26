@@ -1,5 +1,7 @@
 #include "Particle/ParticleModule.h"
 
+#include "Component/ParticleSystemComponent.h"
+#include "GameFramework/World.h"
 #include "Particle/ParticleEmitterInstances.h"
 #include "Particle/ParticleLODLevel.h"
 
@@ -192,6 +194,118 @@ UParticleModule* UParticleModuleVelocity::CloneForLOD(UParticleLODLevel* NewOute
 	Copy->StartVelocityMax = StartVelocityMax;
 	Copy->bInWorldSpace = bInWorldSpace;
 	Copy->bApplyOwnerScale = bApplyOwnerScale;
+	return Copy;
+}
+
+UParticleModuleCollision::UParticleModuleCollision()
+{
+	bFinalUpdateModule = true;
+}
+
+uint32 UParticleModuleCollision::RequiredBytes(UParticleModuleTypeDataBase* TypeData)
+{
+	(void)TypeData;
+	return sizeof(FParticleCollisionPayload);
+}
+
+void UParticleModuleCollision::FinalUpdate(const FUpdateContext& Context)
+{
+	FParticleEmitterInstance& Owner = Context.Owner;
+	if (!Owner.Component || !Owner.ParticleData || !Owner.ParticleIndices || MaxCollisions <= 0)
+	{
+		return;
+	}
+
+	UWorld* World = Owner.Component->GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	const float ClampedDamping = std::clamp(DampingFactor, 0.0f, 1.0f);
+	const float ClampedOffset = std::max(CollisionOffset, 0.0f);
+
+	for (int32 ParticleIndex = Owner.ActiveParticles - 1; ParticleIndex >= 0; --ParticleIndex)
+	{
+		FBaseParticle* Particle = Owner.GetParticleDirect(Owner.ParticleIndices[ParticleIndex]);
+		if (!Particle || (Particle->Flags & STATE_Particle_CollisionIgnoreCheck) != 0)
+		{
+			continue;
+		}
+
+		FParticleCollisionPayload* Payload = reinterpret_cast<FParticleCollisionPayload*>(
+			reinterpret_cast<uint8*>(Particle) + Context.Offset);
+		if (!Payload || Payload->CollisionCount >= MaxCollisions)
+		{
+			continue;
+		}
+
+		const FVector Segment = Particle->Location - Particle->OldLocation;
+		const float SegmentLength = Segment.Length();
+		if (SegmentLength <= 0.0001f)
+		{
+			continue;
+		}
+
+		FVector Direction = Segment / SegmentLength;
+		FHitResult Hit;
+		if (!World->PhysicsRaycast(Particle->OldLocation, Direction, SegmentLength, Hit, TraceChannel, Owner.Component->GetOwner()))
+		{
+			continue;
+		}
+
+		FVector Normal = Hit.ImpactNormal.IsNearlyZero() ? Hit.WorldNormal : Hit.ImpactNormal;
+		if (Normal.IsNearlyZero())
+		{
+			Normal = Direction * -1.0f;
+		}
+		Normal.Normalize();
+
+		++Payload->CollisionCount;
+		Particle->Flags |= STATE_Particle_CollisionHasOccurred;
+		Particle->Location = Hit.WorldHitLocation + Normal * ClampedOffset;
+
+		if (ResponseMode == EParticleCollisionResponseMode::Kill)
+		{
+			Owner.KillParticle(ParticleIndex);
+			continue;
+		}
+
+		if (ResponseMode == EParticleCollisionResponseMode::Stop)
+		{
+			Particle->BaseVelocity = FVector::ZeroVector;
+			Particle->Velocity = FVector::ZeroVector;
+			Particle->Flags |= STATE_Particle_FreezeTranslation;
+		}
+		else
+		{
+			const FVector IncomingVelocity = Particle->BaseVelocity;
+			const float NormalVelocity = IncomingVelocity.Dot(Normal);
+			FVector ReflectedVelocity = IncomingVelocity;
+			if (NormalVelocity < 0.0f)
+			{
+				ReflectedVelocity = IncomingVelocity - Normal * (2.0f * NormalVelocity);
+			}
+			Particle->BaseVelocity = ReflectedVelocity * ClampedDamping;
+			Particle->Velocity = Particle->BaseVelocity;
+		}
+
+		if (Payload->CollisionCount >= MaxCollisions)
+		{
+			Particle->Flags |= STATE_Particle_IgnoreCollisions;
+		}
+	}
+}
+
+UParticleModule* UParticleModuleCollision::CloneForLOD(UParticleLODLevel* NewOuter) const
+{
+	UParticleModuleCollision* Copy = GUObjectArray.CreateObject<UParticleModuleCollision>(NewOuter);
+	CopyModuleBaseTo(Copy);
+	Copy->TraceChannel = TraceChannel;
+	Copy->ResponseMode = ResponseMode;
+	Copy->DampingFactor = DampingFactor;
+	Copy->CollisionOffset = CollisionOffset;
+	Copy->MaxCollisions = MaxCollisions;
 	return Copy;
 }
 

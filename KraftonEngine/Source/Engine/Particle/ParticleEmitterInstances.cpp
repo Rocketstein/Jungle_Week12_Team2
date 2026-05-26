@@ -206,7 +206,7 @@ void FParticleEmitterInstance::Tick_ModuleUpdate(float DeltaTime, UParticleLODLe
 	}
 
 	UParticleLODLevel* HighestLODLevel = SpriteTemplate ? SpriteTemplate->GetLODLevel(0) : nullptr;
-	
+
 	// Update modules are processed in order, and the same module in different LOD levels shares the same instance data offset.
 	for (int32 ModuleIndex = 0; ModuleIndex < static_cast<int32>(InCurrentLODLevel->UpdateModules.size()); ++ModuleIndex)
 	{
@@ -241,16 +241,16 @@ void FParticleEmitterInstance::Tick_ModuleFinalUpdate(float DeltaTime, UParticle
 	}
 
 	UParticleLODLevel* HighestLODLevel = SpriteTemplate ? SpriteTemplate->GetLODLevel(0) : nullptr;
-	for (int32 ModuleIndex = 0; ModuleIndex < static_cast<int32>(InCurrentLODLevel->UpdateModules.size()); ++ModuleIndex)
+	for (int32 ModuleIndex = 0; ModuleIndex < static_cast<int32>(InCurrentLODLevel->FinalUpdateModules.size()); ++ModuleIndex)
 	{
-		UParticleModule* Module = InCurrentLODLevel->UpdateModules[ModuleIndex];
+		UParticleModule* Module = InCurrentLODLevel->FinalUpdateModules[ModuleIndex];
 		if (!Module || !Module->bEnabled || !Module->bFinalUpdateModule)
 		{
 			continue;
 		}
 
-		UParticleModule* OffsetModule = (HighestLODLevel && ModuleIndex < static_cast<int32>(HighestLODLevel->UpdateModules.size()))
-			? HighestLODLevel->UpdateModules[ModuleIndex]
+		UParticleModule* OffsetModule = (HighestLODLevel && ModuleIndex < static_cast<int32>(HighestLODLevel->FinalUpdateModules.size()))
+			? HighestLODLevel->FinalUpdateModules[ModuleIndex]
 			: Module;
 		UParticleModule::FUpdateContext Context(*this, static_cast<int32>(GetModuleDataOffset(OffsetModule)), DeltaTime);
 		Module->FinalUpdate(Context);
@@ -289,7 +289,7 @@ float FParticleEmitterInstance::Spawn(float DeltaTime)
 	int32 SpawnCount = 0;
 	int32 BurstCount = 0;
 	const float OldLeftover = SpawnFraction;
-	bool bProcessSpawnRate = true;  
+	bool bProcessSpawnRate = true;
 	bool bProcessBurstList = true;
 	UParticleLODLevel* HighestLODLevel = SpriteTemplate ? SpriteTemplate->GetLODLevel(0) : nullptr;
 
@@ -505,8 +505,15 @@ void FParticleEmitterInstance::UpdateParticles(float DeltaTime)
 			continue;
 		}
 
-		Particle->Location = Particle->Location + Particle->Velocity * DeltaTime;
-		Particle->Rotation += Particle->RotationRate * DeltaTime;
+		Particle->OldLocation = Particle->Location;
+		if ((Particle->Flags & STATE_Particle_FreezeTranslation) == 0)
+		{
+			Particle->Location = Particle->Location + Particle->Velocity * DeltaTime;
+		}
+		if ((Particle->Flags & STATE_Particle_FreezeRotation) == 0)
+		{
+			Particle->Rotation += Particle->RotationRate * DeltaTime;
+		}
 	}
 }
 

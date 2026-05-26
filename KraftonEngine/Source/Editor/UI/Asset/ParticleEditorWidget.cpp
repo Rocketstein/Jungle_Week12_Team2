@@ -78,6 +78,23 @@ namespace
 		"User Set"
 	};
 
+	const char* GCollisionChannelNames[] =
+	{
+		"World Static",
+		"World Dynamic",
+		"Pawn",
+		"Projectile",
+		"Trigger",
+		"Foot IK"
+	};
+
+	const char* GParticleCollisionResponseNames[] =
+	{
+		"Bounce",
+		"Stop",
+		"Kill"
+	};
+
 	FString GetParticleEditorIconPath(const wchar_t* FileName)
 	{
 		return FPaths::ToUtf8(FPaths::Combine(
@@ -519,6 +536,12 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 		Noise->NoiseRangeMin = FVector(0.0f, -30.0f, -30.0f);
 		Noise->NoiseRangeMax = FVector(0.0f, 30.0f, 30.0f);
 		return Noise;
+	}
+	case EAddableModuleType::Collision:
+	{
+		UParticleModuleCollision* Collision = GUObjectArray.CreateObject<UParticleModuleCollision>(Outer);
+		Collision->bEnabled = true;
+		return Collision;
 	}
 	}
 
@@ -1127,6 +1150,10 @@ FString FParticleEditorWidget::GetModuleDisplayName(UParticleModule* Module) con
 	{
 		return "TypeData";
 	}
+	if (Module->IsA<UParticleModuleCollision>())
+	{
+		return "Collision";
+	}
 	return Module->GetClass()->GetName();
 }
 
@@ -1506,6 +1533,10 @@ void FParticleEditorWidget::RenderEmitterList()
 					QueueAddModule(EmitterIndex, EAddableModuleType::BeamNoise);
 				}
 				ImGui::EndMenu();
+			}
+			if (ImGui::MenuItem("Collision"))
+			{
+				QueueAddModule(EmitterIndex, EAddableModuleType::Collision);
 			}
 			ImGui::EndMenu();
 		}
@@ -2066,6 +2097,44 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		if (ImGui::Checkbox("Always On", &bAlwaysOn))
 		{
 			Beam->bAlwaysOn = bAlwaysOn;
+			bChanged = true;
+		}
+	}
+	else if (UParticleModuleCollision* Collision = Cast<UParticleModuleCollision>(Module))
+	{
+		int TraceChannel = static_cast<int>(Collision->TraceChannel);
+		if (ImGui::Combo("Trace Channel", &TraceChannel, GCollisionChannelNames, IM_ARRAYSIZE(GCollisionChannelNames)))
+		{
+			Collision->TraceChannel = static_cast<ECollisionChannel>(std::clamp(TraceChannel, 0, NumActiveCollisionChannels - 1));
+			bChanged = true;
+		}
+
+		int ResponseMode = static_cast<int>(Collision->ResponseMode);
+		if (ImGui::Combo("Response Mode", &ResponseMode, GParticleCollisionResponseNames, IM_ARRAYSIZE(GParticleCollisionResponseNames)))
+		{
+			ResponseMode = std::clamp(ResponseMode, 0, static_cast<int>(IM_ARRAYSIZE(GParticleCollisionResponseNames)) - 1);
+			Collision->ResponseMode = static_cast<EParticleCollisionResponseMode>(ResponseMode);
+			bChanged = true;
+		}
+
+		float DampingFactor = Collision->DampingFactor;
+		if (ImGui::DragFloat("Damping Factor", &DampingFactor, 0.01f, 0.0f, 1.0f))
+		{
+			Collision->DampingFactor = std::clamp(DampingFactor, 0.0f, 1.0f);
+			bChanged = true;
+		}
+
+		float CollisionOffset = Collision->CollisionOffset;
+		if (ImGui::DragFloat("Collision Offset", &CollisionOffset, 0.01f, 0.0f, 100.0f))
+		{
+			Collision->CollisionOffset = (std::max)(0.0f, CollisionOffset);
+			bChanged = true;
+		}
+
+		int MaxCollisions = Collision->MaxCollisions;
+		if (ImGui::DragInt("Max Collisions", &MaxCollisions, 1.0f, 0, 128))
+		{
+			Collision->MaxCollisions = (std::max)(0, MaxCollisions);
 			bChanged = true;
 		}
 	}
