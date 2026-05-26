@@ -790,6 +790,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\Core\Property\FObjectPropertyBase\FObjectProperty.h" />
     <ClInclude Include="Source\Engine\Core\Property\FObjectPropertyBase\FObjectPropertyBase.h" />
     <ClInclude Include="Source\Engine\Core\Property\FObjectPropertyBase\FSoftObjectProperty.h" />
+    <ClInclude Include="Source\Engine\Core\UObject\FObjectHandle.h" />
     <ClInclude Include="Source\Engine\Core\UObject\FObjectPtr.h" />
     <ClInclude Include="Source\Engine\Core\UObject\FSoftObjectPath.h" />
     <ClInclude Include="Source\Engine\Core\UObject\FSoftObjectPtr.h" />

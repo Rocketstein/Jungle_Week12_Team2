@@ -15,7 +15,6 @@ public:
 
 	bool IsValid() const;
 
-	UObject* Get() const;
 
 
 public:
