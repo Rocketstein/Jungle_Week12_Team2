@@ -452,6 +452,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Engine\Core\Property\FFieldVariant.cpp" />
     <ClCompile Include="Source\Engine\Core\Property\PropertyTypes.cpp" />
     <ClCompile Include="Source\Engine\Core\Property\FObjectPropertyBase\FSoftObjectProperty.cpp" />
+    <ClCompile Include="Source\Engine\Core\UObject\FObjectPtr.cpp" />
     <ClCompile Include="Source\Engine\Core\UObject\FSoftObjectPath.cpp" />
     <ClCompile Include="Source\Engine\Core\UObject\FSoftObjectPtr.cpp" />
     <ClCompile Include="Source\Engine\Core\UObject\FWeakObjectPtr.cpp" />
@@ -789,9 +790,11 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\Core\Property\FObjectPropertyBase\FObjectProperty.h" />
     <ClInclude Include="Source\Engine\Core\Property\FObjectPropertyBase\FObjectPropertyBase.h" />
     <ClInclude Include="Source\Engine\Core\Property\FObjectPropertyBase\FSoftObjectProperty.h" />
+    <ClInclude Include="Source\Engine\Core\UObject\FObjectPtr.h" />
     <ClInclude Include="Source\Engine\Core\UObject\FSoftObjectPath.h" />
     <ClInclude Include="Source\Engine\Core\UObject\FSoftObjectPtr.h" />
     <ClInclude Include="Source\Engine\Core\UObject\FWeakObjectPtr.h" />
+    <ClInclude Include="Source\Engine\Core\UObject\TObjectPtr.h" />
     <ClInclude Include="Source\Engine\Core\UObject\TSoftObjectPtr.h" />
     <ClInclude Include="Source\Engine\Core\UObject\TWeakObjectPtr.h" />
     <ClInclude Include="Source\Engine\Debug\DebugDrawQueue.h" />
