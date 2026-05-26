@@ -37,17 +37,20 @@ bool FObjectPtr::IsValid() const
 
 UClass* FObjectPtr::GetClass() const 
 {
-	
+	if (!DebugPtr) return nullptr;
+	return DebugPtr->GetClass();
 }
 
 FName FObjectPtr::GetFName() const
 {
-
+	if (!DebugPtr) return nullptr;
+	return DebugPtr->GetFName();
 }
 
 FString FObjectPtr::GetName() const 
 {
-
+	if (!DebugPtr) return nullptr;
+	return DebugPtr->GetName();
 }
 
 FString FObjectPtr::GetPathName() const
@@ -57,7 +60,8 @@ FString FObjectPtr::GetPathName() const
 
 FObjectPtr FObjectPtr::GetOuter() const
 {
-
+	if (!DebugPtr) return nullptr;
+	return FObjectPtr(DebugPtr->GetOuter());
 }
 
 FObjectPtr FObjectPtr::GetPackage() const
