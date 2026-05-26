@@ -81,6 +81,7 @@ private:
 	void RenderPreviewViewport(const ImVec2& Size);
 	void RenderEmitterList();
 	bool RenderDetailsPanel();
+	bool RenderParticleSystemDetails();
 	bool RenderRequiredDetails(UParticleModuleRequired* Required);
 	bool RenderModuleDetails(UParticleModule* Module);
 	void RenderCurvePanel();
@@ -105,6 +106,7 @@ private:
 	int32 SelectedEmitterIndex = 0;
 	int32 SelectedLODIndex = 0;
 	UParticleModule* SelectedModule = nullptr;
+	bool bParticleSystemSelected = false;
 	bool bSimulating = true;
 
 	uint32 InstanceId = 0;
