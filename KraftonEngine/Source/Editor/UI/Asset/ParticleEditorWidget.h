@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AssetEditorWidget.h"
+#include "Core/EngineTypes.h"
 #include "Editor/Viewport/StaticMeshEditorViewportClient.h"
 #include "Object/FName.h"
 #include "Slate/SWindow.h"
@@ -40,20 +41,26 @@ private:
 		Location,
 		Color,
 		ColorOverLife,
+		BeamSource,
+		BeamTarget,
+		BeamNoise,
 		Collision
 	};
 
-	enum class EAddableTypeDataType
+	enum class EEmitterTypeData
 	{
+		Sprite,
+		Mesh,
+		Beam,
 		Ribbon
 	};
 
 	void EnsureDefaultSystem();
 	UParticleEmitter* CreateDefaultEmitter(const FString& EmitterName);
 	UParticleModule* CreateModule(EAddableModuleType ModuleType, UObject* Outer);
-	UParticleModule* CreateTypeDataModule(EAddableTypeDataType TypeDataType, UObject* Outer);
+	UParticleModule* CreateTypeDataModule(EEmitterTypeData TypeData, UObject* Outer);
 	void AddModuleToEmitter(int32 EmitterIndex, EAddableModuleType ModuleType);
-	void SetTypeDataOnEmitter(int32 EmitterIndex, EAddableTypeDataType TypeDataType);
+	void SetEmitterTypeData(int32 EmitterIndex, EEmitterTypeData TypeData);
 	void DeleteModuleFromEmitter(int32 EmitterIndex, UParticleModule* Module);
 	void DeleteEmitter(int32 EmitterIndex);
 	int32 GetLODCount() const;
@@ -66,6 +73,8 @@ private:
 	void InitializePreviewWorld();
 	void ReleasePreviewWorld();
 	void RestartPreviewSystem();
+	FBoundingBox CalculatePreviewBounds() const;
+	void ResetPreviewCameraToParticleBounds();
 
 	void RenderToolbar();
 	void RenderEditorLayout();
@@ -81,7 +90,10 @@ private:
 	UParticleModule* GetSelectedModule() const;
 	FString GetEmitterDisplayName(UParticleEmitter* Emitter, int32 Index) const;
 	FString GetModuleDisplayName(UParticleModule* Module) const;
+	FString GetTypeDataDisplayName(UParticleLODLevel* LOD) const;
 	void ApplyEmitterEdit();
+	void SyncAssetNameBuffer();
+	void CommitAssetNameEdit();
 
 private:
 	SWindow ParticleViewportWindow;
@@ -98,4 +110,5 @@ private:
 	uint32 InstanceId = 0;
 	FName PreviewWorldHandle = FName::None;
 	FString WindowIdSuffix;
+	char AssetNameBuffer[128] = {};
 };

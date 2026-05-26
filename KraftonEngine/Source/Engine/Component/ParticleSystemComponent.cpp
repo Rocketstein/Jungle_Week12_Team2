@@ -67,6 +67,12 @@ void MoveBeamReplayData(FDynamicBeamEmitterReplayData& Dest, FDynamicBeamEmitter
 	Dest.UpVectorStepSize = Source.UpVectorStepSize;
 	Dest.TextureTile = Source.TextureTile;
 	Dest.TextureTileDistance = Source.TextureTileDistance;
+	Dest.NoiseAmplitude = Source.NoiseAmplitude;
+	Dest.NoiseFrequency = Source.NoiseFrequency;
+	Dest.NoisePhase = Source.NoisePhase;
+	Dest.NoiseSeed = Source.NoiseSeed;
+	Dest.NoiseRangeMin = Source.NoiseRangeMin;
+	Dest.NoiseRangeMax = Source.NoiseRangeMax;
 	Dest.bRenderGeometry = Source.bRenderGeometry;
 	Dest.bRenderDirectLine = Source.bRenderDirectLine;
 	Dest.bRenderLines = Source.bRenderLines;

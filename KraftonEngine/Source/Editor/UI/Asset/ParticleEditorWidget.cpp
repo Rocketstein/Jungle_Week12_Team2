@@ -1,6 +1,7 @@
 #include "ParticleEditorWidget.h"
 
 #include "Component/ParticleSystemComponent.h"
+#include "Editor/EditorEngine.h"
 #include "Editor/UI/ContentBrowser/ContentItem.h"
 #include "Editor/UI/EditorTextureManager.h"
 #include "GameFramework/AActor.h"
@@ -15,6 +16,7 @@
 #include "Particle/ParticleSpriteEmitter.h"
 #include "Particle/ParticleSystem.h"
 #include "Particle/ParticleSystemManager.h"
+#include "Particle/TypeData/ParticleModuleTypeDataBeam2.h"
 #include "Particle/TypeData/ParticleModuleTypeDataRibbon.h"
 #include "Platform/Paths.h"
 #include "Runtime/Engine.h"
@@ -25,6 +27,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <cstring>
 #include <imgui.h>
 
 namespace
@@ -54,6 +57,26 @@ namespace
 	{
 		"Texture Alpha",
 		"Texture Luminance"
+	};
+
+	const char* GBeamMethodNames[] =
+	{
+		"Distance",
+		"Target",
+		"Branch"
+	};
+
+	const char* GBeamTaperMethodNames[] =
+	{
+		"None",
+		"Full",
+		"Partial"
+	};
+
+	const char* GBeamTangentMethodNames[] =
+	{
+		"Direct",
+		"User Set"
 	};
 
 	const char* GCollisionChannelNames[] =
@@ -135,6 +158,24 @@ namespace
 
 		ImGui::EndDragDropTarget();
 		return Material;
+	}
+
+	bool IsValidAssetFileStem(const FString& Name)
+	{
+		if (Name.empty())
+		{
+			return false;
+		}
+
+		static constexpr const char* InvalidChars = "<>:\"/\\|?*";
+		for (unsigned char Ch : Name)
+		{
+			if (Ch < 32 || std::strchr(InvalidChars, Ch))
+			{
+				return false;
+			}
+		}
+		return true;
 	}
 
 	void DrawHorizontalSplitter(float& TopHeight, float MinTopHeight, float MinBottomHeight, float AvailableHeight, const char* Id)
@@ -227,6 +268,25 @@ namespace
 
 		GUObjectArray.DestroyObject(Emitter);
 	}
+
+	template <typename TModule>
+	TModule* FindEnabledBeamModule(UParticleLODLevel* LOD)
+	{
+		if (!LOD)
+		{
+			return nullptr;
+		}
+
+		for (UParticleModule* Module : LOD->Modules)
+		{
+			TModule* TypedModule = Cast<TModule>(Module);
+			if (TypedModule && TypedModule->bEnabled)
+			{
+				return TypedModule;
+			}
+		}
+		return nullptr;
+	}
 }
 
 FParticleEditorWidget::FParticleEditorWidget()
@@ -265,6 +325,7 @@ void FParticleEditorWidget::Open(UObject* Object)
 	SelectedEmitterIndex = 0;
 	SelectedLODIndex = 0;
 	SelectedModule = nullptr;
+	SyncAssetNameBuffer();
 	EnsureDefaultSystem();
 	InitializePreviewWorld();
 }
@@ -278,6 +339,7 @@ void FParticleEditorWidget::Close()
 	PreviewActor = nullptr;
 	SelectedLODIndex = 0;
 	SelectedModule = nullptr;
+	AssetNameBuffer[0] = '\0';
 }
 
 void FParticleEditorWidget::Tick(float DeltaTime)
@@ -452,6 +514,37 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 		ColorOverLife->AlphaOverLife = 0.0f;
 		return ColorOverLife;
 	}
+	case EAddableModuleType::BeamSource:
+	{
+		UParticleModuleBeamSource* Source = GUObjectArray.CreateObject<UParticleModuleBeamSource>(Outer);
+		Source->bEnabled = true;
+		Source->SourcePoint = FVector(-200.0f, 0.0f, 0.0f);
+		Source->SourceTangentMethod = PEBTANM_UserSet;
+		Source->SourceTangent = FVector(0.0f, 0.0f, 40.0f);
+		return Source;
+	}
+	case EAddableModuleType::BeamTarget:
+	{
+		UParticleModuleBeamTarget* Target = GUObjectArray.CreateObject<UParticleModuleBeamTarget>(Outer);
+		Target->bEnabled = true;
+		Target->TargetPoint = FVector(200.0f, 0.0f, 0.0f);
+		Target->TargetTangentMethod = PEBTANM_UserSet;
+		Target->TargetTangent = FVector(0.0f, 0.0f, -40.0f);
+		return Target;
+	}
+	case EAddableModuleType::BeamNoise:
+	{
+		UParticleModuleBeamNoise* Noise = GUObjectArray.CreateObject<UParticleModuleBeamNoise>(Outer);
+		Noise->bEnabled = true;
+		Noise->NoiseAmplitude = 0.0f;
+		Noise->NoiseFrequency = 10.0f;
+		Noise->NoiseSpeed = 0.0f;
+		Noise->NoiseSeed = 0.0f;
+		Noise->bLowFreqEnabled = true;
+		Noise->NoiseRangeMin = FVector(0.0f, -30.0f, -30.0f);
+		Noise->NoiseRangeMax = FVector(0.0f, 30.0f, 30.0f);
+		return Noise;
+	}
 	case EAddableModuleType::Collision:
 	{
 		UParticleModuleCollision* Collision = GUObjectArray.CreateObject<UParticleModuleCollision>(Outer);
@@ -463,16 +556,37 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 	return nullptr;
 }
 
-UParticleModule* FParticleEditorWidget::CreateTypeDataModule(EAddableTypeDataType TypeDataType, UObject* Outer)
+UParticleModule* FParticleEditorWidget::CreateTypeDataModule(EEmitterTypeData TypeData, UObject* Outer)
 {
 	if (!Outer)
 	{
 		return nullptr;
 	}
 
-	switch (TypeDataType)
+	switch (TypeData)
 	{
-	case EAddableTypeDataType::Ribbon:
+	case EEmitterTypeData::Sprite:
+		return nullptr;
+	case EEmitterTypeData::Mesh:
+	{
+		UParticleModuleTypeDataMesh* Mesh = GUObjectArray.CreateObject<UParticleModuleTypeDataMesh>(Outer);
+		Mesh->bEnabled = true;
+		return Mesh;
+	}
+	case EEmitterTypeData::Beam:
+	{
+		UParticleModuleTypeDataBeam2* Beam = GUObjectArray.CreateObject<UParticleModuleTypeDataBeam2>(Outer);
+		Beam->bEnabled = true;
+		Beam->BeamMethod = PEB2M_Target;
+		Beam->Speed = 0.0f;
+		Beam->InterpolationPoints = 20;
+		Beam->Sheets = 5;
+		Beam->MaxBeamCount = 5;
+		Beam->SourcePoint = FVector(-200.0f, 0.0f, 0.0f);
+		Beam->TargetPoint = FVector(200.0f, 0.0f, 0.0f);
+		return Beam;
+	}
+	case EEmitterTypeData::Ribbon:
 	{
 		UParticleModuleTypeDataRibbon* Ribbon = GUObjectArray.CreateObject<UParticleModuleTypeDataRibbon>(Outer);
 		Ribbon->bEnabled = true;
@@ -516,7 +630,7 @@ void FParticleEditorWidget::AddModuleToEmitter(int32 EmitterIndex, EAddableModul
 	ApplyEmitterEdit();
 }
 
-void FParticleEditorWidget::SetTypeDataOnEmitter(int32 EmitterIndex, EAddableTypeDataType TypeDataType)
+void FParticleEditorWidget::SetEmitterTypeData(int32 EmitterIndex, EEmitterTypeData TypeData)
 {
 	if (!EditingParticleSystem || EmitterIndex < 0 || EmitterIndex >= static_cast<int32>(EditingParticleSystem->Emitters.size()))
 	{
@@ -524,53 +638,95 @@ void FParticleEditorWidget::SetTypeDataOnEmitter(int32 EmitterIndex, EAddableTyp
 	}
 
 	UParticleEmitter* Emitter = EditingParticleSystem->Emitters[EmitterIndex];
-	UParticleLODLevel* LOD = GetSelectedLODLevel(Emitter);
-	if (!LOD)
+	if (!Emitter)
 	{
 		return;
 	}
 
-	UParticleModule* NewTypeData = CreateTypeDataModule(TypeDataType, LOD);
-	if (!NewTypeData)
+	bool bChanged = false;
+	for (UParticleLODLevel* LOD : Emitter->LODLevels)
 	{
-		return;
-	}
-
-	for (auto It = LOD->Modules.begin(); It != LOD->Modules.end();)
-	{
-		UParticleModule* ExistingModule = *It;
-		if (Cast<UParticleModuleTypeDataBase>(ExistingModule))
+		if (!LOD)
 		{
-			if (SelectedModule == ExistingModule)
-			{
-				SelectedModule = nullptr;
-			}
-			It = LOD->Modules.erase(It);
-			GUObjectArray.DestroyObject(ExistingModule);
 			continue;
 		}
-		++It;
-	}
 
-	LOD->Modules.push_back(NewTypeData);
-	LOD->TypeDataModule = Cast<UParticleModuleTypeDataBase>(NewTypeData);
-
-	if (LOD->RequiredModule)
-	{
-		LOD->RequiredModule->ScreenAlignment = PSA_TypeSpecific;
-		if (!LOD->RequiredModule->Material ||
-			GetMaterialPath(LOD->RequiredModule->Material) == "Asset/Particle/Materials/M_Fire_B.mat")
+		const bool bAlreadySprite = !LOD->TypeDataModule;
+		const bool bAlreadyMesh = LOD->TypeDataModule && LOD->TypeDataModule->IsA<UParticleModuleTypeDataMesh>();
+		const bool bAlreadyBeam = LOD->TypeDataModule && LOD->TypeDataModule->IsA<UParticleModuleTypeDataBeam2>();
+		const bool bAlreadyRibbon = LOD->TypeDataModule && LOD->TypeDataModule->IsA<UParticleModuleTypeDataRibbon>();
+		if ((TypeData == EEmitterTypeData::Sprite && bAlreadySprite) ||
+			(TypeData == EEmitterTypeData::Mesh && bAlreadyMesh) ||
+			(TypeData == EEmitterTypeData::Beam && bAlreadyBeam) ||
+			(TypeData == EEmitterTypeData::Ribbon && bAlreadyRibbon))
 		{
-			if (UMaterial* RibbonMaterial = FMaterialManager::Get().GetOrCreateMaterial("Asset/Materials/Editor/DefaultParticleRibbon.mat"))
+			continue;
+		}
+
+		for (auto It = LOD->Modules.begin(); It != LOD->Modules.end();)
+		{
+			UParticleModule* Module = *It;
+			if (Module && Module->IsA<UParticleModuleTypeDataBase>())
 			{
-				LOD->RequiredModule->Material = RibbonMaterial;
+				if (SelectedModule == Module)
+				{
+					SelectedModule = nullptr;
+				}
+				GUObjectArray.DestroyObject(Module);
+				It = LOD->Modules.erase(It);
+				continue;
+			}
+			++It;
+		}
+		LOD->TypeDataModule = nullptr;
+
+		if (UParticleModule* NewTypeData = CreateTypeDataModule(TypeData, LOD))
+		{
+			LOD->TypeDataModule = Cast<UParticleModuleTypeDataBase>(NewTypeData);
+			LOD->Modules.push_back(NewTypeData);
+		}
+
+		if (TypeData == EEmitterTypeData::Beam)
+		{
+			if (LOD->RequiredModule)
+			{
+				LOD->RequiredModule->Material = FMaterialManager::Get().GetOrCreateMaterial(
+					"Asset/Particle/Materials/M_Beam.mat");
+				LOD->RequiredModule->ScreenAlignment = PSA_TypeSpecific;
+			}
+			if (LOD->SpawnModule)
+			{
+				LOD->SpawnModule->Rate = 1.0f;
 			}
 		}
+		else if (TypeData == EEmitterTypeData::Ribbon && LOD->RequiredModule)
+		{
+			LOD->RequiredModule->ScreenAlignment = PSA_TypeSpecific;
+			if (!LOD->RequiredModule->Material ||
+				GetMaterialPath(LOD->RequiredModule->Material) == "Asset/Particle/Materials/M_Fire_B.mat")
+			{
+				if (UMaterial* RibbonMaterial = FMaterialManager::Get().GetOrCreateMaterial("Asset/Materials/Editor/DefaultParticleRibbon.mat"))
+				{
+					LOD->RequiredModule->Material = RibbonMaterial;
+				}
+			}
+		}
+
+		bChanged = true;
+	}
+
+	if (!bChanged)
+	{
+		return;
 	}
 
 	SelectedEmitterIndex = EmitterIndex;
-	SelectedModule = NewTypeData;
+	UParticleLODLevel* SelectedLOD = GetSelectedLODLevel(Emitter);
+	SelectedModule = SelectedLOD && SelectedLOD->TypeDataModule
+		? static_cast<UParticleModule*>(SelectedLOD->TypeDataModule)
+		: static_cast<UParticleModule*>(SelectedLOD ? SelectedLOD->RequiredModule : nullptr);
 	ApplyEmitterEdit();
+	ResetPreviewCameraToParticleBounds();
 }
 
 void FParticleEditorWidget::DeleteModuleFromEmitter(int32 EmitterIndex, UParticleModule* Module)
@@ -666,7 +822,7 @@ void FParticleEditorWidget::InitializePreviewWorld()
 	ViewportClient.SetPreviewWorld(WorldContext.World);
 	ViewportClient.SetPreviewActor(PreviewActor);
 	ViewportClient.SetPreviewMeshComponent(nullptr);
-	ViewportClient.ResetCameraToPreviewBounds();
+	ResetPreviewCameraToParticleBounds();
 
 	WorldContext.World->SetEditorPOVProvider(&ViewportClient);
 	FSlateApplication::Get().RegisterViewport(&ParticleViewportWindow, &ViewportClient);
@@ -701,6 +857,87 @@ void FParticleEditorWidget::RestartPreviewSystem()
 	PreviewParticleComponent->InitializeSystem();
 }
 
+FBoundingBox FParticleEditorWidget::CalculatePreviewBounds() const
+{
+	FBoundingBox Bounds;
+	if (!EditingParticleSystem)
+	{
+		return FBoundingBox(FVector(-0.5f, -0.5f, -0.5f), FVector(0.5f, 0.5f, 0.5f));
+	}
+
+	auto ExpandWithPadding = [&Bounds](const FVector& Point, float Padding)
+	{
+		const FVector Pad(Padding, Padding, Padding);
+		Bounds.Expand(Point - Pad);
+		Bounds.Expand(Point + Pad);
+	};
+
+	for (UParticleEmitter* Emitter : EditingParticleSystem->Emitters)
+	{
+		UParticleLODLevel* LOD = GetSelectedLODLevel(Emitter);
+		if (!LOD)
+		{
+			continue;
+		}
+
+		if (UParticleModuleTypeDataBeam2* Beam = Cast<UParticleModuleTypeDataBeam2>(LOD->TypeDataModule))
+		{
+			FVector Source = Beam->SourcePoint;
+			FVector Target = Beam->TargetPoint;
+			if (UParticleModuleBeamSource* SourceModule = FindEnabledBeamModule<UParticleModuleBeamSource>(LOD))
+			{
+				Source = SourceModule->SourcePoint;
+			}
+			if (Beam->BeamMethod == PEB2M_Distance)
+			{
+				Target = Source + FVector(Beam->Distance, 0.0f, 0.0f);
+			}
+			if (UParticleModuleBeamTarget* TargetModule = FindEnabledBeamModule<UParticleModuleBeamTarget>(LOD))
+			{
+				Target = TargetModule->TargetPoint;
+			}
+
+			const float Padding = (std::max)(Beam->Width, 4.0f);
+			ExpandWithPadding(Source, Padding);
+			ExpandWithPadding(Target, Padding);
+			continue;
+		}
+
+		FVector MinLocation = FVector::ZeroVector;
+		FVector MaxLocation = FVector::ZeroVector;
+		float MaxSize = 16.0f;
+		for (UParticleModule* Module : LOD->Modules)
+		{
+			if (UParticleModuleLocation* Location = Cast<UParticleModuleLocation>(Module))
+			{
+				MinLocation = Location->StartLocationMin;
+				MaxLocation = Location->StartLocationMax;
+			}
+			else if (UParticleModuleSize* Size = Cast<UParticleModuleSize>(Module))
+			{
+				MaxSize = (std::max)(MaxSize, Size->StartSizeMax.X);
+				MaxSize = (std::max)(MaxSize, Size->StartSizeMax.Y);
+				MaxSize = (std::max)(MaxSize, Size->StartSizeMax.Z);
+			}
+		}
+
+		ExpandWithPadding(MinLocation, MaxSize);
+		ExpandWithPadding(MaxLocation, MaxSize);
+	}
+
+	if (!Bounds.IsValid())
+	{
+		return FBoundingBox(FVector(-16.0f, -16.0f, -16.0f), FVector(16.0f, 16.0f, 16.0f));
+	}
+	return Bounds;
+}
+
+void FParticleEditorWidget::ResetPreviewCameraToParticleBounds()
+{
+	ViewportClient.SetPreviewBoundsOverride(CalculatePreviewBounds());
+	ViewportClient.ResetCameraToPreviewBounds();
+}
+
 void FParticleEditorWidget::ApplyEmitterEdit()
 {
 	if (UParticleEmitter* Emitter = GetSelectedEmitter())
@@ -710,6 +947,57 @@ void FParticleEditorWidget::ApplyEmitterEdit()
 
 	RestartPreviewSystem();
 	MarkDirty();
+}
+
+void FParticleEditorWidget::SyncAssetNameBuffer()
+{
+	const FString Name = EditingParticleSystem ? EditingParticleSystem->GetName() : FString();
+	std::snprintf(AssetNameBuffer, sizeof(AssetNameBuffer), "%s", Name.c_str());
+}
+
+void FParticleEditorWidget::CommitAssetNameEdit()
+{
+	if (!EditingParticleSystem)
+	{
+		return;
+	}
+
+	FString NewName = AssetNameBuffer;
+	const size_t First = NewName.find_first_not_of(" \t\r\n");
+	if (First == FString::npos)
+	{
+		SyncAssetNameBuffer();
+		return;
+	}
+
+	const size_t Last = NewName.find_last_not_of(" \t\r\n");
+	NewName = NewName.substr(First, Last - First + 1);
+
+	if (!IsValidAssetFileStem(NewName))
+	{
+		SyncAssetNameBuffer();
+		return;
+	}
+
+	if (NewName == EditingParticleSystem->GetName())
+	{
+		SyncAssetNameBuffer();
+		return;
+	}
+
+	if (FParticleSystemManager::Get().Rename(EditingParticleSystem, NewName))
+	{
+		SyncAssetNameBuffer();
+		ClearDirty();
+		if (EditorEngine)
+		{
+			EditorEngine->RefreshContentBrowser();
+		}
+	}
+	else
+	{
+		SyncAssetNameBuffer();
+	}
 }
 
 int32 FParticleEditorWidget::GetLODCount() const
@@ -890,6 +1178,30 @@ FString FParticleEditorWidget::GetModuleDisplayName(UParticleModule* Module) con
 	{
 		return "Color Over Life";
 	}
+	if (Module->IsA<UParticleModuleBeamSource>())
+	{
+		return "Beam Source";
+	}
+	if (Module->IsA<UParticleModuleBeamTarget>())
+	{
+		return "Beam Target";
+	}
+	if (Module->IsA<UParticleModuleBeamNoise>())
+	{
+		return "Beam Noise";
+	}
+	if (Module->IsA<UParticleModuleTypeDataBeam2>())
+	{
+		return "Beam";
+	}
+	if (Module->IsA<UParticleModuleTypeDataMesh>())
+	{
+		return "Mesh";
+	}
+	if (Module->IsA<UParticleModuleTypeDataBase>())
+	{
+		return "TypeData";
+	}
 	if (Module->IsA<UParticleModuleCollision>())
 	{
 		return "Collision";
@@ -899,6 +1211,23 @@ FString FParticleEditorWidget::GetModuleDisplayName(UParticleModule* Module) con
 		return "TypeData Ribbon";
 	}
 	return Module->GetClass()->GetName();
+}
+
+FString FParticleEditorWidget::GetTypeDataDisplayName(UParticleLODLevel* LOD) const
+{
+	if (!LOD || !LOD->TypeDataModule)
+	{
+		return "GPU Sprites";
+	}
+	if (LOD->TypeDataModule->IsA<UParticleModuleTypeDataBeam2>())
+	{
+		return "Beam";
+	}
+	if (LOD->TypeDataModule->IsA<UParticleModuleTypeDataMesh>())
+	{
+		return "Mesh";
+	}
+	return GetModuleDisplayName(LOD->TypeDataModule);
 }
 
 void FParticleEditorWidget::Render(float DeltaTime)
@@ -1013,6 +1342,7 @@ void FParticleEditorWidget::RenderToolbar()
 {
 	if (ImGui::Button("Save"))
 	{
+		CommitAssetNameEdit();
 		if (FParticleSystemManager::Get().Save(EditingParticleSystem))
 		{
 			ClearDirty();
@@ -1031,7 +1361,7 @@ void FParticleEditorWidget::RenderToolbar()
 	ImGui::SameLine();
 	if (ImGui::Button("Frame Camera"))
 	{
-		ViewportClient.ResetCameraToPreviewBounds();
+		ResetPreviewCameraToParticleBounds();
 	}
 	ImGui::SameLine();
 	ImGui::TextDisabled("|");
@@ -1070,6 +1400,20 @@ void FParticleEditorWidget::RenderToolbar()
 	if (DrawParticleToolbarButton("DeleteLOD", L"Cascade_DeleteLOD_512x.png", "Delete LOD", SelectedLODIndex <= 0 || LODCount <= 1))
 	{
 		DeleteSelectedLOD();
+	}
+	ImGui::SameLine();
+	ImGui::TextDisabled("|");
+	ImGui::SameLine();
+	ImGui::TextUnformatted("Name:");
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth(180.0f);
+	if (ImGui::InputText("##ParticleSystemName", AssetNameBuffer, sizeof(AssetNameBuffer), ImGuiInputTextFlags_EnterReturnsTrue))
+	{
+		CommitAssetNameEdit();
+	}
+	if (ImGui::IsItemDeactivatedAfterEdit())
+	{
+		CommitAssetNameEdit();
 	}
 	ImGui::SameLine();
 	ImGui::TextDisabled("|");
@@ -1155,20 +1499,44 @@ void FParticleEditorWidget::RenderEmitterList()
 
 	int32 EmitterToDelete = -1;
 	int32 EmitterToAddModule = -1;
-	int32 EmitterToSetTypeData = -1;
 	int32 EmitterToDeleteModule = -1;
+	int32 EmitterToSetTypeData = -1;
 	UParticleModule* ModuleToDelete = nullptr;
 	EAddableModuleType ModuleTypeToAdd = EAddableModuleType::Lifetime;
-	EAddableTypeDataType TypeDataTypeToSet = EAddableTypeDataType::Ribbon;
+	EEmitterTypeData TypeDataToSet = EEmitterTypeData::Sprite;
 	auto QueueAddModule = [&](int32 EmitterIndex, EAddableModuleType ModuleType)
 	{
 		EmitterToAddModule = EmitterIndex;
 		ModuleTypeToAdd = ModuleType;
 	};
-	auto QueueSetTypeData = [&](int32 EmitterIndex, EAddableTypeDataType TypeDataType)
+	auto QueueSetTypeData = [&](int32 EmitterIndex, EEmitterTypeData TypeData)
 	{
 		EmitterToSetTypeData = EmitterIndex;
-		TypeDataTypeToSet = TypeDataType;
+		TypeDataToSet = TypeData;
+	};
+	auto DrawTypeDataContextMenu = [&](int32 EmitterIndex, UParticleLODLevel* LOD)
+	{
+		const bool bIsSprite = !LOD || !LOD->TypeDataModule;
+		const bool bIsMesh = LOD && LOD->TypeDataModule && LOD->TypeDataModule->IsA<UParticleModuleTypeDataMesh>();
+		const bool bIsBeam = LOD && LOD->TypeDataModule && LOD->TypeDataModule->IsA<UParticleModuleTypeDataBeam2>();
+		const bool bIsRibbon = LOD && LOD->TypeDataModule && LOD->TypeDataModule->IsA<UParticleModuleTypeDataRibbon>();
+
+		if (ImGui::MenuItem("Sprite", nullptr, bIsSprite))
+		{
+			QueueSetTypeData(EmitterIndex, EEmitterTypeData::Sprite);
+		}
+		if (ImGui::MenuItem("Mesh", nullptr, bIsMesh))
+		{
+			QueueSetTypeData(EmitterIndex, EEmitterTypeData::Mesh);
+		}
+		if (ImGui::MenuItem("Beam", nullptr, bIsBeam))
+		{
+			QueueSetTypeData(EmitterIndex, EEmitterTypeData::Beam);
+		}
+		if (ImGui::MenuItem("Ribbon", nullptr, bIsRibbon))
+		{
+			QueueSetTypeData(EmitterIndex, EEmitterTypeData::Ribbon);
+		}
 	};
 	auto DrawEmitterContextMenu = [&](int32 EmitterIndex)
 	{
@@ -1198,6 +1566,32 @@ void FParticleEditorWidget::RenderEmitterList()
 			{
 				QueueAddModule(EmitterIndex, EAddableModuleType::ColorOverLife);
 			}
+			UParticleEmitter* MenuEmitter = EditingParticleSystem
+				&& EmitterIndex >= 0
+				&& EmitterIndex < static_cast<int32>(EditingParticleSystem->Emitters.size())
+					? EditingParticleSystem->Emitters[EmitterIndex]
+					: nullptr;
+			UParticleLODLevel* MenuLOD = GetSelectedLODLevel(MenuEmitter);
+			const bool bCanAddBeamModule = MenuLOD
+				&& MenuLOD->TypeDataModule
+				&& MenuLOD->TypeDataModule->IsA<UParticleModuleTypeDataBeam2>();
+			ImGui::Separator();
+			if (ImGui::BeginMenu("Beam", bCanAddBeamModule))
+			{
+				if (ImGui::MenuItem("Source"))
+				{
+					QueueAddModule(EmitterIndex, EAddableModuleType::BeamSource);
+				}
+				if (ImGui::MenuItem("Target"))
+				{
+					QueueAddModule(EmitterIndex, EAddableModuleType::BeamTarget);
+				}
+				if (ImGui::MenuItem("Noise"))
+				{
+					QueueAddModule(EmitterIndex, EAddableModuleType::BeamNoise);
+				}
+				ImGui::EndMenu();
+			}
 			if (ImGui::MenuItem("Collision"))
 			{
 				QueueAddModule(EmitterIndex, EAddableModuleType::Collision);
@@ -1213,11 +1607,7 @@ void FParticleEditorWidget::RenderEmitterList()
 				LOD = GetSelectedLODLevel(EditingParticleSystem->Emitters[EmitterIndex]);
 			}
 
-			const bool bIsRibbon = LOD && Cast<UParticleModuleTypeDataRibbon>(LOD->TypeDataModule);
-			if (ImGui::MenuItem("Ribbon", nullptr, bIsRibbon))
-			{
-				QueueSetTypeData(EmitterIndex, EAddableTypeDataType::Ribbon);
-			}
+			DrawTypeDataContextMenu(EmitterIndex, LOD);
 			ImGui::EndMenu();
 		}
 
@@ -1303,11 +1693,40 @@ void FParticleEditorWidget::RenderEmitterList()
 			ImGui::PopID();
 		};
 
+		const bool bTypeDataSelected = Index == SelectedEmitterIndex && LOD->TypeDataModule && SelectedModule == LOD->TypeDataModule;
+		ImGui::PushID("TypeData");
+		ImGui::PushStyleColor(ImGuiCol_Header, bTypeDataSelected ? IM_COL32(245, 215, 42, 255) : IM_COL32(34, 36, 43, 255));
+		ImGui::PushStyleColor(ImGuiCol_HeaderHovered, bTypeDataSelected ? IM_COL32(245, 215, 42, 255) : IM_COL32(58, 61, 72, 255));
+		ImGui::PushStyleColor(ImGuiCol_HeaderActive, IM_COL32(74, 78, 92, 255));
+		const FString TypeDataLabel = GetTypeDataDisplayName(LOD);
+		if (ImGui::Selectable(TypeDataLabel.c_str(), bTypeDataSelected, 0, ImVec2(0.0f, 24.0f)))
+		{
+			SelectedEmitterIndex = Index;
+			SelectedModule = LOD->TypeDataModule
+				? static_cast<UParticleModule*>(LOD->TypeDataModule)
+				: static_cast<UParticleModule*>(LOD->RequiredModule);
+		}
+		ImGui::PopStyleColor(3);
+		if (ImGui::BeginPopupContextItem("TypeDataContext"))
+		{
+			SelectedEmitterIndex = Index;
+			SelectedModule = LOD->TypeDataModule
+				? static_cast<UParticleModule*>(LOD->TypeDataModule)
+				: static_cast<UParticleModule*>(LOD->RequiredModule);
+			DrawTypeDataContextMenu(Index, LOD);
+			ImGui::EndPopup();
+		}
+		ImGui::PopID();
+
 		int32 ModuleIndex = 0;
 		DrawModuleRow(LOD->RequiredModule, ModuleIndex++);
 		DrawModuleRow(LOD->SpawnModule, ModuleIndex++);
 		for (UParticleModule* Module : LOD->Modules)
 		{
+			if (Module && Module->IsA<UParticleModuleTypeDataBase>())
+			{
+				continue;
+			}
 			DrawModuleRow(Module, ModuleIndex++);
 		}
 
@@ -1345,7 +1764,7 @@ void FParticleEditorWidget::RenderEmitterList()
 	}
 	else if (EmitterToSetTypeData >= 0)
 	{
-		SetTypeDataOnEmitter(EmitterToSetTypeData, TypeDataTypeToSet);
+		SetEmitterTypeData(EmitterToSetTypeData, TypeDataToSet);
 	}
 }
 
@@ -1544,6 +1963,210 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		if (ImGui::DragFloat("Alpha Over Life", &EndAlpha, 0.01f, 0.0f, 1.0f))
 		{
 			ColorOverLife->AlphaOverLife = std::clamp(EndAlpha, 0.0f, 1.0f);
+			bChanged = true;
+		}
+	}
+	else if (UParticleModuleBeamSource* Source = Cast<UParticleModuleBeamSource>(Module))
+	{
+		FVector SourcePoint = Source->SourcePoint;
+		if (ImGui::DragFloat3("Source Point", &SourcePoint.X, 0.25f))
+		{
+			Source->SourcePoint = SourcePoint;
+			bChanged = true;
+		}
+
+		int SourceTangentMethod = static_cast<int>(Source->SourceTangentMethod);
+		if (ImGui::Combo("Source Tangent Method", &SourceTangentMethod, GBeamTangentMethodNames, IM_ARRAYSIZE(GBeamTangentMethodNames)))
+		{
+			Source->SourceTangentMethod = static_cast<EBeamTangentMethod>(std::clamp(SourceTangentMethod, 0, static_cast<int>(PEBTANM_MAX) - 1));
+			bChanged = true;
+		}
+
+		FVector SourceTangent = Source->SourceTangent;
+		if (ImGui::DragFloat3("Source Tangent", &SourceTangent.X, 0.25f))
+		{
+			Source->SourceTangent = SourceTangent;
+			bChanged = true;
+		}
+	}
+	else if (UParticleModuleBeamTarget* Target = Cast<UParticleModuleBeamTarget>(Module))
+	{
+		FVector TargetPoint = Target->TargetPoint;
+		if (ImGui::DragFloat3("Target Point", &TargetPoint.X, 0.25f))
+		{
+			Target->TargetPoint = TargetPoint;
+			bChanged = true;
+		}
+
+		int TargetTangentMethod = static_cast<int>(Target->TargetTangentMethod);
+		if (ImGui::Combo("Target Tangent Method", &TargetTangentMethod, GBeamTangentMethodNames, IM_ARRAYSIZE(GBeamTangentMethodNames)))
+		{
+			Target->TargetTangentMethod = static_cast<EBeamTangentMethod>(std::clamp(TargetTangentMethod, 0, static_cast<int>(PEBTANM_MAX) - 1));
+			bChanged = true;
+		}
+
+		FVector TargetTangent = Target->TargetTangent;
+		if (ImGui::DragFloat3("Target Tangent", &TargetTangent.X, 0.25f))
+		{
+			Target->TargetTangent = TargetTangent;
+			bChanged = true;
+		}
+	}
+	else if (UParticleModuleBeamNoise* Noise = Cast<UParticleModuleBeamNoise>(Module))
+	{
+		float NoiseAmplitude = Noise->NoiseAmplitude;
+		if (ImGui::DragFloat("Amplitude", &NoiseAmplitude, 0.25f, 0.0f, 1000.0f))
+		{
+			Noise->NoiseAmplitude = (std::max)(0.0f, NoiseAmplitude);
+			bChanged = true;
+		}
+
+		float NoiseFrequency = Noise->NoiseFrequency;
+		if (ImGui::DragFloat("Frequency", &NoiseFrequency, 0.05f, 0.0f, 128.0f))
+		{
+			Noise->NoiseFrequency = (std::max)(0.0f, NoiseFrequency);
+			bChanged = true;
+		}
+
+		float NoiseSpeed = Noise->NoiseSpeed;
+		if (ImGui::DragFloat("Speed", &NoiseSpeed, 0.05f, 0.0f, 100.0f))
+		{
+			Noise->NoiseSpeed = (std::max)(0.0f, NoiseSpeed);
+			bChanged = true;
+		}
+
+		float NoiseSeed = Noise->NoiseSeed;
+		if (ImGui::DragFloat("Seed", &NoiseSeed, 1.0f, 0.0f, 10000.0f))
+		{
+			Noise->NoiseSeed = NoiseSeed;
+			bChanged = true;
+		}
+
+		bool bLowFreqEnabled = Noise->bLowFreqEnabled;
+		if (ImGui::Checkbox("Low Freq Enabled", &bLowFreqEnabled))
+		{
+			Noise->bLowFreqEnabled = bLowFreqEnabled;
+			bChanged = true;
+		}
+
+		FVector NoiseRangeMin = Noise->NoiseRangeMin;
+		if (ImGui::DragFloat3("Noise Range Min", &NoiseRangeMin.X, 0.25f))
+		{
+			Noise->NoiseRangeMin = NoiseRangeMin;
+			bChanged = true;
+		}
+
+		FVector NoiseRangeMax = Noise->NoiseRangeMax;
+		if (ImGui::DragFloat3("Noise Range Max", &NoiseRangeMax.X, 0.25f))
+		{
+			Noise->NoiseRangeMax = NoiseRangeMax;
+			bChanged = true;
+		}
+	}
+	else if (UParticleModuleTypeDataBeam2* Beam = Cast<UParticleModuleTypeDataBeam2>(Module))
+	{
+		int BeamMethod = static_cast<int>(Beam->BeamMethod);
+		if (ImGui::Combo("Method", &BeamMethod, GBeamMethodNames, IM_ARRAYSIZE(GBeamMethodNames)))
+		{
+			Beam->BeamMethod = static_cast<EBeam2Method>(std::clamp(BeamMethod, 0, static_cast<int>(PEB2M_MAX) - 1));
+			bChanged = true;
+		}
+
+		int InterpolationPoints = Beam->InterpolationPoints;
+		if (ImGui::DragInt("Interpolation Points", &InterpolationPoints, 1.0f, 1, 128))
+		{
+			Beam->InterpolationPoints = (std::max)(1, InterpolationPoints);
+			bChanged = true;
+		}
+
+		int Sheets = Beam->Sheets;
+		if (ImGui::DragInt("Sheets", &Sheets, 1.0f, 1, 16))
+		{
+			Beam->Sheets = (std::max)(1, Sheets);
+			bChanged = true;
+		}
+
+		int MaxBeamCount = Beam->MaxBeamCount;
+		if (ImGui::DragInt("Max Beam Count", &MaxBeamCount, 1.0f, 1, 64))
+		{
+			Beam->MaxBeamCount = (std::max)(1, MaxBeamCount);
+			bChanged = true;
+		}
+
+		float Speed = Beam->Speed;
+		if (ImGui::DragFloat("Speed", &Speed, 0.25f, 0.0f, 10000.0f))
+		{
+			Beam->Speed = (std::max)(0.0f, Speed);
+			bChanged = true;
+		}
+
+		float Distance = Beam->Distance;
+		if (ImGui::DragFloat("Distance", &Distance, 1.0f, 0.0f, 10000.0f))
+		{
+			Beam->Distance = (std::max)(0.0f, Distance);
+			bChanged = true;
+		}
+
+		float Width = Beam->Width;
+		if (ImGui::DragFloat("Width", &Width, 0.25f, 0.0f, 1000.0f))
+		{
+			Beam->Width = (std::max)(0.0f, Width);
+			bChanged = true;
+		}
+
+		int TextureTile = Beam->TextureTile;
+		if (ImGui::DragInt("Texture Tile", &TextureTile, 1.0f, 1, 256))
+		{
+			Beam->TextureTile = (std::max)(1, TextureTile);
+			bChanged = true;
+		}
+
+		float TextureTileDistance = Beam->TextureTileDistance;
+		if (ImGui::DragFloat("Texture Tile Distance", &TextureTileDistance, 1.0f, 0.0f, 10000.0f))
+		{
+			Beam->TextureTileDistance = (std::max)(0.0f, TextureTileDistance);
+			bChanged = true;
+		}
+
+		float BeamColor[3] = { Beam->Color.X, Beam->Color.Y, Beam->Color.Z };
+		if (ImGui::ColorEdit3("Color", BeamColor))
+		{
+			Beam->Color = FVector(BeamColor[0], BeamColor[1], BeamColor[2]);
+			bChanged = true;
+		}
+
+		float Alpha = Beam->Alpha;
+		if (ImGui::DragFloat("Alpha", &Alpha, 0.01f, 0.0f, 1.0f))
+		{
+			Beam->Alpha = std::clamp(Alpha, 0.0f, 1.0f);
+			bChanged = true;
+		}
+
+		int TaperMethod = static_cast<int>(Beam->TaperMethod);
+		if (ImGui::Combo("Taper Method", &TaperMethod, GBeamTaperMethodNames, IM_ARRAYSIZE(GBeamTaperMethodNames)))
+		{
+			Beam->TaperMethod = static_cast<EBeamTaperMethod>(std::clamp(TaperMethod, 0, static_cast<int>(PEBTM_MAX) - 1));
+			bChanged = true;
+		}
+
+		float TaperFactor = Beam->TaperFactor;
+		if (ImGui::DragFloat("Taper Factor", &TaperFactor, 0.01f, 0.0f, 1.0f))
+		{
+			Beam->TaperFactor = std::clamp(TaperFactor, 0.0f, 1.0f);
+			bChanged = true;
+		}
+
+		float TaperScale = Beam->TaperScale;
+		if (ImGui::DragFloat("Taper Scale", &TaperScale, 0.01f, 0.0f, 100.0f))
+		{
+			Beam->TaperScale = (std::max)(0.0f, TaperScale);
+			bChanged = true;
+		}
+
+		bool bAlwaysOn = Beam->bAlwaysOn;
+		if (ImGui::Checkbox("Always On", &bAlwaysOn))
+		{
+			Beam->bAlwaysOn = bAlwaysOn;
 			bChanged = true;
 		}
 	}
