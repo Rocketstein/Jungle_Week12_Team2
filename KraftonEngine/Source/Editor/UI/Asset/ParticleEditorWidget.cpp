@@ -24,8 +24,12 @@
 #include "Slate/SlateApplication.h"
 #include "UI/Toolbar/ViewportToolbar.h"
 #include "Viewport/Viewport.h"
+#include "Mesh/MeshManager.h"
+#include "Mesh/StaticMesh.h"
+#include "Render/Shader/ShaderManager.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <imgui.h>
@@ -33,6 +37,11 @@
 namespace
 {
 	static uint32 GNextParticleEditorInstanceId = 0;
+
+	constexpr const char* DefaultParticleMeshPath =
+		"Asset/Mesh/BasicShape/Sphere_Lowpoly_StaticMesh.uasset";
+	constexpr const char* DefaultParticleMeshMaterialPath =
+		"Asset/Materials/Editor/DefaultParticleMesh.mat";
 
 	const char* GScreenAlignmentNames[] =
 	{
@@ -135,6 +144,92 @@ namespace
 	{
 		UMaterial* Material = MaterialInterface ? MaterialInterface->GetMaterial() : nullptr;
 		return Material ? Material->GetAssetPathFileName() : FString();
+	}
+
+	UStaticMesh* LoadEditorStaticMesh(const FString& MeshPath)
+	{
+		if (MeshPath.empty())
+		{
+			return nullptr;
+		}
+
+		if (UStaticMesh* CachedMesh = FMeshManager::FindStaticMesh(MeshPath))
+		{
+			return CachedMesh;
+		}
+
+		ID3D11Device* Device = GEngine
+			? GEngine->GetRenderer().GetFD3DDevice().GetDevice()
+			: nullptr;
+
+		return Device ? FMeshManager::LoadStaticMesh(MeshPath, Device) : nullptr;
+	}
+
+	UMaterial* GetDefaultParticleMeshMaterial()
+	{
+		return FMaterialManager::Get().GetOrCreateMaterial(DefaultParticleMeshMaterialPath);
+	}
+
+	bool EnsureParticleMeshEmitterDefaults(UParticleModuleRequired* Required)
+	{
+		if (!Required)
+		{
+			return false;
+		}
+
+		bool bChanged = false;
+		if (!Required->Material)
+		{
+			Required->Material = GetDefaultParticleMeshMaterial();
+			bChanged = Required->Material != nullptr;
+		}
+		if (Required->ScreenAlignment != PSA_TypeSpecific)
+		{
+			Required->ScreenAlignment = PSA_TypeSpecific;
+			bChanged = true;
+		}
+		return bChanged;
+	}
+
+	bool ExpandSpriteSizeToMeshVolume(UParticleModuleSize* Size)
+	{
+		if (!Size)
+		{
+			return false;
+		}
+
+		auto ExpandIfSpriteDefault = [](FVector& Value) -> bool
+		{
+			const float TargetUniformSize = (std::max)(Value.X, Value.Y);
+			if (TargetUniformSize <= 1.0f || std::abs(Value.Z - 1.0f) > 0.001f)
+			{
+				return false;
+			}
+
+			Value.Z = TargetUniformSize;
+			return true;
+		};
+
+		bool bChanged = false;
+		bChanged |= ExpandIfSpriteDefault(Size->StartSize);
+		bChanged |= ExpandIfSpriteDefault(Size->StartSizeMin);
+		bChanged |= ExpandIfSpriteDefault(Size->StartSizeMax);
+		return bChanged;
+	}
+
+	bool EnsureParticleMeshSizeDefaults(UParticleLODLevel* LOD)
+	{
+		if (!LOD)
+		{
+			return false;
+		}
+
+		bool bChanged = false;
+		for (UParticleModule* Module : LOD->Modules)
+		{
+			bChanged |= ExpandSpriteSizeToMeshVolume(Cast<UParticleModuleSize>(Module));
+		}
+		return bChanged;
 	}
 
 	UMaterial* AcceptMaterialDrop()
@@ -571,6 +666,8 @@ UParticleModule* FParticleEditorWidget::CreateTypeDataModule(EEmitterTypeData Ty
 	{
 		UParticleModuleTypeDataMesh* Mesh = GUObjectArray.CreateObject<UParticleModuleTypeDataMesh>(Outer);
 		Mesh->bEnabled = true;
+		Mesh->MeshPath = DefaultParticleMeshPath;
+		Mesh->Mesh = LoadEditorStaticMesh(Mesh->MeshPath);
 		return Mesh;
 	}
 	case EEmitterTypeData::Beam:
@@ -660,6 +757,11 @@ void FParticleEditorWidget::SetEmitterTypeData(int32 EmitterIndex, EEmitterTypeD
 			(TypeData == EEmitterTypeData::Beam && bAlreadyBeam) ||
 			(TypeData == EEmitterTypeData::Ribbon && bAlreadyRibbon))
 		{
+			if (TypeData == EEmitterTypeData::Mesh)
+			{
+				bChanged |= EnsureParticleMeshEmitterDefaults(LOD->RequiredModule);
+				bChanged |= EnsureParticleMeshSizeDefaults(LOD);
+			}
 			continue;
 		}
 
@@ -686,7 +788,12 @@ void FParticleEditorWidget::SetEmitterTypeData(int32 EmitterIndex, EEmitterTypeD
 			LOD->Modules.push_back(NewTypeData);
 		}
 
-		if (TypeData == EEmitterTypeData::Beam)
+		if (TypeData == EEmitterTypeData::Mesh)
+		{
+			bChanged |= EnsureParticleMeshEmitterDefaults(LOD->RequiredModule);
+			bChanged |= EnsureParticleMeshSizeDefaults(LOD);
+		}
+		else if (TypeData == EEmitterTypeData::Beam)
 		{
 			if (LOD->RequiredModule)
 			{
@@ -1965,6 +2072,63 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 			ColorOverLife->AlphaOverLife = std::clamp(EndAlpha, 0.0f, 1.0f);
 			bChanged = true;
 		}
+	}
+	else if (UParticleModuleTypeDataMesh* MeshTypeData = Cast<UParticleModuleTypeDataMesh>(Module))
+	{
+		const FString CurrentPath = MeshTypeData->MeshPath;
+		const FString PreviewLabel = CurrentPath.empty() ? "None" : CurrentPath.c_str();
+
+		if (ImGui::BeginCombo("Static Mesh", PreviewLabel.c_str()))
+		{
+			const bool bSelectedNone = CurrentPath.empty();
+			if (ImGui::Selectable("None", bSelectedNone))
+			{
+				MeshTypeData->MeshPath.clear();
+				MeshTypeData->Mesh = nullptr;
+				bChanged = true;
+			}
+			if (bSelectedNone)
+			{
+				ImGui::SetItemDefaultFocus();
+			}
+
+			const TArray<FMeshAssetListItem>& MeshFiles = FMeshManager::GetAvailableStaticMeshFiles();
+			for (const FMeshAssetListItem& Item : MeshFiles)
+			{
+				const bool bSelected = CurrentPath == Item.FullPath;
+				if (ImGui::Selectable(Item.DisplayName.c_str(), bSelected))
+				{
+					MeshTypeData->MeshPath = Item.FullPath;
+					MeshTypeData->Mesh = LoadEditorStaticMesh(MeshTypeData->MeshPath);
+					if (UParticleModuleRequired* Required = GetSelectedRequiredModule())
+					{
+						bChanged |= EnsureParticleMeshEmitterDefaults(Required);
+					}
+					UParticleEmitter* Emitter = GetSelectedEmitter();
+					bChanged |= EnsureParticleMeshSizeDefaults(GetSelectedLODLevel(Emitter));
+					bChanged = true;
+				}
+
+				if (bSelected)
+				{
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+
+			ImGui::EndCombo();
+		}
+
+		if (!MeshTypeData->MeshPath.empty() && !MeshTypeData->Mesh)
+		{
+			ImGui::TextDisabled("Mesh path is set, but the mesh is not loaded.");
+		}
+
+		if (UParticleModuleRequired* Required = GetSelectedRequiredModule())
+		{
+			bChanged |= EnsureParticleMeshEmitterDefaults(Required);
+		}
+		UParticleEmitter* Emitter = GetSelectedEmitter();
+		bChanged |= EnsureParticleMeshSizeDefaults(GetSelectedLODLevel(Emitter));
 	}
 	else if (UParticleModuleBeamSource* Source = Cast<UParticleModuleBeamSource>(Module))
 	{

@@ -468,6 +468,7 @@ UParticleModule* UParticleModuleTypeDataMesh::CloneForLOD(UParticleLODLevel* New
 {
 	UParticleModuleTypeDataMesh* Copy = GUObjectArray.CreateObject<UParticleModuleTypeDataMesh>(NewOuter);
 	CopyModuleBaseTo(Copy);
+	Copy->MeshPath = MeshPath;
 	Copy->Mesh = Mesh;
 	return Copy;
 }
