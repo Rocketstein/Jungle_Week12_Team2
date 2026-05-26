@@ -258,7 +258,12 @@ void EditorShadowMapDebugWidget::RenderVizPass(
 
 void EditorShadowMapDebugWidget::Render(float DeltaTime)
 {
-	if (!ImGui::Begin("Shadow Map Debug"))
+	Render(DeltaTime, nullptr);
+}
+
+void EditorShadowMapDebugWidget::Render(float DeltaTime, bool* bOpen)
+{
+	if (!ImGui::Begin("Shadow Map Debug", bOpen))
 	{
 		ImGui::End();
 		return;

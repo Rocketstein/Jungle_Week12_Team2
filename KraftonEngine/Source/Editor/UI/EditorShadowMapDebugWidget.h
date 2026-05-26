@@ -10,6 +10,7 @@ class EditorShadowMapDebugWidget : public FEditorWidget
 public:
 	virtual ~EditorShadowMapDebugWidget() override { ReleaseVizRT(); }
 	virtual void Render(float DeltaTime) override;
+	void Render(float DeltaTime, bool* bOpen);
 
 private:
 	// 0=CSM(t21), 1=SpotAtlas(t22), 2=PointAtlas(t23)

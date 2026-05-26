@@ -177,9 +177,14 @@ void FEditorContentBrowserWidget::Initialize(UEditorEngine* InEditor, ID3D11Devi
 
 void FEditorContentBrowserWidget::Render(float DeltaTime)
 {
+	Render(DeltaTime, nullptr);
+}
+
+void FEditorContentBrowserWidget::Render(float DeltaTime, bool* bOpen)
+{
 	(void)DeltaTime;
 
-	if (!ImGui::Begin("ContentBrowser"))
+	if (!ImGui::Begin("ContentBrowser", bOpen))
 	{
 		ImGui::End();
 		return;

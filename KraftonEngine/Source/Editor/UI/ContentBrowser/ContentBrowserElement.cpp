@@ -86,6 +86,57 @@ static FString GetLowerExtensionFromPath(const FString& Path)
 	return Extension;
 }
 
+static ImVec2 GetTextureSize(ID3D11ShaderResourceView* View)
+{
+	if (!View)
+	{
+		return ImVec2(0.0f, 0.0f);
+	}
+
+	ID3D11Resource* Resource = nullptr;
+	View->GetResource(&Resource);
+	if (!Resource)
+	{
+		return ImVec2(0.0f, 0.0f);
+	}
+
+	ID3D11Texture2D* Texture = nullptr;
+	const HRESULT Result = Resource->QueryInterface(__uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&Texture));
+	Resource->Release();
+
+	if (FAILED(Result) || !Texture)
+	{
+		return ImVec2(0.0f, 0.0f);
+	}
+
+	D3D11_TEXTURE2D_DESC Desc = {};
+	Texture->GetDesc(&Desc);
+	Texture->Release();
+
+	return ImVec2(static_cast<float>(Desc.Width), static_cast<float>(Desc.Height));
+}
+
+static void DrawImagePreserveAspect(ImDrawList* DrawList, ID3D11ShaderResourceView* Icon, const ImVec2& Min, const ImVec2& Max)
+{
+	const ImVec2 TextureSize = GetTextureSize(Icon);
+	if (!DrawList || !Icon || TextureSize.x <= 0.0f || TextureSize.y <= 0.0f || Max.x <= Min.x || Max.y <= Min.y)
+	{
+		return;
+	}
+
+	const ImVec2 Available(Max.x - Min.x, Max.y - Min.y);
+	const float Scale = (std::min)(
+		1.0f,
+		(std::min)(Available.x / TextureSize.x, Available.y / TextureSize.y));
+	const ImVec2 DrawSize(TextureSize.x * Scale, TextureSize.y * Scale);
+	const ImVec2 DrawMin(
+		Min.x + (Available.x - DrawSize.x) * 0.5f,
+		Min.y + (Available.y - DrawSize.y) * 0.5f);
+	const ImVec2 DrawMax(DrawMin.x + DrawSize.x, DrawMin.y + DrawSize.y);
+
+	DrawList->AddImage(Icon, DrawMin, DrawMax);
+}
+
 bool ContentBrowserElement::RenderSelectSpace(ContentBrowserContext& Context)
 {
 	FString Name = FPaths::ToUtf8(ContentItem.Name);
@@ -138,7 +189,7 @@ bool ContentBrowserElement::RenderSelectSpace(ContentBrowserContext& Context)
 
 	if (Icon && IconMax.y > IconMin.y)
 	{
-		DrawList->AddImage(Icon, IconMin, IconMax);
+		DrawImagePreserveAspect(DrawList, Icon, IconMin, IconMax);
 	}
 
 	const char* TypeLabel = GetTypeLabel();
