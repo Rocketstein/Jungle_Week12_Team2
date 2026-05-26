@@ -641,7 +641,7 @@ void FParticleSystemSceneProxy::FSpriteParticlePacker::PackEmitter(const FFrameC
 			V.Size = FVector(P.Size.X, P.Size.Y, /*subImageLerp*/ 0.0f);
 			V.UV = FVector2{ float(corner & 1), float((corner >> 1) & 1) };  // 0,0..1,1
 			V.Color = FVector4(P.Color.R, P.Color.G, P.Color.B, P.Color.A);
-			V.Rotation = P.Rotation;
+			V.Rotation = P.Rotation.Z;
 			V.SubImageIndex = static_cast<float>(SubImageIndex);
 			V.Velocity = P.Velocity;
 			PackedVertices.push_back(V);
@@ -709,7 +709,9 @@ void FParticleSystemSceneProxy::FMeshParticlePacker::PackEmitter(const FFrameCon
 		const FBaseParticle& P = *reinterpret_cast<const FBaseParticle*>(Bytes);
 
 		const FMatrix Model = FMatrix::MakeScaleMatrix(P.Size)
-		                    * FMatrix::MakeRotationZ(P.Rotation)
+		                    * FMatrix::MakeRotationX(P.Rotation.X)
+		                    * FMatrix::MakeRotationY(P.Rotation.Y)
+		                    * FMatrix::MakeRotationZ(P.Rotation.Z)
 		                    * FMatrix::MakeTranslationMatrix(P.Location);
 
 		FMeshParticleInstanceVertex V;

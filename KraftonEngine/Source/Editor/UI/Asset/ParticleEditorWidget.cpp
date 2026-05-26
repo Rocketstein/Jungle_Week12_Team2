@@ -585,6 +585,31 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 		Velocity->StartVelocityMax = Velocity->StartVelocity;
 		return Velocity;
 	}
+	case EAddableModuleType::InitialRotation:
+	{
+		UParticleModuleInitialRotation* Rotation = GUObjectArray.CreateObject<UParticleModuleInitialRotation>(Outer);
+		Rotation->bEnabled = true;
+		Rotation->StartRotationDegrees = FVector(0.0f, 0.0f, 360.0f);
+		Rotation->StartRotationDegreesMin = FVector::ZeroVector;
+		Rotation->StartRotationDegreesMax = FVector(0.0f, 0.0f, 360.0f);
+		return Rotation;
+	}
+	case EAddableModuleType::InitialRotationRate:
+	{
+		UParticleModuleInitialRotationRate* RotationRate = GUObjectArray.CreateObject<UParticleModuleInitialRotationRate>(Outer);
+		RotationRate->bEnabled = true;
+		RotationRate->StartRotationRateDegrees = FVector(0.0f, 0.0f, 90.0f);
+		RotationRate->StartRotationRateDegreesMin = FVector(0.0f, 0.0f, -90.0f);
+		RotationRate->StartRotationRateDegreesMax = FVector(0.0f, 0.0f, 90.0f);
+		return RotationRate;
+	}
+	case EAddableModuleType::Acceleration:
+	{
+		UParticleModuleAcceleration* Acceleration = GUObjectArray.CreateObject<UParticleModuleAcceleration>(Outer);
+		Acceleration->bEnabled = true;
+		Acceleration->Acceleration = FVector(0.0f, 0.0f, -35.0f);
+		return Acceleration;
+	}
 	case EAddableModuleType::Location:
 	{
 		UParticleModuleLocation* Location = GUObjectArray.CreateObject<UParticleModuleLocation>(Outer);
@@ -599,6 +624,8 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 		UParticleModuleColor* Color = GUObjectArray.CreateObject<UParticleModuleColor>(Outer);
 		Color->bEnabled = true;
 		Color->StartColor = FVector(1.0f, 1.0f, 1.0f);
+		Color->StartColorMin = Color->StartColor;
+		Color->StartColorMax = Color->StartColor;
 		Color->StartAlpha = 1.0f;
 		Color->StartAlphaMin = Color->StartAlpha;
 		Color->StartAlphaMax = Color->StartAlpha;
@@ -611,6 +638,14 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 		ColorOverLife->ColorOverLife = FVector(1.0f, 1.0f, 1.0f);
 		ColorOverLife->AlphaOverLife = 0.0f;
 		return ColorOverLife;
+	}
+	case EAddableModuleType::ColorScaleOverLife:
+	{
+		UParticleModuleColorScaleOverLife* ColorScale = GUObjectArray.CreateObject<UParticleModuleColorScaleOverLife>(Outer);
+		ColorScale->bEnabled = true;
+		ColorScale->ColorScaleOverLife = FVector(1.0f, 1.0f, 1.0f);
+		ColorScale->AlphaScaleOverLife = 1.0f;
+		return ColorScale;
 	}
 	case EAddableModuleType::BeamSource:
 	{
@@ -1283,6 +1318,18 @@ FString FParticleEditorWidget::GetModuleDisplayName(UParticleModule* Module) con
 	{
 		return "Initial Velocity";
 	}
+	if (Module->IsA<UParticleModuleInitialRotation>())
+	{
+		return "Initial Rotation";
+	}
+	if (Module->IsA<UParticleModuleInitialRotationRate>())
+	{
+		return "Initial Rotation Rate";
+	}
+	if (Module->IsA<UParticleModuleAcceleration>())
+	{
+		return "Acceleration";
+	}
 	if (Module->IsA<UParticleModuleLocation>())
 	{
 		return "Initial Location";
@@ -1294,6 +1341,10 @@ FString FParticleEditorWidget::GetModuleDisplayName(UParticleModule* Module) con
 	if (Module->IsA<UParticleModuleColorOverLife>())
 	{
 		return "Color Over Life";
+	}
+	if (Module->IsA<UParticleModuleColorScaleOverLife>())
+	{
+		return "Color Scale Over Life";
 	}
 	if (Module->IsA<UParticleModuleBeamSource>())
 	{
@@ -1679,6 +1730,18 @@ void FParticleEditorWidget::RenderEmitterList()
 			{
 				QueueAddModule(EmitterIndex, EAddableModuleType::Velocity);
 			}
+			if (ImGui::MenuItem("Initial Rotation"))
+			{
+				QueueAddModule(EmitterIndex, EAddableModuleType::InitialRotation);
+			}
+			if (ImGui::MenuItem("Initial Rotation Rate"))
+			{
+				QueueAddModule(EmitterIndex, EAddableModuleType::InitialRotationRate);
+			}
+			if (ImGui::MenuItem("Acceleration"))
+			{
+				QueueAddModule(EmitterIndex, EAddableModuleType::Acceleration);
+			}
 			if (ImGui::MenuItem("Initial Location"))
 			{
 				QueueAddModule(EmitterIndex, EAddableModuleType::Location);
@@ -1690,6 +1753,10 @@ void FParticleEditorWidget::RenderEmitterList()
 			if (ImGui::MenuItem("Color Over Life"))
 			{
 				QueueAddModule(EmitterIndex, EAddableModuleType::ColorOverLife);
+			}
+			if (ImGui::MenuItem("Color Scale Over Life"))
+			{
+				QueueAddModule(EmitterIndex, EAddableModuleType::ColorScaleOverLife);
 			}
 			UParticleEmitter* MenuEmitter = EditingParticleSystem
 				&& EmitterIndex >= 0
@@ -2098,6 +2165,51 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 			bChanged = true;
 		}
 	}
+	else if (UParticleModuleInitialRotation* Rotation = Cast<UParticleModuleInitialRotation>(Module))
+	{
+		FVector StartRotationMin = Rotation->StartRotationDegreesMin;
+		if (ImGui::DragFloat3("Start Rotation Min (deg)", &StartRotationMin.X, 1.0f, -36000.0f, 36000.0f))
+		{
+			Rotation->StartRotationDegreesMin = StartRotationMin;
+			Rotation->StartRotationDegrees = Rotation->StartRotationDegreesMax;
+			bChanged = true;
+		}
+
+		FVector StartRotationMax = Rotation->StartRotationDegreesMax;
+		if (ImGui::DragFloat3("Start Rotation Max (deg)", &StartRotationMax.X, 1.0f, -36000.0f, 36000.0f))
+		{
+			Rotation->StartRotationDegreesMax = StartRotationMax;
+			Rotation->StartRotationDegrees = Rotation->StartRotationDegreesMax;
+			bChanged = true;
+		}
+	}
+	else if (UParticleModuleInitialRotationRate* RotationRate = Cast<UParticleModuleInitialRotationRate>(Module))
+	{
+		FVector StartRotationRateMin = RotationRate->StartRotationRateDegreesMin;
+		if (ImGui::DragFloat3("Start Rotation Rate Min (deg/s)", &StartRotationRateMin.X, 1.0f, -36000.0f, 36000.0f))
+		{
+			RotationRate->StartRotationRateDegreesMin = StartRotationRateMin;
+			RotationRate->StartRotationRateDegrees = RotationRate->StartRotationRateDegreesMax;
+			bChanged = true;
+		}
+
+		FVector StartRotationRateMax = RotationRate->StartRotationRateDegreesMax;
+		if (ImGui::DragFloat3("Start Rotation Rate Max (deg/s)", &StartRotationRateMax.X, 1.0f, -36000.0f, 36000.0f))
+		{
+			RotationRate->StartRotationRateDegreesMax = StartRotationRateMax;
+			RotationRate->StartRotationRateDegrees = RotationRate->StartRotationRateDegreesMax;
+			bChanged = true;
+		}
+	}
+	else if (UParticleModuleAcceleration* Acceleration = Cast<UParticleModuleAcceleration>(Module))
+	{
+		FVector AccelerationValue = Acceleration->Acceleration;
+		if (ImGui::DragFloat3("Acceleration", &AccelerationValue.X, 0.5f, -10000.0f, 10000.0f))
+		{
+			Acceleration->Acceleration = AccelerationValue;
+			bChanged = true;
+		}
+	}
 	else if (UParticleModuleLocation* Location = Cast<UParticleModuleLocation>(Module))
 	{
 		FVector StartLocationMin = Location->StartLocationMin;
@@ -2118,10 +2230,19 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 	}
 	else if (UParticleModuleColor* Color = Cast<UParticleModuleColor>(Module))
 	{
-		float StartColor[3] = { Color->StartColor.X, Color->StartColor.Y, Color->StartColor.Z };
-		if (ImGui::ColorEdit3("Start Color", StartColor))
+		float StartColorMin[3] = { Color->StartColorMin.X, Color->StartColorMin.Y, Color->StartColorMin.Z };
+		if (ImGui::ColorEdit3("Start Color Min", StartColorMin))
 		{
-			Color->StartColor = FVector(StartColor[0], StartColor[1], StartColor[2]);
+			Color->StartColorMin = FVector(StartColorMin[0], StartColorMin[1], StartColorMin[2]);
+			Color->StartColor = Color->StartColorMax;
+			bChanged = true;
+		}
+
+		float StartColorMax[3] = { Color->StartColorMax.X, Color->StartColorMax.Y, Color->StartColorMax.Z };
+		if (ImGui::ColorEdit3("Start Color Max", StartColorMax))
+		{
+			Color->StartColorMax = FVector(StartColorMax[0], StartColorMax[1], StartColorMax[2]);
+			Color->StartColor = Color->StartColorMax;
 			bChanged = true;
 		}
 
@@ -2154,6 +2275,25 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		if (ImGui::DragFloat("Alpha Over Life", &EndAlpha, 0.01f, 0.0f, 1.0f))
 		{
 			ColorOverLife->AlphaOverLife = std::clamp(EndAlpha, 0.0f, 1.0f);
+			bChanged = true;
+		}
+	}
+	else if (UParticleModuleColorScaleOverLife* ColorScale = Cast<UParticleModuleColorScaleOverLife>(Module))
+	{
+		FVector ScaleValue = ColorScale->ColorScaleOverLife;
+		if (ImGui::DragFloat3("Color Scale Over Life", &ScaleValue.X, 0.01f, 0.0f, 10.0f))
+		{
+			ColorScale->ColorScaleOverLife = FVector(
+				(std::max)(0.0f, ScaleValue.X),
+				(std::max)(0.0f, ScaleValue.Y),
+				(std::max)(0.0f, ScaleValue.Z));
+			bChanged = true;
+		}
+
+		float AlphaScale = ColorScale->AlphaScaleOverLife;
+		if (ImGui::DragFloat("Alpha Scale Over Life", &AlphaScale, 0.01f, 0.0f, 10.0f))
+		{
+			ColorScale->AlphaScaleOverLife = (std::max)(0.0f, AlphaScale);
 			bChanged = true;
 		}
 	}
