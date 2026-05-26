@@ -35,6 +35,10 @@ cbuffer BeamParamBuffer : register(b3)
     float  BeamWidth;
     float3 BeamTarget;
     float  BeamAlpha;
+    float3 BeamSourceTangent;
+    uint   BeamUseTangents;
+    float3 BeamTargetTangent;
+    float  BeamNoiseSeed;
     float3 BeamColor;
     float  BeamTaperFactor;
     float  BeamTaperScale;
@@ -43,6 +47,14 @@ cbuffer BeamParamBuffer : register(b3)
     uint   BeamTextureTile;
     float  BeamTextureTileDistance;
     uint   BeamSheetCount;
+    float  BeamNoiseAmplitude;
+    float  BeamNoiseFrequency;
+    float  BeamNoisePhase;
+    float  _BeamPad0;
+    float3 BeamNoiseRangeMin;
+    float  _BeamPad1;
+    float3 BeamNoiseRangeMax;
+    float  _BeamPad2;
     float2 _BeamPad;
 }
 

@@ -26,6 +26,65 @@ float3 RotateAroundAxis(float3 V, float3 UnitAxis, float Radians)
     return V * C + cross(UnitAxis, V) * S + UnitAxis * dot(UnitAxis, V) * (1.0f - C);
 }
 
+float3 EvaluateBeamCenter(float T)
+{
+    if (BeamUseTangents == 0u)
+    {
+        return lerp(BeamSource, BeamTarget, T);
+    }
+
+    float T2 = T * T;
+    float T3 = T2 * T;
+    float H00 = 2.0f * T3 - 3.0f * T2 + 1.0f;
+    float H10 = T3 - 2.0f * T2 + T;
+    float H01 = -2.0f * T3 + 3.0f * T2;
+    float H11 = T3 - T2;
+    return H00 * BeamSource + H10 * BeamSourceTangent + H01 * BeamTarget + H11 * BeamTargetTangent;
+}
+
+float3 EvaluateBeamDirection(float T, float PointCountF)
+{
+    float Step = 1.0f / max(PointCountF, 1.0f);
+    float T0 = saturate(T - Step);
+    float T1 = saturate(T + Step);
+    return SafeNormalizeBeam(EvaluateBeamCenter(T1) - EvaluateBeamCenter(T0), SafeNormalizeBeam(BeamTarget - BeamSource, float3(1, 0, 0)));
+}
+
+float Noise01(float Seed)
+{
+    return frac(sin(Seed) * 43758.5453123f);
+}
+
+float3 BeamNoiseSample(float SampleIndex)
+{
+    float Seed = BeamNoiseSeed + SampleIndex * 17.137f;
+    return lerp(
+        BeamNoiseRangeMin,
+        BeamNoiseRangeMax,
+        float3(Noise01(Seed + 11.0f), Noise01(Seed + 29.0f), Noise01(Seed + 47.0f)));
+}
+
+float3 ApplyBeamNoise(float3 Center, float3 BeamDir, float T)
+{
+    if (BeamNoiseFrequency <= 0.0f)
+    {
+        return Center;
+    }
+
+    float3 AxisA = SafeNormalizeBeam(cross(BeamDir, float3(0, 0, 1)), float3(0, 1, 0));
+    float3 AxisB = SafeNormalizeBeam(cross(BeamDir, AxisA), float3(0, 0, 1));
+    float EndpointFade = sin(saturate(T) * 3.14159265359f);
+    float Phase = BeamNoisePhase + BeamNoiseSeed * 6.28318530718f;
+    float WaveA = sin((T * BeamNoiseFrequency) * 6.28318530718f + Phase);
+    float WaveB = cos((T * BeamNoiseFrequency * 1.37f) * 6.28318530718f - Phase);
+    float NoiseCoord = saturate(T) * BeamNoiseFrequency;
+    float NoiseIndex = floor(NoiseCoord);
+    float NoiseAlpha = frac(NoiseCoord);
+    float3 UniformRange = lerp(BeamNoiseSample(NoiseIndex), BeamNoiseSample(NoiseIndex + 1.0f), NoiseAlpha);
+    float3 AxisNoise = (AxisA * WaveA + AxisB * WaveB) * BeamNoiseAmplitude;
+    return Center + (UniformRange + AxisNoise) * EndpointFade;
+}
+
 PS_Input_Particle VS(uint vid : SV_VertexID)
 {
     uint segmentCount     = max(BeamPointCount, 2u) - 1u;
@@ -43,9 +102,9 @@ PS_Input_Particle VS(uint vid : SV_VertexID)
 
     float3 BeamDelta = BeamTarget - BeamSource;
     float  BeamLen   = length(BeamDelta);
-    float3 BeamDir   = (BeamLen > 1e-6f) ? BeamDelta / BeamLen : float3(1, 0, 0);
+    float3 BeamDir   = EvaluateBeamDirection(T, PointCountF);
 
-    float3 Center    = BeamSource + BeamDelta * T;
+    float3 Center    = ApplyBeamNoise(EvaluateBeamCenter(T), BeamDir, T);
     float  Taper     = ApplyBeamTaper(BeamTaperMethod, BeamTaperFactor, BeamTaperScale, T);
     float  HalfWidth = max(0.0f, BeamWidth * Taper) * 0.5f;
     float  SideSign  = (side == 0) ? -1.0f : 1.0f;

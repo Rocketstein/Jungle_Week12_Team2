@@ -60,6 +60,9 @@ void MoveBeamReplayData(FDynamicBeamEmitterReplayData& Dest, FDynamicBeamEmitter
 	MoveRenderableReplayData(Dest, Source);
 	Dest.Source = Source.Source;
 	Dest.Target = Source.Target;
+	Dest.SourceTangent = Source.SourceTangent;
+	Dest.TargetTangent = Source.TargetTangent;
+	Dest.bUseTangents = Source.bUseTangents;
 	Dest.Color = Source.Color;
 	Dest.Alpha = Source.Alpha;
 	Dest.Width = Source.Width;
@@ -70,6 +73,12 @@ void MoveBeamReplayData(FDynamicBeamEmitterReplayData& Dest, FDynamicBeamEmitter
 	Dest.UpVectorStepSize = Source.UpVectorStepSize;
 	Dest.TextureTile = Source.TextureTile;
 	Dest.TextureTileDistance = Source.TextureTileDistance;
+	Dest.NoiseAmplitude = Source.NoiseAmplitude;
+	Dest.NoiseFrequency = Source.NoiseFrequency;
+	Dest.NoisePhase = Source.NoisePhase;
+	Dest.NoiseSeed = Source.NoiseSeed;
+	Dest.NoiseRangeMin = Source.NoiseRangeMin;
+	Dest.NoiseRangeMax = Source.NoiseRangeMax;
 	Dest.TaperMethod = Source.TaperMethod;
 	Dest.TaperFactor = Source.TaperFactor;
 	Dest.TaperScale = Source.TaperScale;

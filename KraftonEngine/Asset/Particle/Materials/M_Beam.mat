@@ -1,7 +1,7 @@
 {
   "BlendState" : "Additive",
   "DepthStencilState" : "DepthReadOnly",
-  "Origin" : "Editor",
+  "Origin" : "Particle",
   "Parameters" : {
     "BeamAlpha" : 0.000000,
     "BeamColor" : [0.000000, 0.000000, 0.000000],
@@ -24,13 +24,21 @@
     "BeamTextureTileDistance" : 0.000000,
     "BeamUseTangents" : 0.000000,
     "BeamWidth" : 0.000000,
-    "_BeamPad" : [0.000000, 0.000000]
+    "_BeamPad" : [0.000000, 0.000000],
+    "_BeamPad0" : 0.000000,
+    "_BeamPad1" : 0.000000,
+    "_BeamPad2" : 0.000000
   },
-  "PathFileName" : "Asset/Materials/Editor/DefaultParticleBeam.mat",
+  "Particle" : {
+    "SubUVColumns" : 1,
+    "SubUVRows" : 1,
+    "UseSubUV" : false
+  },
+  "PathFileName" : "Asset/Particle/Materials/M_Beam.mat",
   "RasterizerState" : "SolidNoCull",
   "RenderPass" : "AlphaBlend",
   "ShaderPath" : "Shaders/Particle/ParticleBeam.hlsl",
   "Textures" : {
-    "DiffuseTexture" : "Asset/Particle/Textures/T_Flare_A.PNG"
+    "DiffuseTexture" : "Asset/Particle/Textures/T_Beam.png"
   }
 }

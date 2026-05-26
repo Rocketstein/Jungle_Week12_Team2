@@ -88,6 +88,9 @@ struct FDynamicBeamEmitterReplayData : public FDynamicRenderableEmitterReplayDat
 {
 	FVector Source = FVector::ZeroVector;	// World-space start point of the beam
 	FVector Target = FVector::ZeroVector;	// World-space end point of the beam
+	FVector SourceTangent = FVector::ZeroVector;	// World-space source tangent for curved beams
+	FVector TargetTangent = FVector::ZeroVector;	// World-space target tangent for curved beams
+	bool bUseTangents = false;				// Hermite path toggle
 	FVector Color = FVector::OneVector;		// Base RGB tint applied to the beam
 	float Alpha = 1.0f;						// Opacity multiplier for the beam
 	float Width = 8.0f;						// Beam thickness in world units
@@ -100,6 +103,12 @@ struct FDynamicBeamEmitterReplayData : public FDynamicRenderableEmitterReplayDat
 
 	int32 TextureTile = 1;					// Number of times the texture tiles along the beam length
 	float TextureTileDistance = 0.0f;		// Distance per texture tile (overrides TextureTile when non-zero)
+	float NoiseAmplitude = 0.0f;			// World-space offset applied along generated beam noise axes
+	float NoiseFrequency = 0.0f;			// Number of noise waves along the beam
+	float NoisePhase = 0.0f;				// Time-driven phase offset for animated noise
+	float NoiseSeed = 0.0f;				// Stable offset so beams can vary without changing their endpoints
+	FVector NoiseRangeMin = FVector::ZeroVector;	// Low-frequency uniform noise range minimum
+	FVector NoiseRangeMax = FVector::ZeroVector;	// Low-frequency uniform noise range maximum
 
 	EBeamTaperMethod TaperMethod = PEBTM_None;	// Width taper mode along the beam (none/start/end/full)
 	float TaperFactor = 1.0f;				// Strength of the taper effect

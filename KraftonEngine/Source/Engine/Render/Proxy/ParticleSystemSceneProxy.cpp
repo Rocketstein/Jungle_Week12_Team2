@@ -613,6 +613,9 @@ void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(FDynamicBeamEmi
 	FBeamParamConstants& P = Draw.BeamParams;
 	P.Source              = Source.Source;
 	P.Target              = Source.Target;
+	P.SourceTangent       = Source.SourceTangent;
+	P.TargetTangent       = Source.TargetTangent;
+	P.UseTangents         = Source.bUseTangents ? 1u : 0u;
 	P.Width               = Source.Width;
 	P.Color               = Source.Color;
 	P.Alpha               = std::clamp(Source.Alpha, 0.0f, 1.0f);
@@ -623,6 +626,12 @@ void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(FDynamicBeamEmi
 	P.TextureTile         = static_cast<uint32>(std::max(1, Source.TextureTile));
 	P.TextureTileDistance = std::max(0.0f, Source.TextureTileDistance);
 	P.SheetCount          = static_cast<uint32>(SheetCount);
+	P.NoiseAmplitude      = std::max(0.0f, Source.NoiseAmplitude);
+	P.NoiseFrequency      = std::max(0.0f, Source.NoiseFrequency);
+	P.NoisePhase          = Source.NoisePhase;
+	P.NoiseSeed           = Source.NoiseSeed;
+	P.NoiseRangeMin       = Source.NoiseRangeMin;
+	P.NoiseRangeMax       = Source.NoiseRangeMax;
 	Draw.bBeamParamCBDirty = true;
 
 	Draw.IndexCount = static_cast<uint32>(SegmentCount) * 6 * static_cast<uint32>(SheetCount);

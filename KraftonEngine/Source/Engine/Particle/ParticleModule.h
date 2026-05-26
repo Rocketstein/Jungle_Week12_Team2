@@ -44,6 +44,14 @@ enum EParticleSortMode : int
 	PSORTMODE_MAX
 };
 
+UENUM()
+enum EBeamTangentMethod : int
+{
+	PEBTANM_Direct,
+	PEBTANM_UserSet,
+	PEBTANM_MAX
+};
+
 UCLASS()
 class UParticleModule : public UObject
 {
@@ -335,6 +343,81 @@ public:
 	FVector StartSizeMax = FVector::OneVector;
 
 	void Spawn(const FSpawnContext& Context) override;
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
+};
+
+UCLASS()
+class UParticleModuleBeamBase : public UParticleModule
+{
+public:
+	GENERATED_BODY(UParticleModuleBeamBase)
+
+	EModuleType GetModuleType() const override { return EPMT_Beam; }
+};
+
+UCLASS()
+class UParticleModuleBeamSource : public UParticleModuleBeamBase
+{
+public:
+	GENERATED_BODY(UParticleModuleBeamSource)
+
+	UPROPERTY(Edit, Category="Beam Source", DisplayName="Source Point")
+	FVector SourcePoint = FVector::ZeroVector;
+
+	UPROPERTY(Edit, Category="Beam Source", DisplayName="Source Tangent Method")
+	EBeamTangentMethod SourceTangentMethod = PEBTANM_Direct;
+
+	UPROPERTY(Edit, Category="Beam Source", DisplayName="Source Tangent")
+	FVector SourceTangent = FVector(0.0f, 0.0f, 40.0f);
+
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
+};
+
+UCLASS()
+class UParticleModuleBeamTarget : public UParticleModuleBeamBase
+{
+public:
+	GENERATED_BODY(UParticleModuleBeamTarget)
+
+	UPROPERTY(Edit, Category="Beam Target", DisplayName="Target Point")
+	FVector TargetPoint = FVector(100.0f, 0.0f, 0.0f);
+
+	UPROPERTY(Edit, Category="Beam Target", DisplayName="Target Tangent Method")
+	EBeamTangentMethod TargetTangentMethod = PEBTANM_Direct;
+
+	UPROPERTY(Edit, Category="Beam Target", DisplayName="Target Tangent")
+	FVector TargetTangent = FVector(0.0f, 0.0f, -40.0f);
+
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
+};
+
+UCLASS()
+class UParticleModuleBeamNoise : public UParticleModuleBeamBase
+{
+public:
+	GENERATED_BODY(UParticleModuleBeamNoise)
+
+	UPROPERTY(Edit, Category="Beam Noise", Min=0.0f, Max=1000.0f, Speed=0.25f)
+	float NoiseAmplitude = 0.0f;
+
+	UPROPERTY(Edit, Category="Beam Noise", Min=0.0f, Max=128.0f, Speed=0.1f)
+	float NoiseFrequency = 3.0f;
+
+	UPROPERTY(Edit, Category="Beam Noise", Min=0.0f, Max=100.0f, Speed=0.05f)
+	float NoiseSpeed = 0.0f;
+
+	UPROPERTY(Edit, Category="Beam Noise", Min=0.0f, Max=10000.0f, Speed=1.0f)
+	float NoiseSeed = 0.0f;
+
+	UPROPERTY(Edit, Category="Beam Noise", DisplayName="Low Freq Enabled")
+	bool bLowFreqEnabled = false;
+
+	UPROPERTY(Edit, Category="Beam Noise", DisplayName="Noise Range Min")
+	FVector NoiseRangeMin = FVector(0.0f, -30.0f, -30.0f);
+
+	UPROPERTY(Edit, Category="Beam Noise", DisplayName="Noise Range Max")
+	FVector NoiseRangeMax = FVector(0.0f, 30.0f, 30.0f);
+
 	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
 };
 

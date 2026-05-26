@@ -228,6 +228,10 @@ struct FBeamParamConstants
 	float   Width = 8.0f;
 	FVector Target = FVector::ZeroVector;
 	float   Alpha = 1.0f;
+	FVector SourceTangent = FVector::ZeroVector;
+	uint32  UseTangents = 0;
+	FVector TargetTangent = FVector::ZeroVector;
+	float   NoiseSeed = 0.0f;
 	FVector Color = FVector::OneVector;
 	float   TaperFactor = 1.0f;
 	float   TaperScale = 1.0f;
@@ -236,9 +240,17 @@ struct FBeamParamConstants
 	uint32  TextureTile = 1;
 	float   TextureTileDistance = 0.0f;
 	uint32  SheetCount = 1;
+	float   NoiseAmplitude = 0.0f;
+	float   NoiseFrequency = 0.0f;
+	float   NoisePhase = 0.0f;
+	float   _Pad0 = 0.0f;
+	FVector NoiseRangeMin = FVector::ZeroVector;
+	float   _Pad1 = 0.0f;
+	FVector NoiseRangeMax = FVector::ZeroVector;
+	float   _Pad2 = 0.0f;
 	float   _Pad[2] = {};
 };
-static_assert(sizeof(FBeamParamConstants) == 80);
+static_assert(sizeof(FBeamParamConstants) == 160);
 
 struct FGizmoConstants
 {

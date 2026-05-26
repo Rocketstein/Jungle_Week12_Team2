@@ -18,7 +18,7 @@
 
 namespace
 {
-constexpr int32 ParticleSystemVersion = 2;
+constexpr int32 ParticleSystemVersion = 3;
 
 namespace ParticleKeys
 {
@@ -86,6 +86,10 @@ namespace ParticleKeys
 	static constexpr const char* Distance = "Distance";
 	static constexpr const char* SourcePoint = "SourcePoint";
 	static constexpr const char* TargetPoint = "TargetPoint";
+	static constexpr const char* SourceTangentMethod = "SourceTangentMethod";
+	static constexpr const char* SourceTangent = "SourceTangent";
+	static constexpr const char* TargetTangentMethod = "TargetTangentMethod";
+	static constexpr const char* TargetTangent = "TargetTangent";
 	static constexpr const char* Width = "Width";
 	static constexpr const char* TextureTile = "TextureTile";
 	static constexpr const char* TextureTileDistance = "TextureTileDistance";
@@ -102,6 +106,13 @@ namespace ParticleKeys
 	static constexpr const char* TargetData = "TargetData";
 	static constexpr const char* TargetName = "TargetName";
 	static constexpr const char* TargetPercentage = "TargetPercentage";
+	static constexpr const char* NoiseAmplitude = "NoiseAmplitude";
+	static constexpr const char* NoiseFrequency = "NoiseFrequency";
+	static constexpr const char* NoiseSpeed = "NoiseSpeed";
+	static constexpr const char* NoiseSeed = "NoiseSeed";
+	static constexpr const char* bLowFreqEnabled = "bLowFreqEnabled";
+	static constexpr const char* NoiseRangeMin = "NoiseRangeMin";
+	static constexpr const char* NoiseRangeMax = "NoiseRangeMax";
 }
 
 json::JSON MakeVectorJSON(const FVector& Value)
@@ -261,6 +272,9 @@ const char* GetSerializableModuleType(UParticleModule* Module)
 	if (Module->IsA<UParticleModuleColor>()) return "InitialColor";
 	if (Module->IsA<UParticleModuleColorOverLife>()) return "ColorOverLife";
 	if (Module->IsA<UParticleModuleSize>()) return "InitialSize";
+	if (Module->IsA<UParticleModuleBeamSource>()) return "BeamSource";
+	if (Module->IsA<UParticleModuleBeamTarget>()) return "BeamTarget";
+	if (Module->IsA<UParticleModuleBeamNoise>()) return "BeamNoise";
 	return nullptr;
 }
 
@@ -316,6 +330,28 @@ json::JSON SerializeModule(UParticleModule* Module)
 		Object[ParticleKeys::StartSize] = MakeVectorJSON(Size->StartSize);
 		Object[ParticleKeys::StartSizeMin] = MakeVectorJSON(Size->StartSizeMin);
 		Object[ParticleKeys::StartSizeMax] = MakeVectorJSON(Size->StartSizeMax);
+	}
+	else if (UParticleModuleBeamSource* Source = Cast<UParticleModuleBeamSource>(Module))
+	{
+		Object[ParticleKeys::SourcePoint] = MakeVectorJSON(Source->SourcePoint);
+		Object[ParticleKeys::SourceTangentMethod] = static_cast<int32>(Source->SourceTangentMethod);
+		Object[ParticleKeys::SourceTangent] = MakeVectorJSON(Source->SourceTangent);
+	}
+	else if (UParticleModuleBeamTarget* Target = Cast<UParticleModuleBeamTarget>(Module))
+	{
+		Object[ParticleKeys::TargetPoint] = MakeVectorJSON(Target->TargetPoint);
+		Object[ParticleKeys::TargetTangentMethod] = static_cast<int32>(Target->TargetTangentMethod);
+		Object[ParticleKeys::TargetTangent] = MakeVectorJSON(Target->TargetTangent);
+	}
+	else if (UParticleModuleBeamNoise* Noise = Cast<UParticleModuleBeamNoise>(Module))
+	{
+		Object[ParticleKeys::NoiseAmplitude] = Noise->NoiseAmplitude;
+		Object[ParticleKeys::NoiseFrequency] = Noise->NoiseFrequency;
+		Object[ParticleKeys::NoiseSpeed] = Noise->NoiseSpeed;
+		Object[ParticleKeys::NoiseSeed] = Noise->NoiseSeed;
+		Object[ParticleKeys::bLowFreqEnabled] = Noise->bLowFreqEnabled;
+		Object[ParticleKeys::NoiseRangeMin] = MakeVectorJSON(Noise->NoiseRangeMin);
+		Object[ParticleKeys::NoiseRangeMax] = MakeVectorJSON(Noise->NoiseRangeMax);
 	}
 
 	return Object;
@@ -618,6 +654,42 @@ UParticleModule* DeserializeModule(json::JSON& Object, UParticleLODLevel* Outer)
 		Size->StartSizeMin = ReadVectorJSON(Object, ParticleKeys::StartSizeMin, Size->StartSize);
 		Size->StartSizeMax = ReadVectorJSON(Object, ParticleKeys::StartSizeMax, Size->StartSize);
 		Module = Size;
+	}
+	else if (Type == "BeamSource")
+	{
+		UParticleModuleBeamSource* Source = GUObjectArray.CreateObject<UParticleModuleBeamSource>(Outer);
+		Source->SourcePoint = ReadVectorJSON(Object, ParticleKeys::SourcePoint, Source->SourcePoint);
+		if (Object.hasKey(ParticleKeys::SourceTangentMethod))
+		{
+			const int32 Value = static_cast<int32>(Object[ParticleKeys::SourceTangentMethod].ToInt());
+			Source->SourceTangentMethod = static_cast<EBeamTangentMethod>(std::clamp(Value, 0, static_cast<int32>(PEBTANM_MAX) - 1));
+		}
+		Source->SourceTangent = ReadVectorJSON(Object, ParticleKeys::SourceTangent, Source->SourceTangent);
+		Module = Source;
+	}
+	else if (Type == "BeamTarget")
+	{
+		UParticleModuleBeamTarget* Target = GUObjectArray.CreateObject<UParticleModuleBeamTarget>(Outer);
+		Target->TargetPoint = ReadVectorJSON(Object, ParticleKeys::TargetPoint, Target->TargetPoint);
+		if (Object.hasKey(ParticleKeys::TargetTangentMethod))
+		{
+			const int32 Value = static_cast<int32>(Object[ParticleKeys::TargetTangentMethod].ToInt());
+			Target->TargetTangentMethod = static_cast<EBeamTangentMethod>(std::clamp(Value, 0, static_cast<int32>(PEBTANM_MAX) - 1));
+		}
+		Target->TargetTangent = ReadVectorJSON(Object, ParticleKeys::TargetTangent, Target->TargetTangent);
+		Module = Target;
+	}
+	else if (Type == "BeamNoise")
+	{
+		UParticleModuleBeamNoise* Noise = GUObjectArray.CreateObject<UParticleModuleBeamNoise>(Outer);
+		if (Object.hasKey(ParticleKeys::NoiseAmplitude)) Noise->NoiseAmplitude = std::max(0.0f, static_cast<float>(Object[ParticleKeys::NoiseAmplitude].ToFloat()));
+		if (Object.hasKey(ParticleKeys::NoiseFrequency)) Noise->NoiseFrequency = std::max(0.0f, static_cast<float>(Object[ParticleKeys::NoiseFrequency].ToFloat()));
+		if (Object.hasKey(ParticleKeys::NoiseSpeed)) Noise->NoiseSpeed = std::max(0.0f, static_cast<float>(Object[ParticleKeys::NoiseSpeed].ToFloat()));
+		if (Object.hasKey(ParticleKeys::NoiseSeed)) Noise->NoiseSeed = static_cast<float>(Object[ParticleKeys::NoiseSeed].ToFloat());
+		if (Object.hasKey(ParticleKeys::bLowFreqEnabled)) Noise->bLowFreqEnabled = Object[ParticleKeys::bLowFreqEnabled].ToBool();
+		Noise->NoiseRangeMin = ReadVectorJSON(Object, ParticleKeys::NoiseRangeMin, Noise->NoiseRangeMin);
+		Noise->NoiseRangeMax = ReadVectorJSON(Object, ParticleKeys::NoiseRangeMax, Noise->NoiseRangeMax);
+		Module = Noise;
 	}
 
 	if (Module && Object.hasKey(ParticleKeys::bEnabled))
