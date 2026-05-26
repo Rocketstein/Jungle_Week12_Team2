@@ -41,6 +41,7 @@ struct FParticleEmitterInstance : FParticleEmitterInstanceFixLayout
 	int32 ParticleStride = 0;
 	int32 ActiveParticles = 0;
 	uint32 ParticleCounter = 0;
+	int32 EmitterIndex = -1;
 	int32 MaxActiveParticles = 0;
 	float SpawnFraction = 0.0f;
 	float SecondsSinceCreation = 0.0f;
@@ -85,6 +86,8 @@ struct FParticleEmitterInstance : FParticleEmitterInstanceFixLayout
 	virtual uint32 CalculateParticleStride(uint32 InParticleSize);
 
 	FBaseParticle* GetParticleDirect(int32 DirectIndex) const;
+	virtual void AddCollisionEvent(const FBaseParticle& Particle, uint16 DirectIndex, const FVector& HitLocation,
+		const FVector& HitNormal, float HitTime, bool bParticleWasKilled);
 
 protected:
 	// Spawning and updating functions

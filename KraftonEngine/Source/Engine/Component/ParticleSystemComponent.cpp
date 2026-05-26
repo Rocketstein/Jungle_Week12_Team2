@@ -81,9 +81,7 @@ void MoveBeamReplayData(FDynamicBeamEmitterReplayData& Dest, FDynamicBeamEmitter
 	Dest.TargetData = std::move(Source.TargetData);
 }
 
-FParticleEmitterInstance* CreateEmitterInstance(
-	UParticleSystemComponent* Component,
-	UParticleEmitter* Emitter)
+FParticleEmitterInstance* CreateEmitterInstance(UParticleSystemComponent* Component, UParticleEmitter* Emitter)
 {
 	if (!Emitter)
 	{
@@ -218,6 +216,7 @@ FParticleSystemSceneProxy* UParticleSystemComponent::GetSceneProxy() const
 void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	ClearParticleEvents();
 
 	UParticleSystem* ParticleTemplate = Template.Get();
 	if (!ParticleTemplate)
@@ -345,6 +344,7 @@ void UParticleSystemComponent::InitParticles()
 
 		Emitter->CalculateMaxActiveParticleCount();
 		FParticleEmitterInstance* Instance = CreateEmitterInstance(this, Emitter);
+		Instance->EmitterIndex = static_cast<int32>(EmitterInstances.size());
 		Instance->InitParameters(Emitter);
 		Instance->SetCurrentLODLevel(LODLevel);
 		Instance->RebuildTemplateModuleList();
@@ -372,6 +372,16 @@ void UParticleSystemComponent::ResetParticles(bool bEmptyInstances)
 			EmitterInstance = nullptr;
 		}
 	}
+}
+
+void UParticleSystemComponent::ClearParticleEvents()
+{
+	CollisionEvents.clear();
+}
+
+void UParticleSystemComponent::AddCollisionEvent(const FParticleEventCollideData& EventData)
+{
+	CollisionEvents.push_back(EventData);
 }
 
 void UParticleSystemComponent::InitializeSystem()

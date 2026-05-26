@@ -345,7 +345,10 @@ float FParticleEmitterInstance::Spawn(float DeltaTime)
 
 	if (Number > 0 || BurstCount > 0)
 	{
+		// If there is a spawn rate, spawn those particles evenly throughout the tick. 
 		SpawnParticles(Number, StartTime, Increment, Location, FVector::ZeroVector, nullptr);
+
+		// If there are also bursts, the spawn rate-based spawns will come before them.
 		SpawnParticles(BurstCount, 0.0f, BurstCount > 0 ? DeltaTime / static_cast<float>(BurstCount) : 0.0f,
 			Location, FVector::ZeroVector, nullptr);
 	}
@@ -681,6 +684,7 @@ void FParticleEmitterInstance::PreSpawn(FBaseParticle* Particle, const FVector& 
 	Particle->BaseColor = Particle->Color;
 	Particle->RelativeTime = 0.0f;
 	Particle->OneOverMaxLifetime = 1.0f;
+	Particle->ParticleId = 0;
 	Particle->Flags = 0;
 }
 
@@ -694,5 +698,30 @@ void FParticleEmitterInstance::PostSpawn(FBaseParticle* Particle, float Interp, 
 	}
 
 	Particle->Flags |= ((ParticleCounter++) & STATE_CounterMask);
+	Particle->ParticleId = ParticleCounter;
 	Particle->Flags |= STATE_Particle_JustSpawned;
+}
+
+void FParticleEmitterInstance::AddCollisionEvent(const FBaseParticle& Particle, uint16 DirectIndex, const FVector& HitLocation,
+	const FVector& HitNormal, float HitTime, bool bParticleWasKilled)
+{
+	if (!Component)
+	{
+		return;
+	}
+
+	FParticleEventCollideData EventData;
+	EventData.EmitterIndex = EmitterIndex;
+	EventData.ParticleDirectIndex = DirectIndex;
+	EventData.ParticleId = Particle.ParticleId;
+	EventData.Location = HitLocation;
+	EventData.OldLocation = Particle.OldLocation;
+	EventData.Velocity = Particle.Velocity;
+	EventData.Normal = HitNormal;
+	EventData.EmitterTime = EmitterTime;
+	EventData.ParticleRelativeTime = Particle.RelativeTime;
+	EventData.HitTime = HitTime;
+	EventData.bParticleWasKilled = bParticleWasKilled;
+
+	Component->AddCollisionEvent(EventData);
 }

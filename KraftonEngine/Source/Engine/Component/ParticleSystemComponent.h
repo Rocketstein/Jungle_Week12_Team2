@@ -10,6 +10,21 @@ class UFXSystemAsset;
 class FParticleSystemSceneProxy;
 struct FParticleEmitterInstance;
 
+struct FParticleEventCollideData
+{
+	int32 EmitterIndex = -1;
+	uint16 ParticleDirectIndex = 0;
+	uint32 ParticleId = 0;
+	FVector Location = FVector::ZeroVector;
+	FVector OldLocation = FVector::ZeroVector;
+	FVector Velocity = FVector::ZeroVector;
+	FVector Normal = FVector::ZeroVector;
+	float EmitterTime = 0.0f;
+	float ParticleRelativeTime = 0.0f;
+	float HitTime = 0.0f;
+	bool bParticleWasKilled = false;
+};
+
 UCLASS(HiddenInComponentList)
 class UFXSystemComponent : public UPrimitiveComponent
 {
@@ -39,6 +54,9 @@ public:
 	virtual void InitParticles();
 	void ResetParticles(bool bEmptyInstances = false);
 	void InitializeSystem();
+	void ClearParticleEvents();
+	void AddCollisionEvent(const FParticleEventCollideData& EventData);
+	const TArray<FParticleEventCollideData>& GetCollisionEvents() const { return CollisionEvents; }
 
 	UPROPERTY(Edit, Category="Particles", DisplayName="Template", Type=SoftObject, Class=UParticleSystem)
 	TSoftObjectPtr<UParticleSystem> Template;
@@ -47,6 +65,7 @@ public:
 	int32 SortPriority = 0;
 
 	TArray<FParticleEmitterInstance*> EmitterInstances;
+	TArray<FParticleEventCollideData> CollisionEvents;
 	int32 LODLevel = 0;
 	int32 ForcedLODLevel = -1;
 	TArray<float> LODDistances;
