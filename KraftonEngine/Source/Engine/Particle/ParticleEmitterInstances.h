@@ -26,6 +26,7 @@ struct FParticleEmitterInstance : FParticleEmitterInstanceFixLayout
 
 	// Owner
 	UParticleSystemComponent* Component = nullptr;
+	int32 EmitterIndex = -1;
 
 	int32 CurrentLODLevelIndex = 0;
 	UParticleLODLevel* CurrentLODLevel = nullptr;
@@ -41,7 +42,6 @@ struct FParticleEmitterInstance : FParticleEmitterInstanceFixLayout
 	int32 ParticleStride = 0;
 	int32 ActiveParticles = 0;
 	uint32 ParticleCounter = 0;
-	int32 EmitterIndex = -1;
 	int32 MaxActiveParticles = 0;
 	float SpawnFraction = 0.0f;
 	float SecondsSinceCreation = 0.0f;

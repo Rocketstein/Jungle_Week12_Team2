@@ -14,6 +14,7 @@
 
 #include "GameFramework/World.h"
 #include "Particle/ParticleLODContext.h"
+#include "Particle/RibbonEmitterInstance.h"
 
 namespace
 {
@@ -58,21 +59,20 @@ void MoveMeshReplayData(FDynamicMeshEmitterReplayData& Dest, FDynamicMeshEmitter
 void MoveBeamReplayData(FDynamicBeamEmitterReplayData& Dest, FDynamicBeamEmitterReplayData& Source)
 {
 	MoveRenderableReplayData(Dest, Source);
-	Dest.Source = Source.Source;
-	Dest.Target = Source.Target;
-	Dest.Color = Source.Color;
-	Dest.Alpha = Source.Alpha;
-	Dest.Width = Source.Width;
+	Dest.Beams = std::move(Source.Beams);
 	Dest.InterpolationPoints = Source.InterpolationPoints;
 	Dest.Sheets = Source.Sheets;
+	Dest.LogicalBeamCount = Source.LogicalBeamCount;
 	Dest.MaxBeamCount = Source.MaxBeamCount;
-	Dest.Speed = Source.Speed;
 	Dest.UpVectorStepSize = Source.UpVectorStepSize;
 	Dest.TextureTile = Source.TextureTile;
 	Dest.TextureTileDistance = Source.TextureTileDistance;
-	Dest.TaperMethod = Source.TaperMethod;
-	Dest.TaperFactor = Source.TaperFactor;
-	Dest.TaperScale = Source.TaperScale;
+	Dest.NoiseAmplitude = Source.NoiseAmplitude;
+	Dest.NoiseFrequency = Source.NoiseFrequency;
+	Dest.NoisePhase = Source.NoisePhase;
+	Dest.NoiseSeed = Source.NoiseSeed;
+	Dest.NoiseRangeMin = Source.NoiseRangeMin;
+	Dest.NoiseRangeMax = Source.NoiseRangeMax;
 	Dest.bRenderGeometry = Source.bRenderGeometry;
 	Dest.bRenderDirectLine = Source.bRenderDirectLine;
 	Dest.bRenderLines = Source.bRenderLines;
@@ -81,7 +81,24 @@ void MoveBeamReplayData(FDynamicBeamEmitterReplayData& Dest, FDynamicBeamEmitter
 	Dest.TargetData = std::move(Source.TargetData);
 }
 
-FParticleEmitterInstance* CreateEmitterInstance(UParticleSystemComponent* Component, UParticleEmitter* Emitter)
+void MoveRibbonReplayData(FDynamicRibbonEmitterReplayData& Dest, FDynamicRibbonEmitterReplayData& Source)
+{
+	MoveRenderableReplayData(Dest, Source);
+	Dest.Points = std::move(Source.Points);
+	Dest.Trails = std::move(Source.Trails);
+	Dest.SheetsPerTrail = Source.SheetsPerTrail;
+	Dest.MaxTessellationBetweenParticles = Source.MaxTessellationBetweenParticles;
+	Dest.TilingDistance = Source.TilingDistance;
+	Dest.DistanceTessellationStepSize = Source.DistanceTessellationStepSize;
+	Dest.bRenderGeometry = Source.bRenderGeometry;
+	Dest.bRenderSpawnPoints = Source.bRenderSpawnPoints;
+	Dest.bRenderTangents = Source.bRenderTangents;
+	Dest.bRenderTessellation = Source.bRenderTessellation;
+}
+
+FParticleEmitterInstance* CreateEmitterInstance(
+	UParticleSystemComponent* Component,
+	UParticleEmitter* Emitter)
 {
 	if (!Emitter)
 	{
@@ -94,6 +111,10 @@ FParticleEmitterInstance* CreateEmitterInstance(UParticleSystemComponent* Compon
 	{
 		if (LOD->TypeDataModule->IsABeamEmitter()) {
 			return new FBeam2EmitterInstance(Component);
+		}
+		if (LOD->TypeDataModule->IsARibbonEmitter())
+		{
+			return new FRibbonEmitterInstance(Component);
 		}
 	}
 
@@ -125,7 +146,10 @@ FDynamicEmitterDataBase* CreateDynamicEmitterData(int32 EmitterIndex, FDynamicEm
 	}
 	else if (ReplayData->eEmitterType == DET_Ribbon)
 	{
-		// TODO
+		FDynamicRibbonEmitterData* RibbonDynamicData = new FDynamicRibbonEmitterData();
+		RibbonDynamicData->EmitterIndex = EmitterIndex;
+		MoveRibbonReplayData(RibbonDynamicData->RibbonSource, *static_cast<FDynamicRibbonEmitterReplayData*>(ReplayData));
+		DynamicData = RibbonDynamicData;
 	}
 	else
 	{
@@ -176,6 +200,11 @@ void UParticleSystemComponent::PostEditProperty(const char* PropertyName)
 			ParticleSceneProxy->SetTranslucencySortPriority(ToTranslucencySortPriority(SortPriority));
 		}
 	}
+	else if (std::strcmp(PropertyName, "Template") == 0)
+	{
+		ResetParticles(true);
+		InitializeSystem();
+	}
 }
 
 void UParticleSystemComponent::EndPlay()
@@ -216,7 +245,7 @@ FParticleSystemSceneProxy* UParticleSystemComponent::GetSceneProxy() const
 void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	ClearParticleEvents();
+	ClearParticleCollisionEvents();
 
 	UParticleSystem* ParticleTemplate = Template.Get();
 	if (!ParticleTemplate)
@@ -226,7 +255,8 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 
 	if (EmitterInstances.empty())
 	{
-		InitializeSystem();
+		InitParticles();
+		//InitializeSystem();
 	}
 
 	if (ForcedLODLevel >= 0)
@@ -245,6 +275,8 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 			EmitterInstance->Tick(DeltaTime, LODLevel, false);
 		}
 	}
+
+	DispatchParticleCollisionEvents();
 
 	TArray<FDynamicEmitterDataBase*> NewRenderData;
 	NewRenderData.reserve(EmitterInstances.size());
@@ -310,6 +342,7 @@ void UParticleSystemComponent::ClearForcedLODLevel()
 	ForcedLODLevel = -1;
 }
 
+//각 Instance를 채워넣는다
 void UParticleSystemComponent::InitParticles()
 {
 	ResetParticles(true);
@@ -319,35 +352,37 @@ void UParticleSystemComponent::InitParticles()
 	{
 		return;
 	}
-
+	//ParticleSystem과 Emitter가 가지는 LODLevels의 갯수를 맞춘다
 	ParticleTemplate->NormalizeLODData();
 	LODDistances = ParticleTemplate->GetLODDistances();
+	const int32 MaxLODIndex = LODDistances.empty() ? 0 : static_cast<int32>(LODDistances.size()) - 1;
 	if (ForcedLODLevel >= 0)
 	{
-		const int32 MaxLODIndex = LODDistances.empty() ? 0 : static_cast<int32>(LODDistances.size()) - 1;
 		LODLevel = std::clamp(ForcedLODLevel, 0, MaxLODIndex);
 	}
 	else
 	{
-		const int32 MaxLODIndex = LODDistances.empty() ? 0 : static_cast<int32>(LODDistances.size()) - 1;
 		LODLevel = std::clamp(LODLevel, 0, MaxLODIndex);
 	}
-
+	
 	EmitterInstances.reserve(ParticleTemplate->Emitters.size());
-	for (UParticleEmitter* Emitter : ParticleTemplate->Emitters)
+	//Particle System(원본)과 같은 크기로 Isntance를 만든다.
+	for (int32 EmitterInstanceIdx = 0; EmitterInstanceIdx < static_cast<int32>(ParticleTemplate->Emitters.size()); ++EmitterInstanceIdx)
 	{
+		//Particle System안의 Emitter
+		UParticleEmitter* Emitter = ParticleTemplate->Emitters[EmitterInstanceIdx];
 		if (!Emitter)
 		{
 			EmitterInstances.push_back(nullptr);
 			continue;
 		}
 
-		Emitter->CalculateMaxActiveParticleCount();
-		FParticleEmitterInstance* Instance = CreateEmitterInstance(this, Emitter);
-		Instance->EmitterIndex = static_cast<int32>(EmitterInstances.size());
-		Instance->InitParameters(Emitter);
-		Instance->SetCurrentLODLevel(LODLevel);
-		Instance->RebuildTemplateModuleList();
+		Emitter->CalculateMaxActiveParticleCount(); //최대 몇개의 Particle가질지 계산
+		FParticleEmitterInstance* Instance = CreateEmitterInstance(this, Emitter); //TypeDataModule보고 알맞은 Emitter만든다
+		Instance->EmitterIndex = EmitterInstanceIdx; //Component의 몇번째 EmitterInstance인지 가르키는 Idx
+		Instance->InitParameters(Emitter); //Instance의 ParticleSize를 계산한다.
+		Instance->SetCurrentLODLevel(LODLevel); //Instance의 LODLevel설정한다
+//		Instance->RebuildTemplateModuleList(); //InitParameters에서 이미 한번하는데 왜 굳이?
 		EmitterInstances.push_back(Instance);
 	}
 
@@ -374,17 +409,39 @@ void UParticleSystemComponent::ResetParticles(bool bEmptyInstances)
 	}
 }
 
-void UParticleSystemComponent::ClearParticleEvents()
-{
-	CollisionEvents.clear();
-}
-
-void UParticleSystemComponent::AddCollisionEvent(const FParticleEventCollideData& EventData)
-{
-	CollisionEvents.push_back(EventData);
-}
-
 void UParticleSystemComponent::InitializeSystem()
 {
 	InitParticles();
+}
+
+void UParticleSystemComponent::QueueParticleCollisionEvent(const FParticleEventCollideData& EventData)
+{
+	if (MaxParticleCollisionEventsPerFrame >= 0
+		&& static_cast<int32>(ParticleEventCollideDatas.size()) >= MaxParticleCollisionEventsPerFrame)
+	{
+		return;
+	}
+
+	ParticleEventCollideDatas.push_back(EventData);
+}
+
+void UParticleSystemComponent::DispatchParticleCollisionEvents()
+{
+	if (bDispatchingParticleCollisionEvents || ParticleEventCollideDatas.empty() || !OnParticleCollide.IsBound())
+	{
+		return;
+	}
+
+	bDispatchingParticleCollisionEvents = true;
+	const TArray<FParticleEventCollideData> EventsToDispatch = ParticleEventCollideDatas;
+	for (const FParticleEventCollideData& EventData : EventsToDispatch)
+	{
+		OnParticleCollide.Broadcast(this, EventData);
+	}
+	bDispatchingParticleCollisionEvents = false;
+}
+
+void UParticleSystemComponent::ClearParticleCollisionEvents()
+{
+	ParticleEventCollideDatas.clear();
 }

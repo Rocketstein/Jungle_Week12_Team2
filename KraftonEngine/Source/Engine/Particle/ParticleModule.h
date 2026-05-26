@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Core/EngineTypes.h"
+#include "Core/CollisionTypes.h"
 #include "Object/Object.h"
 #include "Particle/ParticleEmitter.h"
 #include "ParticleModule.generated.h"
@@ -42,6 +43,22 @@ enum EParticleSortMode : int
 	PSORTMODE_Age_OldestFirst,
 	PSORTMODE_Age_NewestFirst,
 	PSORTMODE_MAX
+};
+
+UENUM()
+enum EBeamTangentMethod : int
+{
+	PEBTANM_Direct,
+	PEBTANM_UserSet,
+	PEBTANM_MAX
+};
+
+UENUM()
+enum class EParticleCollisionResponseMode : uint8
+{
+	Bounce = 0,
+	Stop = 1,
+	Kill = 2,
 };
 
 UCLASS()
@@ -268,6 +285,39 @@ public:
 	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
 };
 
+struct FParticleCollisionPayload
+{
+	int32 CollisionCount = 0;
+};
+
+UCLASS()
+class UParticleModuleCollision : public UParticleModule
+{
+public:
+	GENERATED_BODY(UParticleModuleCollision)
+
+	UParticleModuleCollision();
+
+	uint32 RequiredBytes(UParticleModuleTypeDataBase* TypeData) override;
+	void FinalUpdate(const FUpdateContext& Context) override;
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
+
+	UPROPERTY(Edit, Category="Collision", DisplayName="Trace Channel", Type=Enum, Enum=StaticEnum_ECollisionChannel())
+	ECollisionChannel TraceChannel = ECollisionChannel::WorldStatic;
+
+	UPROPERTY(Edit, Category="Collision", DisplayName="Response Mode", Type=Enum, Enum=StaticEnum_EParticleCollisionResponseMode())
+	EParticleCollisionResponseMode ResponseMode = EParticleCollisionResponseMode::Bounce;
+
+	UPROPERTY(Edit, Category="Collision", DisplayName="Damping Factor", Min=0.0f, Max=1.0f, Speed=0.01f)
+	float DampingFactor = 0.5f;
+
+	UPROPERTY(Edit, Category="Collision", DisplayName="Collision Offset", Min=0.0f, Max=100.0f, Speed=0.1f)
+	float CollisionOffset = 0.1f;
+
+	UPROPERTY(Edit, Category="Collision", DisplayName="Max Collisions", Min=0, Max=128, Speed=1.0f)
+	int32 MaxCollisions = 1;
+};
+
 UCLASS()
 class UParticleModuleColorBase : public UParticleModule
 {
@@ -339,6 +389,81 @@ public:
 };
 
 UCLASS()
+class UParticleModuleBeamBase : public UParticleModule
+{
+public:
+	GENERATED_BODY(UParticleModuleBeamBase)
+
+	EModuleType GetModuleType() const override { return EPMT_Beam; }
+};
+
+UCLASS()
+class UParticleModuleBeamSource : public UParticleModuleBeamBase
+{
+public:
+	GENERATED_BODY(UParticleModuleBeamSource)
+
+	UPROPERTY(Edit, Category="Beam Source", DisplayName="Source Point")
+	FVector SourcePoint = FVector::ZeroVector;
+
+	UPROPERTY(Edit, Category="Beam Source", DisplayName="Source Tangent Method")
+	EBeamTangentMethod SourceTangentMethod = PEBTANM_Direct;
+
+	UPROPERTY(Edit, Category="Beam Source", DisplayName="Source Tangent")
+	FVector SourceTangent = FVector(0.0f, 0.0f, 40.0f);
+
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
+};
+
+UCLASS()
+class UParticleModuleBeamTarget : public UParticleModuleBeamBase
+{
+public:
+	GENERATED_BODY(UParticleModuleBeamTarget)
+
+	UPROPERTY(Edit, Category="Beam Target", DisplayName="Target Point")
+	FVector TargetPoint = FVector(100.0f, 0.0f, 0.0f);
+
+	UPROPERTY(Edit, Category="Beam Target", DisplayName="Target Tangent Method")
+	EBeamTangentMethod TargetTangentMethod = PEBTANM_Direct;
+
+	UPROPERTY(Edit, Category="Beam Target", DisplayName="Target Tangent")
+	FVector TargetTangent = FVector(0.0f, 0.0f, -40.0f);
+
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
+};
+
+UCLASS()
+class UParticleModuleBeamNoise : public UParticleModuleBeamBase
+{
+public:
+	GENERATED_BODY(UParticleModuleBeamNoise)
+
+	UPROPERTY(Edit, Category="Beam Noise", Min=0.0f, Max=1000.0f, Speed=0.25f)
+	float NoiseAmplitude = 0.0f;
+
+	UPROPERTY(Edit, Category="Beam Noise", Min=0.0f, Max=128.0f, Speed=0.1f)
+	float NoiseFrequency = 3.0f;
+
+	UPROPERTY(Edit, Category="Beam Noise", Min=0.0f, Max=100.0f, Speed=0.05f)
+	float NoiseSpeed = 0.0f;
+
+	UPROPERTY(Edit, Category="Beam Noise", Min=0.0f, Max=10000.0f, Speed=1.0f)
+	float NoiseSeed = 0.0f;
+
+	UPROPERTY(Edit, Category="Beam Noise", DisplayName="Low Freq Enabled")
+	bool bLowFreqEnabled = false;
+
+	UPROPERTY(Edit, Category="Beam Noise", DisplayName="Noise Range Min")
+	FVector NoiseRangeMin = FVector(0.0f, -30.0f, -30.0f);
+
+	UPROPERTY(Edit, Category="Beam Noise", DisplayName="Noise Range Max")
+	FVector NoiseRangeMax = FVector(0.0f, 30.0f, 30.0f);
+
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
+};
+
+UCLASS()
 class UParticleModuleTypeDataBase : public UParticleModule
 {
 public:
@@ -350,6 +475,7 @@ public:
 	virtual bool SupportsSpecificScreenAlignmentFlags() const { return false; }
 	virtual bool IsAMeshEmitter() const { return false; }
 	virtual bool IsABeamEmitter() const { return false; }
+	virtual bool IsARibbonEmitter() const { return false; }
 };
 
 UCLASS()
@@ -362,4 +488,11 @@ public:
 
 	bool IsAMeshEmitter() const override { return true; }
 	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
+};
+
+
+struct FRibbonParticlePayload
+{
+	uint32 SpawnSequence = 0;
+	int32 TrailIndex = 0; //
 };

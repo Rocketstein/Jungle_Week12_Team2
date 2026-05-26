@@ -5,12 +5,12 @@
 
 Texture2D DiffuseTexture : register(t0);
 
-PS_Input_Particle VS(VS_Input_BeamParticle Input)
+PS_Input_Particle VS(VS_Input_RibbonParticle Input)
 {
     PS_Input_Particle Out;
     Out.position = mul(mul(float4(Input.position, 1.0f), View), Projection);
     Out.texcoord = Input.uv;
-    Out.color    = Input.color;
+    Out.color = Input.color;
     return Out;
 }
 

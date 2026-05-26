@@ -486,6 +486,9 @@
     <FxCompile Include="Shaders\Particle\ParticleBeam.hlsl">
       <Filter>Shaders\Particle</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\Particle\ParticleRibbon.hlsl">
+      <Filter>Shaders\Particle</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Editor\EditorEngine.cpp">
@@ -4135,6 +4138,9 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleBeamInstances.h">
       <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\TypeData\ParticleModuleTypeDataRibbon.h">
+      <Filter>Source\Engine\Particle\TypeData</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

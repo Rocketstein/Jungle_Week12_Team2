@@ -118,6 +118,7 @@ bool UParticleSystem::SetLODDistance(int32 LODIndex, float Distance)
 	return true;
 }
 
+//ParticleSystem과 Emitter가 가지는 LODLevels의 갯수를 맞춘다
 void UParticleSystem::NormalizeLODData()
 {
 	if (LODDistances.empty())

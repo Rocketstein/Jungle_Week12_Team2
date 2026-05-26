@@ -81,10 +81,11 @@ struct FBeamParticleInstanceVertex
 	FVector4 Color;
 };
 
-// Consider reusing FBeamParticleInstanceVertex
 struct FRibbonParticleInstanceVertex
 {
-	FVector Position;
+	FVector  Position;
+	FVector2 UV;
+	FVector4 Color;
 };
 
 template<typename VertexType>

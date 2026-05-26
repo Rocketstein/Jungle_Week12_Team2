@@ -10,6 +10,7 @@ void UParticleLODLevel::UpdateModuleLists()
 	SpawningModules.clear();
 	SpawnModules.clear();
 	UpdateModules.clear();
+	FinalUpdateModules.clear();
 	TypeDataModule = nullptr;
 
 	if (SpawnModule && SpawnModule->bEnabled)
@@ -42,6 +43,11 @@ void UParticleLODLevel::UpdateModuleLists()
 		if (Module->IsUpdateModule())
 		{
 			UpdateModules.push_back(Module);
+		}
+
+		if (Module->bFinalUpdateModule)
+		{
+			FinalUpdateModules.push_back(Module);
 		}
 	}
 }

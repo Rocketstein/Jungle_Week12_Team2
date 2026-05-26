@@ -22,6 +22,7 @@
 #include "Component/DecalComponent.h"
 #include "Component/HeightFogComponent.h"
 #include "Component/ParticleSystemComponent.h"
+#include "Asset/AssetPackage.h"
 #include "Core/Property/FArrayProperty.h"
 #include "Core/Property/FEnumProperty.h"
 #include "Core/Property/FObjectPropertyBase/FSoftObjectProperty.h"
@@ -40,6 +41,8 @@
 #include "Mesh/StaticMesh.h"
 #include "Mesh/SkeletalMesh.h"
 #include "Mesh/SkeletonAsset.h"
+#include "Particle/ParticleSystem.h"
+#include "Particle/ParticleSystemManager.h"
 #include "Platform/Paths.h"
 #include "SimpleJSON/json.hpp"
 
@@ -352,6 +355,48 @@ static FString GetStemFromPath(const FString& Path)
 	size_t SlashPos = Path.find_last_of("/\\");
 	FString FileName = (SlashPos == FString::npos) ? Path : Path.substr(SlashPos + 1);
 	return RemoveExtension(FileName);
+}
+
+struct FParticleSystemAssetListItem
+{
+	FString FullPath;
+	FString DisplayName;
+};
+
+static TArray<FParticleSystemAssetListItem> ScanParticleSystemAssets()
+{
+	TArray<FParticleSystemAssetListItem> Items;
+	const std::filesystem::path AssetRoot(FPaths::AssetDir());
+	if (!std::filesystem::exists(AssetRoot))
+	{
+		return Items;
+	}
+
+	for (const std::filesystem::directory_entry& Entry : std::filesystem::recursive_directory_iterator(AssetRoot))
+	{
+		if (!Entry.is_regular_file() || Entry.path().extension() != L".uasset")
+		{
+			continue;
+		}
+
+		const FString PackagePath = FPaths::MakeProjectRelative(FPaths::ToUtf8(Entry.path().generic_wstring()));
+		EAssetPackageType PackageType = EAssetPackageType::Unknown;
+		if (!FAssetPackage::GetPackageType(PackagePath, PackageType) || PackageType != EAssetPackageType::ParticleSystem)
+		{
+			continue;
+		}
+
+		FParticleSystemAssetListItem Item;
+		Item.FullPath = PackagePath;
+		Item.DisplayName = GetStemFromPath(PackagePath);
+		Items.push_back(Item);
+	}
+
+	std::sort(Items.begin(), Items.end(), [](const FParticleSystemAssetListItem& A, const FParticleSystemAssetListItem& B)
+	{
+		return A.DisplayName < B.DisplayName;
+	});
+	return Items;
 }
 
 FString FEditorPropertyWidget::OpenStaticMeshFileDialog()
@@ -1798,6 +1843,75 @@ bool FEditorPropertyWidget::RenderPropertyWidget(
 							ActualSkeletonPath.empty() ? "missing asset or Skeleton" : ActualSkeletonPath.c_str());
 					}
 				}
+			}
+		}
+		else if (SoftObjectProp.PropertyClass == UParticleSystem::StaticClass())
+		{
+			auto* Val = static_cast<TSoftObjectPtr<UParticleSystem>*>(ValuePtr);
+			FString CurrentPath = FPaths::MakeProjectRelative(Val->GetPath().ToString());
+			FString Preview = CurrentPath.empty() ? "None" : GetStemFromPath(CurrentPath);
+			if (CurrentPath == "None") Preview = "None";
+
+			ImGui::SetNextItemWidth(-1);
+			if (ImGui::BeginCombo("##ParticleSystem", Preview.c_str()))
+			{
+				const bool bSelectedNone = CurrentPath.empty() || CurrentPath == "None";
+				if (ImGui::Selectable("None", bSelectedNone))
+				{
+					Val->Reset();
+					CurrentPath = "None";
+					bChanged = true;
+				}
+				if (bSelectedNone)
+				{
+					ImGui::SetItemDefaultFocus();
+				}
+
+				const TArray<FParticleSystemAssetListItem> ParticleSystems = ScanParticleSystemAssets();
+				for (const FParticleSystemAssetListItem& Item : ParticleSystems)
+				{
+					const bool bSelected = CurrentPath == Item.FullPath;
+					if (ImGui::Selectable(Item.DisplayName.c_str(), bSelected))
+					{
+						if (UParticleSystem* ParticleSystem = FParticleSystemManager::Get().Load(Item.FullPath))
+						{
+							*Val = ParticleSystem;
+						}
+						else
+						{
+							Val->SetPath(Item.FullPath);
+						}
+						CurrentPath = Item.FullPath;
+						bChanged = true;
+					}
+					if (bSelected)
+					{
+						ImGui::SetItemDefaultFocus();
+					}
+				}
+				ImGui::EndCombo();
+			}
+
+			if (ImGui::BeginDragDropTarget())
+			{
+				if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("ParticleSystemContentItem"))
+				{
+					const FContentItem* Item = static_cast<const FContentItem*>(Payload->Data);
+					if (Item)
+					{
+						const FString DroppedPath = FPaths::MakeProjectRelative(FPaths::ToUtf8(Item->Path.generic_wstring()));
+						if (UParticleSystem* ParticleSystem = FParticleSystemManager::Get().Load(DroppedPath))
+						{
+							*Val = ParticleSystem;
+						}
+						else
+						{
+							Val->SetPath(DroppedPath);
+						}
+						bChanged = true;
+					}
+				}
+				ImGui::EndDragDropTarget();
 			}
 		}
 		break;

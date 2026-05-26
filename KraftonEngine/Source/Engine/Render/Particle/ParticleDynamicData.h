@@ -84,43 +84,97 @@ struct FDynamicMeshEmitterReplayData : public FDynamicRenderableEmitterReplayDat
 	}
 };
 
+// Per-beam state inside a beam emitter. Cascade-style: every active beam carries
+// its own physical form; the packer tessellates each into the shared per-proxy VB/IB.
+struct FBeamInstanceData
+{
+	FVector Source = FVector::ZeroVector;
+	FVector Target = FVector::ZeroVector;
+	FVector SourceTangent = FVector::ZeroVector;
+	FVector TargetTangent = FVector::ZeroVector;
+	bool bUseTangents = false;
+	FVector Color = FVector::OneVector;
+	float Alpha = 1.0f;
+	float Width = 8.0f;
+	EBeamTaperMethod TaperMethod = PEBTM_None;
+	float TaperFactor = 1.0f;
+	float TaperScale = 1.0f;
+	float BeamProgress = 1.0f;				// 0 = at source, 1 = full target
+};
+
 struct FDynamicBeamEmitterReplayData : public FDynamicRenderableEmitterReplayDataBase
 {
-	FVector Source = FVector::ZeroVector;	// World-space start point of the beam
-	FVector Target = FVector::ZeroVector;	// World-space end point of the beam
-	FVector Color = FVector::OneVector;		// Base RGB tint applied to the beam
-	float Alpha = 1.0f;						// Opacity multiplier for the beam
-	float Width = 8.0f;						// Beam thickness in world units
+	// Per-beam state. PackEmitter iterates this and appends each beam's
+	// tessellation into the proxy's shared VB/IB slice.
+	TArray<FBeamInstanceData> Beams;
 
-	int32 InterpolationPoints = 8;			// Number of subdivisions along the beam for curve interpolation
-	int32 Sheets = 1;						// Number of crossed quad sheets used to render the beam
-	int32 MaxBeamCount = 1;					// Max beam instances requested by type data
-	float Speed = 0.0f;						// Beam interpolation speed requested by type data
+	// Per-emitter (shared by every beam in Beams).
+	int32 InterpolationPoints = 8;			// Subdivisions along the beam
+	int32 Sheets = 1;						// Crossed quad sheets per beam
+	int32 MaxBeamCount = 1;					// Capacity hint from type data
 	int32 UpVectorStepSize = 0;				// UE-compatible up-vector step hint
+	int32 TextureTile = 1;					// Tile count along the beam length
+	float TextureTileDistance = 0.0f;		// Per-tile distance (overrides TextureTile when non-zero)
+	float NoiseAmplitude = 0.0f;			// World-space offset applied along generated beam noise axes
+	float NoiseFrequency = 0.0f;			// Number of noise waves along the beam
+	float NoisePhase = 0.0f;				// Time-driven phase offset for animated noise
+	float NoiseSeed = 0.0f;				// Stable offset so beams can vary without changing their endpoints
+	FVector NoiseRangeMin = FVector::ZeroVector;	// Low-frequency uniform noise range minimum
+	FVector NoiseRangeMax = FVector::ZeroVector;	// Low-frequency uniform noise range maximum
 
-	int32 TextureTile = 1;					// Number of times the texture tiles along the beam length
-	float TextureTileDistance = 0.0f;		// Distance per texture tile (overrides TextureTile when non-zero)
+	bool bRenderGeometry = true;
+	bool bRenderDirectLine = false;
+	bool bRenderLines = false;
+	bool bRenderTessellation = false;
+	FName BranchParentName;
+	TArray<FBeamTargetData> TargetData;
 
-	EBeamTaperMethod TaperMethod = PEBTM_None;	// Width taper mode along the beam (none/start/end/full)
-	float TaperFactor = 1.0f;				// Strength of the taper effect
-	float TaperScale = 1.0f;				// Additional scale applied on top of the taper
-
-	bool bRenderGeometry = true;			// Whether to render the solid beam geometry
-	bool bRenderDirectLine = false;			// Whether to render a debug straight line from Source to Target
-	bool bRenderLines = false;				// Whether to render debug lines along the interpolated path
-	bool bRenderTessellation = false;		// Whether to render debug tessellation wireframe
-	FName BranchParentName;					// Parent emitter requested by branch beams
-	TArray<FBeamTargetData> TargetData;		// Imported branch target metadata
+	// Cascade accounting: LogicalBeamCount * Sheets. Mirrors Beams.size() *
+	// Sheets at steady state but the producer is allowed to set it before the
+	// per-beam list is populated.
+	int32 LogicalBeamCount = 1;
 
 	FDynamicBeamEmitterReplayData()
 	{
 		eEmitterType = DET_Beam2;
+		SortMode = PSORTMODE_None;
 	}
+};
+
+struct FRibbonPointData
+{
+	FVector Position;
+	FLinearColor Color;
+	float Width = 1.0f;
+	float DistanceFromStart = 0.0f;
+	uint32 SpawnSequence = 0;
+};
+
+struct FRibbonTrailData
+{
+	int32 FirstPoint = 0;
+	int32 PointCount = 0;
 };
 
 struct FDynamicRibbonEmitterReplayData : public FDynamicRenderableEmitterReplayDataBase
 {
-	
+	TArray<FRibbonPointData> Points;
+	TArray<FRibbonTrailData> Trails;
+
+	int32 SheetsPerTrail = 1;
+	int32 MaxTessellationBetweenParticles = 1;
+	float TilingDistance = 0.0f;
+	float DistanceTessellationStepSize = 0.0f;
+	bool bRenderGeometry = true;
+	bool bRenderSpawnPoints = false;
+	bool bRenderTangents = false;
+	bool bRenderTessellation = false;
+
+	FDynamicRibbonEmitterReplayData()
+	{
+		eEmitterType = DET_Ribbon;
+		SortMode = PSORTMODE_None;
+	}
 };
 
 

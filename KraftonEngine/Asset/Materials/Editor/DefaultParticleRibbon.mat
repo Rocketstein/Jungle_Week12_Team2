@@ -5,10 +5,10 @@
   "Parameters" : {
 
   },
-  "PathFileName" : "Asset/Materials/Editor/DefaultParticleBeam.mat",
+  "PathFileName" : "Asset/Materials/Editor/DefaultParticleRibbon.mat",
   "RasterizerState" : "SolidNoCull",
   "RenderPass" : "AlphaBlend",
-  "ShaderPath" : "Shaders/Particle/ParticleBeam.hlsl",
+  "ShaderPath" : "Shaders/Particle/ParticleRibbon.hlsl",
   "Textures" : {
     "DiffuseTexture" : "Asset/Particle/Textures/beacon_beam.png"
   }
