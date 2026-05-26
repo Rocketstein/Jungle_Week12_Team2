@@ -7,6 +7,7 @@
 #include "Particle/ParticleBeamInstances.h"
 #include "Render/Particle/ParticleDynamicData.h"
 #include "Render/Proxy/ParticleSystemSceneProxy.h"
+#include "Particle/ParticleSystemManager.h"
 
 #include <algorithm>
 #include <cstring>
@@ -183,6 +184,18 @@ UParticleSystemComponent::~UParticleSystemComponent()
 	ResetParticles(true);
 }
 
+void UParticleSystemComponent::BeginPlay()
+{
+	UFXSystemComponent::BeginPlay();
+	InitializeSystem();
+}
+
+void UParticleSystemComponent::PostDuplicate()
+{
+	UFXSystemComponent::PostDuplicate();
+	ResolveTemplate();
+}
+
 void UParticleSystemComponent::PostEditProperty(const char* PropertyName)
 {
 	UPrimitiveComponent::PostEditProperty(PropertyName);
@@ -203,6 +216,7 @@ void UParticleSystemComponent::PostEditProperty(const char* PropertyName)
 	else if (std::strcmp(PropertyName, "Template") == 0)
 	{
 		ResetParticles(true);
+		ResolveTemplate();
 		InitializeSystem();
 	}
 }
@@ -216,6 +230,27 @@ void UParticleSystemComponent::EndPlay()
 UFXSystemAsset* UParticleSystemComponent::GetFXSystemAsset() const
 {
 	return Template.Get();
+}
+
+UParticleSystem* UParticleSystemComponent::ResolveTemplate()
+{
+	if (UParticleSystem* ParticleTemplate = Template.Get())
+	{
+		return ParticleTemplate;
+	}
+
+	const FString TemplatePath = Template.GetPath().ToString();
+	if (TemplatePath.empty() || TemplatePath == "None")
+	{
+		return nullptr;
+	}
+
+	UParticleSystem* LoadedTemplate = FParticleSystemManager::Get().Load(TemplatePath);
+	if (LoadedTemplate)
+	{
+		Template = LoadedTemplate;
+	}
+	return LoadedTemplate;
 }
 
 void UParticleSystemComponent::SetTemplate(UParticleSystem* NewTemplate)
@@ -247,7 +282,7 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	ClearParticleCollisionEvents();
 
-	UParticleSystem* ParticleTemplate = Template.Get();
+	UParticleSystem* ParticleTemplate = ResolveTemplate();
 	if (!ParticleTemplate)
 	{
 		return;
@@ -368,7 +403,7 @@ void UParticleSystemComponent::InitParticles()
 {
 	ResetParticles(true);
 
-	UParticleSystem* ParticleSystemTemplate = Template.Get();
+	UParticleSystem* ParticleSystemTemplate = ResolveTemplate();
 	if (!ParticleSystemTemplate)
 	{
 		return;

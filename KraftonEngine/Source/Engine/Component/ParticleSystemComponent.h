@@ -36,6 +36,8 @@ public:
 	~UParticleSystemComponent() override;
 
 	//Important Logics
+	void BeginPlay() override;
+	void PostDuplicate() override;
 	virtual void InitParticles();
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 	
@@ -63,6 +65,7 @@ public:
 	//Getter/Setter
 	UFXSystemAsset* GetFXSystemAsset() const override;
 	void SetTemplate(UParticleSystem* NewTemplate);
+	UParticleSystem* ResolveTemplate();
 	
 	
 	UPROPERTY(Edit, Category="Particles", DisplayName="Template", Type=SoftObject, Class=UParticleSystem)
