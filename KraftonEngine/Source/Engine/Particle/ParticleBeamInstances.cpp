@@ -93,7 +93,7 @@ FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
 	const int32 SheetCount = std::max(1, BeamModule->Sheets);
 	const int32 MaxBeamCount = std::max(1, BeamModule->MaxBeamCount);
 	const int32 LogicalBeamCount = BeamModule->bAlwaysOn
-		? std::clamp(std::max(1, ActiveParticles), 1, MaxBeamCount)
+		? MaxBeamCount
 		: std::clamp(ActiveParticles, 0, MaxBeamCount);
 	const float FullBeamLength = (ComponentToWorld.TransformPositionWithW(LocalTarget)
 		- ComponentToWorld.TransformPositionWithW(LocalSource)).Length();
