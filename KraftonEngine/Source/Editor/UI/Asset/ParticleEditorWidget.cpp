@@ -16,6 +16,9 @@
 #include "Particle/ParticleSpriteEmitter.h"
 #include "Particle/ParticleSystem.h"
 #include "Particle/ParticleSystemManager.h"
+#include "Particle/BeamModule/ParticleModuleBeamNoise.h"
+#include "Particle/BeamModule/ParticleModuleBeamSource.h"
+#include "Particle/BeamModule/ParticleModuleBeamTarget.h"
 #include "Particle/TypeData/ParticleModuleTypeDataBeam2.h"
 #include "Particle/TypeData/ParticleModuleTypeDataRibbon.h"
 #include "Platform/Paths.h"
@@ -82,10 +85,13 @@ namespace
 		"Partial"
 	};
 
-	const char* GBeamTangentMethodNames[] =
+	const char* GBeamSourceTargetMethodNames[] =
 	{
-		"Direct",
-		"User Set"
+		"Default",
+		"User Set",
+		"Emitter",
+		"Particle",
+		"Actor"
 	};
 
 	const char* GCollisionChannelNames[] =
@@ -651,8 +657,8 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 	{
 		UParticleModuleBeamSource* Source = GUObjectArray.CreateObject<UParticleModuleBeamSource>(Outer);
 		Source->bEnabled = true;
-		Source->SourcePoint = FVector(-200.0f, 0.0f, 0.0f);
-		Source->SourceTangentMethod = PEBTANM_UserSet;
+		Source->SourceMethod = PEB2STM_UserSet;
+		Source->Source = FVector(-200.0f, 0.0f, 0.0f);
 		Source->SourceTangent = FVector(0.0f, 0.0f, 40.0f);
 		return Source;
 	}
@@ -660,8 +666,8 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 	{
 		UParticleModuleBeamTarget* Target = GUObjectArray.CreateObject<UParticleModuleBeamTarget>(Outer);
 		Target->bEnabled = true;
-		Target->TargetPoint = FVector(200.0f, 0.0f, 0.0f);
-		Target->TargetTangentMethod = PEBTANM_UserSet;
+		Target->TargetMethod = PEB2STM_UserSet;
+		Target->Target = FVector(200.0f, 0.0f, 0.0f);
 		Target->TargetTangent = FVector(0.0f, 0.0f, -40.0f);
 		return Target;
 	}
@@ -669,13 +675,12 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 	{
 		UParticleModuleBeamNoise* Noise = GUObjectArray.CreateObject<UParticleModuleBeamNoise>(Outer);
 		Noise->bEnabled = true;
-		Noise->NoiseAmplitude = 0.0f;
-		Noise->NoiseFrequency = 10.0f;
-		Noise->NoiseSpeed = 0.0f;
-		Noise->NoiseSeed = 0.0f;
-		Noise->bLowFreqEnabled = true;
-		Noise->NoiseRangeMin = FVector(0.0f, -30.0f, -30.0f);
-		Noise->NoiseRangeMax = FVector(0.0f, 30.0f, 30.0f);
+		Noise->bLowFreq_Enabled = true;
+		Noise->Frequency = 10;
+		Noise->FrequencyDistance = 0.0f;
+		Noise->NoiseRange = FVector(0.0f, 30.0f, 30.0f);
+		Noise->NoiseLockTime = 0.0f;
+		Noise->bTargetNoise = false;
 		return Noise;
 	}
 	case EAddableModuleType::Collision:
@@ -1035,7 +1040,7 @@ FBoundingBox FParticleEditorWidget::CalculatePreviewBounds() const
 			FVector Target = Beam->TargetPoint;
 			if (UParticleModuleBeamSource* SourceModule = FindEnabledBeamModule<UParticleModuleBeamSource>(LOD))
 			{
-				Source = SourceModule->SourcePoint;
+				Source = SourceModule->Source;
 			}
 			if (Beam->BeamMethod == PEB2M_Distance)
 			{
@@ -1043,7 +1048,7 @@ FBoundingBox FParticleEditorWidget::CalculatePreviewBounds() const
 			}
 			if (UParticleModuleBeamTarget* TargetModule = FindEnabledBeamModule<UParticleModuleBeamTarget>(LOD))
 			{
-				Target = TargetModule->TargetPoint;
+				Target = TargetModule->Target;
 			}
 
 			const float Padding = (std::max)(Beam->Width, 4.0f);
@@ -2356,17 +2361,38 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 	}
 	else if (UParticleModuleBeamSource* Source = Cast<UParticleModuleBeamSource>(Module))
 	{
-		FVector SourcePoint = Source->SourcePoint;
-		if (ImGui::DragFloat3("Source Point", &SourcePoint.X, 0.25f))
+		int SourceMethod = static_cast<int>(Source->SourceMethod);
+		if (ImGui::Combo("Source Method", &SourceMethod, GBeamSourceTargetMethodNames, IM_ARRAYSIZE(GBeamSourceTargetMethodNames)))
 		{
-			Source->SourcePoint = SourcePoint;
+			Source->SourceMethod = static_cast<EBeam2SourceTargetMethod>(std::clamp(SourceMethod, 0, static_cast<int>(PEB2STM_Actor)));
 			bChanged = true;
 		}
 
-		int SourceTangentMethod = static_cast<int>(Source->SourceTangentMethod);
-		if (ImGui::Combo("Source Tangent Method", &SourceTangentMethod, GBeamTangentMethodNames, IM_ARRAYSIZE(GBeamTangentMethodNames)))
+		bool bSourceAbsolute = Source->bSourceAbsolute;
+		if (ImGui::Checkbox("Source Absolute", &bSourceAbsolute))
 		{
-			Source->SourceTangentMethod = static_cast<EBeamTangentMethod>(std::clamp(SourceTangentMethod, 0, static_cast<int>(PEBTANM_MAX) - 1));
+			Source->bSourceAbsolute = bSourceAbsolute;
+			bChanged = true;
+		}
+
+		bool bLockSource = Source->bLockSource;
+		if (ImGui::Checkbox("Lock Source", &bLockSource))
+		{
+			Source->bLockSource = bLockSource;
+			bChanged = true;
+		}
+
+		FVector SourcePoint = Source->Source;
+		if (ImGui::DragFloat3("Source", &SourcePoint.X, 0.25f))
+		{
+			Source->Source = SourcePoint;
+			bChanged = true;
+		}
+
+		bool bLockSourceTangent = Source->bLockSourceTangent;
+		if (ImGui::Checkbox("Lock Source Tangent", &bLockSourceTangent))
+		{
+			Source->bLockSourceTangent = bLockSourceTangent;
 			bChanged = true;
 		}
 
@@ -2376,20 +2402,48 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 			Source->SourceTangent = SourceTangent;
 			bChanged = true;
 		}
+
+		float SourceStrength = Source->SourceStrength;
+		if (ImGui::DragFloat("Source Strength", &SourceStrength, 0.05f, 0.0f, 1000.0f))
+		{
+			Source->SourceStrength = (std::max)(0.0f, SourceStrength);
+			bChanged = true;
+		}
 	}
 	else if (UParticleModuleBeamTarget* Target = Cast<UParticleModuleBeamTarget>(Module))
 	{
-		FVector TargetPoint = Target->TargetPoint;
-		if (ImGui::DragFloat3("Target Point", &TargetPoint.X, 0.25f))
+		int TargetMethod = static_cast<int>(Target->TargetMethod);
+		if (ImGui::Combo("Target Method", &TargetMethod, GBeamSourceTargetMethodNames, IM_ARRAYSIZE(GBeamSourceTargetMethodNames)))
 		{
-			Target->TargetPoint = TargetPoint;
+			Target->TargetMethod = static_cast<EBeam2SourceTargetMethod>(std::clamp(TargetMethod, 0, static_cast<int>(PEB2STM_Actor)));
 			bChanged = true;
 		}
 
-		int TargetTangentMethod = static_cast<int>(Target->TargetTangentMethod);
-		if (ImGui::Combo("Target Tangent Method", &TargetTangentMethod, GBeamTangentMethodNames, IM_ARRAYSIZE(GBeamTangentMethodNames)))
+		bool bTargetAbsolute = Target->bTargetAbsolute;
+		if (ImGui::Checkbox("Target Absolute", &bTargetAbsolute))
 		{
-			Target->TargetTangentMethod = static_cast<EBeamTangentMethod>(std::clamp(TargetTangentMethod, 0, static_cast<int>(PEBTANM_MAX) - 1));
+			Target->bTargetAbsolute = bTargetAbsolute;
+			bChanged = true;
+		}
+
+		bool bLockTarget = Target->bLockTarget;
+		if (ImGui::Checkbox("Lock Target", &bLockTarget))
+		{
+			Target->bLockTarget = bLockTarget;
+			bChanged = true;
+		}
+
+		FVector TargetPoint = Target->Target;
+		if (ImGui::DragFloat3("Target", &TargetPoint.X, 0.25f))
+		{
+			Target->Target = TargetPoint;
+			bChanged = true;
+		}
+
+		bool bLockTargetTangent = Target->bLockTargetTangent;
+		if (ImGui::Checkbox("Lock Target Tangent", &bLockTargetTangent))
+		{
+			Target->bLockTargetTangent = bLockTargetTangent;
 			bChanged = true;
 		}
 
@@ -2399,55 +2453,55 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 			Target->TargetTangent = TargetTangent;
 			bChanged = true;
 		}
+
+		float TargetStrength = Target->TargetStrength;
+		if (ImGui::DragFloat("Target Strength", &TargetStrength, 0.05f, 0.0f, 1000.0f))
+		{
+			Target->TargetStrength = (std::max)(0.0f, TargetStrength);
+			bChanged = true;
+		}
 	}
 	else if (UParticleModuleBeamNoise* Noise = Cast<UParticleModuleBeamNoise>(Module))
 	{
-		float NoiseAmplitude = Noise->NoiseAmplitude;
-		if (ImGui::DragFloat("Amplitude", &NoiseAmplitude, 0.25f, 0.0f, 1000.0f))
-		{
-			Noise->NoiseAmplitude = (std::max)(0.0f, NoiseAmplitude);
-			bChanged = true;
-		}
-
-		float NoiseFrequency = Noise->NoiseFrequency;
-		if (ImGui::DragFloat("Frequency", &NoiseFrequency, 0.05f, 0.0f, 128.0f))
-		{
-			Noise->NoiseFrequency = (std::max)(0.0f, NoiseFrequency);
-			bChanged = true;
-		}
-
-		float NoiseSpeed = Noise->NoiseSpeed;
-		if (ImGui::DragFloat("Speed", &NoiseSpeed, 0.05f, 0.0f, 100.0f))
-		{
-			Noise->NoiseSpeed = (std::max)(0.0f, NoiseSpeed);
-			bChanged = true;
-		}
-
-		float NoiseSeed = Noise->NoiseSeed;
-		if (ImGui::DragFloat("Seed", &NoiseSeed, 1.0f, 0.0f, 10000.0f))
-		{
-			Noise->NoiseSeed = NoiseSeed;
-			bChanged = true;
-		}
-
-		bool bLowFreqEnabled = Noise->bLowFreqEnabled;
+		bool bLowFreqEnabled = Noise->bLowFreq_Enabled;
 		if (ImGui::Checkbox("Low Freq Enabled", &bLowFreqEnabled))
 		{
-			Noise->bLowFreqEnabled = bLowFreqEnabled;
+			Noise->bLowFreq_Enabled = bLowFreqEnabled;
 			bChanged = true;
 		}
 
-		FVector NoiseRangeMin = Noise->NoiseRangeMin;
-		if (ImGui::DragFloat3("Noise Range Min", &NoiseRangeMin.X, 0.25f))
+		int Frequency = Noise->Frequency;
+		if (ImGui::SliderInt("Frequency", &Frequency, 0, 64))
 		{
-			Noise->NoiseRangeMin = NoiseRangeMin;
+			Noise->Frequency = std::clamp(Frequency, 0, 64);
 			bChanged = true;
 		}
 
-		FVector NoiseRangeMax = Noise->NoiseRangeMax;
-		if (ImGui::DragFloat3("Noise Range Max", &NoiseRangeMax.X, 0.25f))
+		float FrequencyDistance = Noise->FrequencyDistance;
+		if (ImGui::DragFloat("Frequency Distance", &FrequencyDistance, 0.05f, 0.0f, 10000.0f))
 		{
-			Noise->NoiseRangeMax = NoiseRangeMax;
+			Noise->FrequencyDistance = (std::max)(0.0f, FrequencyDistance);
+			bChanged = true;
+		}
+
+		FVector NoiseRange = Noise->NoiseRange;
+		if (ImGui::DragFloat3("Noise Range", &NoiseRange.X, 0.25f))
+		{
+			Noise->NoiseRange = NoiseRange;
+			bChanged = true;
+		}
+
+		float NoiseLockTime = Noise->NoiseLockTime;
+		if (ImGui::DragFloat("Noise Lock Time", &NoiseLockTime, 0.05f, 0.0f, 1000.0f))
+		{
+			Noise->NoiseLockTime = (std::max)(0.0f, NoiseLockTime);
+			bChanged = true;
+		}
+
+		bool bTargetNoise = Noise->bTargetNoise;
+		if (ImGui::Checkbox("Target Noise", &bTargetNoise))
+		{
+			Noise->bTargetNoise = bTargetNoise;
 			bChanged = true;
 		}
 	}

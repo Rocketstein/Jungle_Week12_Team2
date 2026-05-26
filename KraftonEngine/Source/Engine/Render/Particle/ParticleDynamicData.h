@@ -90,9 +90,6 @@ struct FBeamInstanceData
 {
 	FVector Source = FVector::ZeroVector;
 	FVector Target = FVector::ZeroVector;
-	FVector SourceTangent = FVector::ZeroVector;
-	FVector TargetTangent = FVector::ZeroVector;
-	bool bUseTangents = false;
 	FVector Color = FVector::OneVector;
 	float Alpha = 1.0f;
 	float Width = 8.0f;
@@ -100,6 +97,14 @@ struct FBeamInstanceData
 	float TaperFactor = 1.0f;
 	float TaperScale = 1.0f;
 	float BeamProgress = 1.0f;				// 0 = at source, 1 = full target
+	FVector SourceTangent = FVector::ZeroVector;
+	FVector TargetTangent = FVector::ZeroVector;
+	float SourceStrength = 1.0f;
+	float TargetStrength = 1.0f;
+
+	// Optional intermediate points (world space) between Source and Target.
+	// Empty = tangent curve; non-empty = polyline Source -> NoisePoints -> Target.
+	TArray<FVector> NoisePoints;
 };
 
 struct FDynamicBeamEmitterReplayData : public FDynamicRenderableEmitterReplayDataBase
@@ -115,12 +120,6 @@ struct FDynamicBeamEmitterReplayData : public FDynamicRenderableEmitterReplayDat
 	int32 UpVectorStepSize = 0;				// UE-compatible up-vector step hint
 	int32 TextureTile = 1;					// Tile count along the beam length
 	float TextureTileDistance = 0.0f;		// Per-tile distance (overrides TextureTile when non-zero)
-	float NoiseAmplitude = 0.0f;			// World-space offset applied along generated beam noise axes
-	float NoiseFrequency = 0.0f;			// Number of noise waves along the beam
-	float NoisePhase = 0.0f;				// Time-driven phase offset for animated noise
-	float NoiseSeed = 0.0f;				// Stable offset so beams can vary without changing their endpoints
-	FVector NoiseRangeMin = FVector::ZeroVector;	// Low-frequency uniform noise range minimum
-	FVector NoiseRangeMax = FVector::ZeroVector;	// Low-frequency uniform noise range maximum
 
 	bool bRenderGeometry = true;
 	bool bRenderDirectLine = false;
