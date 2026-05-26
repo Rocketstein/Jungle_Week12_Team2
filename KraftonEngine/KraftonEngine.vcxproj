@@ -518,12 +518,14 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Engine\Particle\ParticleBeamInstances.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleEmitter.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleEmitterInstances.cpp" />
+    <ClCompile Include="Source\Engine\Particle\ParticleEventCollideData.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleLODContext.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleLODLevel.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleModules.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleSpriteEmitter.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleSystem.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleSystemManager.cpp" />
+    <ClCompile Include="Source\Engine\Particle\RibbonEmitterInstance.cpp" />
     <ClCompile Include="Source\Engine\Physics\NativePhysicsScene.cpp" />
     <ClCompile Include="Source\Engine\Physics\PhysXPhysicsScene.cpp" />
     <ClCompile Include="Source\Engine\Platform\CrashDump.cpp" />
@@ -863,6 +865,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\Particle\ParticleBeamInstances.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEmitter.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEmitterInstances.h" />
+    <ClInclude Include="Source\Engine\Particle\ParticleEventCollideData.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleHelper.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleLODContext.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleLODLevel.h" />
@@ -870,6 +873,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\Particle\ParticleSpriteEmitter.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleSystem.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleSystemManager.h" />
+    <ClInclude Include="Source\Engine\Particle\RibbonEmitterInstance.h" />
     <ClInclude Include="Source\Engine\Particle\TypeData\ParticleModuleTypeDataBeam2.h" />
     <ClInclude Include="Source\Engine\Particle\TypeData\ParticleModuleTypeDataRibbon.h" />
     <ClInclude Include="Source\Engine\Physics\IPhysicsScene.h" />

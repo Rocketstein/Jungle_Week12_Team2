@@ -20,6 +20,8 @@ public:
 
 	bool IsARibbonEmitter() const override { return true; }
 	bool SupportsSpecificScreenAlignmentFlags() const override { return true; }
+	uint32 RequiredBytes(UParticleModuleTypeDataBase* TypeData) override;
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
 
 	// Maximum interpolation points considered between two spawned trail particles.
 	UPROPERTY(Edit, Category="Trail", Min=0, Max=32, Speed=1.0f)

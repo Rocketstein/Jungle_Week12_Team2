@@ -406,3 +406,10 @@ public:
 	bool IsAMeshEmitter() const override { return true; }
 	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
 };
+
+
+struct FRibbonParticlePayload
+{
+	uint32 SpawnSequence = 0;
+	int32 TrailIndex = 0; //
+};

@@ -132,8 +132,35 @@ struct FDynamicBeamEmitterReplayData : public FDynamicRenderableEmitterReplayDat
 	}
 };
 
+struct FRibbonPointData
+{
+	FVector Position;
+	FLinearColor Color;
+	float Width = 1.0f;
+	float DistanceFromStart = 0.0f;
+	uint32 SpawnSequence = 0;
+};
+
+struct FRibbonTrailData
+{
+	int32 FirstPoint = 0;
+	int32 PointCount = 0;
+};
+
 struct FDynamicRibbonEmitterReplayData : public FDynamicRenderableEmitterReplayDataBase
 {
+	TArray<FRibbonPointData> Points;
+	TArray<FRibbonTrailData> Trails;
+
+	int32 SheetsPerTrail = 1;
+	int32 MaxTessellationBetweenParticles = 1;
+	float TilingDistance = 0.0f;
+	float DistanceTessellationStepSize = 0.0f;
+	bool bRenderGeometry = true;
+	bool bRenderSpawnPoints = false;
+	bool bRenderTangents = false;
+	bool bRenderTessellation = false;
+
 	FDynamicRibbonEmitterReplayData()
 	{
 		eEmitterType = DET_Ribbon;

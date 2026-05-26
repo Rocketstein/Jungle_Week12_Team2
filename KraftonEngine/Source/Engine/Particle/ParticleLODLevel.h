@@ -34,7 +34,7 @@ public:
 	TArray<UParticleModuleEventReceiverBase*> EventReceiverModules;
 
 	uint32 ConvertedModules : 1 = false;
-	int32 PeakActiveParticles = 0;
+	int32 PeakActiveParticles = 0; //예상 최대 particle값
 
 	virtual void UpdateModuleLists();
 	virtual int32 CalculateMaxActiveParticleCount();

@@ -4,6 +4,7 @@
 #include "GameFramework/World.h"
 #include "Particle/ParticleEmitterInstances.h"
 #include "Particle/ParticleLODLevel.h"
+#include "Particle/TypeData/ParticleModuleTypeDataRibbon.h"
 
 #include <algorithm>
 #include <random>
@@ -261,6 +262,17 @@ void UParticleModuleCollision::FinalUpdate(const FUpdateContext& Context)
 		}
 		Normal.Normalize();
 
+		FParticleEventCollideData EventData;
+		EventData.EmitterIndex = Owner.EmitterIndex;
+		EventData.ParticleIndex = ParticleIndex;
+		EventData.Location = Hit.WorldHitLocation;
+		EventData.OldLocation = Particle->OldLocation;
+		EventData.Velocity = Particle->BaseVelocity;
+		EventData.Normal = Normal;
+		EventData.HitActor = Hit.HitActor;
+		EventData.HitComponent = Hit.HitComponent;
+		Owner.Component->QueueParticleCollisionEvent(EventData);
+
 		++Payload->CollisionCount;
 		Particle->Flags |= STATE_Particle_CollisionHasOccurred;
 		Particle->Location = Hit.WorldHitLocation + Normal * ClampedOffset;
@@ -423,5 +435,41 @@ UParticleModule* UParticleModuleTypeDataMesh::CloneForLOD(UParticleLODLevel* New
 	UParticleModuleTypeDataMesh* Copy = GUObjectArray.CreateObject<UParticleModuleTypeDataMesh>(NewOuter);
 	CopyModuleBaseTo(Copy);
 	Copy->Mesh = Mesh;
+	return Copy;
+}
+
+uint32 UParticleModuleTypeDataRibbon::RequiredBytes(UParticleModuleTypeDataBase* TypeData)
+{
+	(void)TypeData;
+	return sizeof(FRibbonParticlePayload);
+}
+
+UParticleModule* UParticleModuleTypeDataRibbon::CloneForLOD(UParticleLODLevel* NewOuter) const
+{
+	UParticleModuleTypeDataRibbon* Copy = GUObjectArray.CreateObject<UParticleModuleTypeDataRibbon>(NewOuter);
+	CopyModuleBaseTo(Copy);
+	Copy->MaxTessellationBetweenParticles = MaxTessellationBetweenParticles;
+	Copy->SheetsPerTrail = SheetsPerTrail;
+	Copy->MaxTrailCount = MaxTrailCount;
+	Copy->MaxParticleInTrailCount = MaxParticleInTrailCount;
+	Copy->bDeadTrailsOnDeactivate = bDeadTrailsOnDeactivate;
+	Copy->bDeadTrailsOnSourceLoss = bDeadTrailsOnSourceLoss;
+	Copy->bClipSourceSegment = bClipSourceSegment;
+	Copy->bEnablePreviousTangentRecalculation = bEnablePreviousTangentRecalculation;
+	Copy->bTangentRecalculationEveryFrame = bTangentRecalculationEveryFrame;
+	Copy->bSpawnInitialParticle = bSpawnInitialParticle;
+	Copy->RenderAxis = RenderAxis;
+	Copy->TangentSpawningScalar = TangentSpawningScalar;
+	Copy->bRenderGeometry = bRenderGeometry;
+	Copy->bRenderSpawnPoints = bRenderSpawnPoints;
+	Copy->bRenderTangents = bRenderTangents;
+	Copy->bRenderTessellation = bRenderTessellation;
+	Copy->TilingDistance = TilingDistance;
+	Copy->DistanceTessellationStepSize = DistanceTessellationStepSize;
+	Copy->bEnableTangentDiffInterpScale = bEnableTangentDiffInterpScale;
+	Copy->TangentTessellationScalar = TangentTessellationScalar;
+	Copy->Width = Width;
+	Copy->Color = Color;
+	Copy->Alpha = Alpha;
 	return Copy;
 }
