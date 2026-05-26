@@ -65,6 +65,8 @@ private:
 	UParticleModule* CreateTypeDataModule(EEmitterTypeData TypeData, UObject* Outer);
 	void AddModuleToEmitter(int32 EmitterIndex, EAddableModuleType ModuleType);
 	void SetEmitterTypeData(int32 EmitterIndex, EEmitterTypeData TypeData);
+	void MoveEmitterToIndex(int32 SourceEmitterIndex, int32 TargetInsertIndex);
+	void MoveModuleToEmitterAtIndex(int32 SourceEmitterIndex, UParticleModule* Module, int32 TargetEmitterIndex, int32 TargetInsertIndex);
 	void DeleteModuleFromEmitter(int32 EmitterIndex, UParticleModule* Module);
 	void DeleteEmitter(int32 EmitterIndex);
 	int32 GetLODCount() const;
