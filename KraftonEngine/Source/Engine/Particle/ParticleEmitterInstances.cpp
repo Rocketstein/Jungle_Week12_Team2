@@ -5,6 +5,7 @@
 #include "Particle/ParticleEmitter.h"
 #include "Particle/ParticleLODLevel.h"
 #include "Particle/ParticleModule.h"
+#include "Profiling/ParticleStats.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -152,6 +153,7 @@ void FParticleEmitterInstance::SetCurrentLODLevel(int32 LODLevel)
 
 void FParticleEmitterInstance::Tick(float DeltaTime, int32 LODLevel, bool bSuppressSpawning)
 {
+	PARTICLE_SCOPE_STAT(EParticleStatTimer::EmitterTick);
 	LastDeltaTime = DeltaTime;
 	SecondsSinceCreation += DeltaTime;
 	EmitterTime += DeltaTime;
@@ -164,13 +166,34 @@ void FParticleEmitterInstance::Tick(float DeltaTime, int32 LODLevel, bool bSuppr
 		return;
 	}
 
-	KillParticles();
-	ResetParticleParameters(DeltaTime);
-	Tick_ModuleUpdate(DeltaTime, CurrentLODLevel);
-	SpawnFraction = Tick_SpawnParticles(DeltaTime, CurrentLODLevel, bSuppressSpawning, false);
-	Tick_ModulePostUpdate(DeltaTime, CurrentLODLevel);
-	UpdateParticles(DeltaTime);
-	Tick_ModuleFinalUpdate(DeltaTime, CurrentLODLevel);
+	{
+		PARTICLE_SCOPE_STAT(EParticleStatTimer::KillParticles);
+		KillParticles();
+	}
+	{
+		PARTICLE_SCOPE_STAT(EParticleStatTimer::ResetParticleParameters);
+		ResetParticleParameters(DeltaTime);
+	}
+	{
+		PARTICLE_SCOPE_STAT(EParticleStatTimer::UpdateModules);
+		Tick_ModuleUpdate(DeltaTime, CurrentLODLevel);
+	}
+	{
+		PARTICLE_SCOPE_STAT(EParticleStatTimer::Spawn);
+		SpawnFraction = Tick_SpawnParticles(DeltaTime, CurrentLODLevel, bSuppressSpawning, false);
+	}
+	{
+		PARTICLE_SCOPE_STAT(EParticleStatTimer::PostUpdateModules);
+		Tick_ModulePostUpdate(DeltaTime, CurrentLODLevel);
+	}
+	{
+		PARTICLE_SCOPE_STAT(EParticleStatTimer::ParticleUpdate);
+		UpdateParticles(DeltaTime);
+	}
+	{
+		PARTICLE_SCOPE_STAT(EParticleStatTimer::FinalUpdateModules);
+		Tick_ModuleFinalUpdate(DeltaTime, CurrentLODLevel);
+	}
 }
 
 void FParticleEmitterInstance::ResetParticleParameters(float DeltaTime)
@@ -434,23 +457,27 @@ void FParticleEmitterInstance::SpawnParticles(int32 Count, float StartTime, floa
 		if (CurrentLODLevel)
 		{
 			UParticleLODLevel* HighestLODLevel = EmitterTemplate ? EmitterTemplate->GetLODLevel(0) : nullptr;
-			for (int32 ModuleIndex = 0; ModuleIndex < static_cast<int32>(CurrentLODLevel->OnSpawnModules.size()); ++ModuleIndex)
 			{
-				UParticleModule* Module = CurrentLODLevel->OnSpawnModules[ModuleIndex];
-				if (!Module)
+				PARTICLE_SCOPE_STAT(EParticleStatTimer::OnSpawnModules);
+				for (int32 ModuleIndex = 0; ModuleIndex < static_cast<int32>(CurrentLODLevel->OnSpawnModules.size()); ++ModuleIndex)
 				{
-					continue;
-				}
+					UParticleModule* Module = CurrentLODLevel->OnSpawnModules[ModuleIndex];
+					if (!Module)
+					{
+						continue;
+					}
 
-				UParticleModule* OffsetModule = (HighestLODLevel && ModuleIndex < static_cast<int32>(HighestLODLevel->OnSpawnModules.size()))
-					? HighestLODLevel->OnSpawnModules[ModuleIndex]
-					: Module;
-				UParticleModule::FSpawnContext Context(*this, static_cast<int32>(GetModuleDataOffset(OffsetModule)), SpawnTime, &Particle);
-				Module->Spawn(Context);
+					UParticleModule* OffsetModule = (HighestLODLevel && ModuleIndex < static_cast<int32>(HighestLODLevel->OnSpawnModules.size()))
+						? HighestLODLevel->OnSpawnModules[ModuleIndex]
+						: Module;
+					UParticleModule::FSpawnContext Context(*this, static_cast<int32>(GetModuleDataOffset(OffsetModule)), SpawnTime, &Particle);
+					Module->Spawn(Context);
+				}
 			}
 
 			if (CurrentLODLevel->TypeDataModule)
 			{
+				PARTICLE_SCOPE_STAT(EParticleStatTimer::TypeDataSpawn);
 				UParticleModule::FSpawnContext Context(*this, TypeDataOffset, SpawnTime, &Particle);
 				CurrentLODLevel->TypeDataModule->Spawn(Context);
 			}

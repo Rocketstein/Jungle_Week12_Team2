@@ -6,6 +6,7 @@
 #include "Component/ParticleSystemComponent.h"
 #include "Materials/Material.h"
 #include "Mesh/StaticMesh.h"
+#include "Profiling/ParticleStats.h"
 #include "Render/Shader/ShaderManager.h"
 
 #include <algorithm>
@@ -42,67 +43,6 @@ namespace {
 			+ UnitAxis * (UnitAxis.Dot(Value) * (1.0f - C));
 	}
 
-	FVector EvaluateBeamCenter(const FBeamInstanceData& Beam, float Alpha)
-	{
-		Alpha = std::clamp(Alpha, 0.0f, 1.0f);
-		if (!Beam.bUseTangents)
-		{
-			return Beam.Source + (Beam.Target - Beam.Source) * Alpha;
-		}
-
-		const float A2 = Alpha * Alpha;
-		const float A3 = A2 * Alpha;
-		const float H00 = 2.0f * A3 - 3.0f * A2 + 1.0f;
-		const float H10 = A3 - 2.0f * A2 + Alpha;
-		const float H01 = -2.0f * A3 + 3.0f * A2;
-		const float H11 = A3 - A2;
-		return Beam.Source * H00
-			+ Beam.SourceTangent * H10
-			+ Beam.Target * H01
-			+ Beam.TargetTangent * H11;
-	}
-
-	float BeamNoise01(float Seed)
-	{
-		const float Value = std::sin(Seed) * 43758.5453123f;
-		return Value - std::floor(Value);
-	}
-
-	FVector BeamNoiseSample(const FDynamicBeamEmitterReplayData& Source, float SampleIndex, float BeamIndex)
-	{
-		const float Seed = Source.NoiseSeed + BeamIndex * 101.73f + SampleIndex * 17.137f;
-		const FVector Noise(
-			BeamNoise01(Seed + 11.0f),
-			BeamNoise01(Seed + 29.0f),
-			BeamNoise01(Seed + 47.0f));
-		const FVector Range = Source.NoiseRangeMax - Source.NoiseRangeMin;
-		return Source.NoiseRangeMin + FVector(Range.X * Noise.X, Range.Y * Noise.Y, Range.Z * Noise.Z);
-	}
-
-	FVector ApplyBeamNoise(const FDynamicBeamEmitterReplayData& Source, const FVector& Center, const FVector& BeamDir, float Alpha, float BeamIndex)
-	{
-		if (Source.NoiseFrequency <= 0.0f)
-		{
-			return Center;
-		}
-
-		constexpr float Pi = 3.14159265358979323846f;
-		const FVector AxisA = SafeNormalizeBeam(BeamDir.Cross(FVector::UpVector), FVector::RightVector);
-		const FVector AxisB = SafeNormalizeBeam(BeamDir.Cross(AxisA), FVector::UpVector);
-		const float EndpointFade = std::sin(std::clamp(Alpha, 0.0f, 1.0f) * Pi);
-		const float Phase = Source.NoisePhase + (Source.NoiseSeed + BeamIndex * 0.61803398875f) * 2.0f * Pi;
-		const float WaveA = std::sin((Alpha * Source.NoiseFrequency) * 2.0f * Pi + Phase);
-		const float WaveB = std::cos((Alpha * Source.NoiseFrequency * 1.37f) * 2.0f * Pi - Phase);
-		const float NoiseCoord = std::clamp(Alpha, 0.0f, 1.0f) * Source.NoiseFrequency;
-		const float NoiseIndex = std::floor(NoiseCoord);
-		const float NoiseAlpha = NoiseCoord - NoiseIndex;
-		const FVector NoiseA = BeamNoiseSample(Source, NoiseIndex, BeamIndex);
-		const FVector NoiseB = BeamNoiseSample(Source, NoiseIndex + 1.0f, BeamIndex);
-		const FVector UniformRange = NoiseA + (NoiseB - NoiseA) * NoiseAlpha;
-		const FVector AxisNoise = (AxisA * WaveA + AxisB * WaveB) * Source.NoiseAmplitude;
-		return Center + (UniformRange + AxisNoise) * EndpointFade;
-	}
-
 	float ApplyBeamTaper(EBeamTaperMethod TaperMethod, float TaperFactor, float TaperScale, float Alpha)
 	{
 		Alpha = std::clamp(Alpha, 0.0f, 1.0f);
@@ -124,6 +64,53 @@ namespace {
 		}
 
 		return TaperScale;
+	}
+
+	uint64 EstimateBeamPackedBytes(const FDynamicBeamEmitterReplayData& Source)
+	{
+		constexpr int32 MaxSegmentsPerBeam = 256;
+		constexpr int32 MaxSheetsPerBeam = 16;
+		const int32 SegmentCount = std::clamp(Source.InterpolationPoints + 1,
+			1, MaxSegmentsPerBeam);
+		const int32 PointCount = SegmentCount + 1;
+		const int32 SheetCount = std::clamp(Source.Sheets,
+			1, MaxSheetsPerBeam);
+		const uint64 BeamCount = static_cast<uint64>(Source.Beams.size());
+		const uint64 VertexCount = BeamCount * static_cast<uint64>(PointCount) * 2ull * static_cast<uint64>(SheetCount);
+		const uint64 IndexCount = BeamCount * static_cast<uint64>(SegmentCount) * 6ull * static_cast<uint64>(SheetCount);
+		return VertexCount * sizeof(FBeamParticleInstanceVertex) + IndexCount * sizeof(uint32);
+	}
+
+	uint64 EstimateRibbonPackedBytes(const FDynamicRibbonEmitterReplayData& Source)
+	{
+		constexpr int32 MaxSheetsPerTrail = 16;
+		const int32 SheetCount = std::clamp(Source.SheetsPerTrail,
+			1, MaxSheetsPerTrail);
+		uint64 VertexCount = 0;
+		uint64 IndexCount = 0;
+		for (const FRibbonTrailSection& Trail : Source.Trails)
+		{
+			if (Trail.PointCount < 2)
+			{
+				continue;
+			}
+			VertexCount += static_cast<uint64>(Trail.PointCount) * 2ull * static_cast<uint64>(SheetCount);
+			IndexCount += static_cast<uint64>(Trail.PointCount - 1) * 6ull * static_cast<uint64>(SheetCount);
+		}
+		return VertexCount * sizeof(FRibbonParticleInstanceVertex) + IndexCount * sizeof(uint32);
+	}
+
+	FVector EvaluateBeamCurve(const FBeamInstanceData& Beam, float Alpha)
+	{
+		const float T = std::clamp(Alpha, 0.0f, 1.0f);
+		const float InvT = 1.0f - T;
+		const FVector SourceControl = Beam.Source + Beam.SourceTangent * (std::max(0.0f, Beam.SourceStrength) / 3.0f);
+		const FVector TargetControl = Beam.Target + Beam.TargetTangent * (std::max(0.0f, Beam.TargetStrength) / 3.0f);
+
+		return Beam.Source * (InvT * InvT * InvT)
+			+ SourceControl * (3.0f * InvT * InvT * T)
+			+ TargetControl * (3.0f * InvT * T * T)
+			+ Beam.Target * (T * T * T);
 	}
 
 }
@@ -341,6 +328,7 @@ void FParticleSystemSceneProxy::SetEmitterSortingPriority(uint16 EmitterIndex, u
 
 void FParticleSystemSceneProxy::SortEmitters()
 {
+	PARTICLE_SCOPE_STAT(EParticleStatTimer::SortEmitters);
 	const uint16 Count = static_cast<uint16>(EmitterDraws.size());
 	SectionToEmitterDrawIndex.resize(Count);
 	for (uint16 i = 0; i < Count; ++i)
@@ -360,6 +348,7 @@ void FParticleSystemSceneProxy::SortEmitters()
 
 void FParticleSystemSceneProxy::RebuildSectionDraws()
 {
+	PARTICLE_SCOPE_STAT(EParticleStatTimer::RebuildSections);
 	if (SectionToEmitterDrawIndex.size() != EmitterDraws.size())
 	{
 		SortEmitters();
@@ -405,32 +394,61 @@ void FParticleSystemSceneProxy::PackParticles(const FFrameContext& Frame)
 		case DET_Sprite:
 		{
 			const uint32 IndexBefore = IndexCursor;
-			SpritePacker.PackEmitter(Frame,
-				static_cast<FDynamicSpriteEmitterData&>(*DynamicData[DrawIndex]), Draw, IndexCursor);
+			FDynamicSpriteEmitterData& SpriteData = static_cast<FDynamicSpriteEmitterData&>(*DynamicData[DrawIndex]);
+			{
+				PARTICLE_SCOPE_STAT(EParticleStatTimer::PackSprites);
+				SpritePacker.PackEmitter(Frame, SpriteData, Draw, IndexCursor);
+			}
 
 			// Refresh section range so DrawCommandBuilder sees the right slice
 			// even if ActiveParticleCount shrank since UpdateMesh.
 			Draw.FirstIndex = IndexBefore;
 			Draw.IndexCount = IndexCursor - IndexBefore;
+			const uint32 PackedParticleCount = Draw.IndexCount / 6u;
+			const uint64 PackedBytes = static_cast<uint64>(PackedParticleCount)
+				* (4ull * sizeof(FParticleSpriteVertex) + 6ull * sizeof(uint32));
+			FParticleStats::Get().RecordPacking(DET_Sprite, PackedParticleCount, PackedBytes);
 			break;
 		}
 		case DET_Mesh:
 		{
-			MeshPacker.PackEmitter(Frame,
-				static_cast<FDynamicMeshEmitterData&>(*DynamicData[DrawIndex]),
-				Draw);
+			FDynamicMeshEmitterData& MeshData = static_cast<FDynamicMeshEmitterData&>(*DynamicData[DrawIndex]);
+			{
+				PARTICLE_SCOPE_STAT(EParticleStatTimer::PackMeshes);
+				MeshPacker.PackEmitter(Frame, MeshData, Draw);
+			}
+			FParticleStats::Get().RecordPacking(
+				DET_Mesh,
+				Draw.InstanceCount,
+				static_cast<uint64>(Draw.PackedInstances.size()) * sizeof(FMeshParticleInstanceVertex));
 			// Mesh section range stays as UpdateMesh set it (static-mesh IB range
 			// is fixed; InstanceCount is the per-frame variable).
 			break;
 		}
 		case DET_Beam2:
 		{
-			BeamPacker.PackEmitter(Frame, static_cast<FDynamicBeamEmitterData&>(*DynamicData[DrawIndex]), Draw);
+			FDynamicBeamEmitterData& BeamData = static_cast<FDynamicBeamEmitterData&>(*DynamicData[DrawIndex]);
+			{
+				PARTICLE_SCOPE_STAT(EParticleStatTimer::PackBeams);
+				BeamPacker.PackEmitter(Frame, BeamData, Draw);
+			}
+			FParticleStats::Get().RecordPacking(
+				DET_Beam2,
+				static_cast<uint32>(std::max(0, BeamData.BeamSource.ActiveParticleCount)),
+				Draw.IndexCount > 0 ? EstimateBeamPackedBytes(BeamData.BeamSource) : 0);
 			break;
 		}
 		case DET_Ribbon:
 		{
-			RibbonPacker.PackEmitter(Frame, static_cast<FDynamicRibbonEmitterData&>(*DynamicData[DrawIndex]), Draw);
+			FDynamicRibbonEmitterData& RibbonData = static_cast<FDynamicRibbonEmitterData&>(*DynamicData[DrawIndex]);
+			{
+				PARTICLE_SCOPE_STAT(EParticleStatTimer::PackRibbons);
+				RibbonPacker.PackEmitter(Frame, RibbonData, Draw);
+			}
+			FParticleStats::Get().RecordPacking(
+				DET_Ribbon,
+				static_cast<uint32>(std::max(0, RibbonData.RibbonSource.ActiveParticleCount)),
+				Draw.IndexCount > 0 ? EstimateRibbonPackedBytes(RibbonData.RibbonSource) : 0);
 			break;
 		}
 		default:
@@ -492,6 +510,7 @@ bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevic
 
 		if (Hit.bInstanceVBDirty && !Hit.PackedInstances.empty())
 		{
+			PARTICLE_SCOPE_STAT(EParticleStatTimer::UploadMeshInstances);
 			const uint32 Count = static_cast<uint32>(Hit.PackedInstances.size());
 			if (Hit.InstanceVB.GetMaxCount() == 0)
 			{
@@ -549,6 +568,7 @@ bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevic
 bool FParticleSystemSceneProxy::FSpriteParticlePacker::PrepareDrawBuffer(
 	ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FDrawCommandBuffer& Out) const
 {
+	PARTICLE_SCOPE_STAT(EParticleStatTimer::UploadSpriteBuffers);
 	if (!HasPackedSprites())
 	{
 		return false;
@@ -738,6 +758,7 @@ void FParticleSystemSceneProxy::FBeamParticlePacker::ResetFrame()
 bool FParticleSystemSceneProxy::FBeamParticlePacker::PrepareDrawBuffer(
 	ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FDrawCommandBuffer& Out) const
 {
+	PARTICLE_SCOPE_STAT(EParticleStatTimer::UploadBeamBuffers);
 	if (!HasPackedBeams())
 	{
 		return false;
@@ -793,13 +814,16 @@ void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(const FFrameCon
 	if (!Source.bRenderGeometry || Source.Beams.empty())
 		return;
 
-	const int32 SegmentCount = std::clamp(Source.InterpolationPoints + 1,
+	const int32 BaseSegmentCount = std::clamp(Source.InterpolationPoints + 1,
 		1, static_cast<int32>(MaxSegmentsPerBeam));
-	const int32 PointCount = SegmentCount + 1;
+	const int32 BasePointCount = BaseSegmentCount + 1;
 	const int32 SheetCount = std::clamp(Source.Sheets,
 		1, static_cast<int32>(MaxSheetsPerBeam));
-	const uint32 VertsPerBeam   = static_cast<uint32>(PointCount) * 2u * static_cast<uint32>(SheetCount);
-	const uint32 IndicesPerBeam = static_cast<uint32>(SegmentCount) * 6u * static_cast<uint32>(SheetCount);
+
+	// Reserve assuming non-noise beams; noise polylines may exceed this and
+	// trigger a normal reallocation. Hint only.
+	const uint32 VertsPerBeam   = static_cast<uint32>(BasePointCount) * 2u * static_cast<uint32>(SheetCount);
+	const uint32 IndicesPerBeam = static_cast<uint32>(BaseSegmentCount) * 6u * static_cast<uint32>(SheetCount);
 	PackedVertices.reserve(PackedVertices.size() + VertsPerBeam   * Source.Beams.size());
 	PackedIndices.reserve (PackedIndices.size()  + IndicesPerBeam * Source.Beams.size());
 
@@ -809,41 +833,88 @@ void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(const FFrameCon
 	for (size_t BeamIndex = 0; BeamIndex < Source.Beams.size(); ++BeamIndex)
 	{
 		const FBeamInstanceData& Beam = Source.Beams[BeamIndex];
-		const FVector BeamDelta = Beam.Target - Beam.Source;
-		const float BeamLen = BeamDelta.Length();
-		if (BeamLen <= 1e-6f)
+		// Centerline: either noise-driven polyline, or Cascade-style tangent curve.
+		TArray<FVector> Polyline;
+		if (!Beam.NoisePoints.empty())
+		{
+			Polyline.reserve(Beam.NoisePoints.size() + 2);
+			Polyline.push_back(Beam.Source);
+			for (const FVector& NP : Beam.NoisePoints) Polyline.push_back(NP);
+			Polyline.push_back(Beam.Target);
+		}
+		else
+		{
+			Polyline.reserve(BasePointCount);
+			for (int32 PointIdx = 0; PointIdx < BasePointCount; ++PointIdx)
+			{
+				const float T = static_cast<float>(PointIdx) /
+					static_cast<float>(std::max(BasePointCount - 1, 1));
+				Polyline.push_back(EvaluateBeamCurve(Beam, T));
+			}
+		}
+
+		const int32 PolylineCount = static_cast<int32>(Polyline.size());
+		TArray<float> CumLen(PolylineCount, 0.0f);
+		for (int32 i = 1; i < PolylineCount; ++i)
+		{
+			CumLen[i] = CumLen[i - 1] + (Polyline[i] - Polyline[i - 1]).Length();
+		}
+		const float TotalLen = CumLen[PolylineCount - 1];
+		if (TotalLen <= 1e-6f)
 			continue;
 
-		const float   Progress     = std::clamp(Beam.BeamProgress, 0.0f, 1.0f);
-		const float   VisibleLen   = BeamLen * Progress;
+		const float  Progress   = std::clamp(Beam.BeamProgress, 0.0f, 1.0f);
+		const float  VisibleLen = TotalLen * Progress;
+
+		// Tessellation: at least one sample per polyline vertex, plus optional
+		// additional subdivision from InterpolationPoints. Clamped to the proxy
+		// cap.
+		const int32 ThisPointCount = std::min(static_cast<int32>(MaxSegmentsPerBeam) + 1,
+			std::max(PolylineCount, BasePointCount));
+		const int32 ThisSegmentCount = ThisPointCount - 1;
+
 		const FVector4 PackedColor(Beam.Color.X, Beam.Color.Y, Beam.Color.Z,
 			std::clamp(Beam.Alpha, 0.0f, 1.0f));
+
+		// Sample the polyline at the given arc length. Returns the interpolated
+		// world-space center plus the local segment direction (un-normalized).
+		auto SampleAt = [&](float Arc, FVector& OutCenter, FVector& OutEdgeDir)
+		{
+			int32 Idx = 0;
+			while (Idx + 1 < PolylineCount && CumLen[Idx + 1] < Arc) ++Idx;
+			if (Idx >= PolylineCount - 1) Idx = PolylineCount - 2;
+			const float SegLen = CumLen[Idx + 1] - CumLen[Idx];
+			const float Local  = (SegLen > 1e-6f) ? (Arc - CumLen[Idx]) / SegLen : 0.0f;
+			OutCenter  = Polyline[Idx] + (Polyline[Idx + 1] - Polyline[Idx]) * Local;
+			OutEdgeDir = Polyline[Idx + 1] - Polyline[Idx];
+		};
 
 		for (int32 SheetIdx = 0; SheetIdx < SheetCount; ++SheetIdx)
 		{
 			const uint32 SheetVertexBase = static_cast<uint32>(PackedVertices.size());
-			for (int32 PointIdx = 0; PointIdx < PointCount; ++PointIdx)
+			for (int32 PointIdx = 0; PointIdx < ThisPointCount; ++PointIdx)
 			{
-				const float T = static_cast<float>(PointIdx) / static_cast<float>(std::max(PointCount - 1, 1));
-				const float BeamAlpha = T * Progress;
-				const float DirectionStep = 1.0f / static_cast<float>(std::max(PointCount - 1, 1));
-				const FVector PrevCenter = EvaluateBeamCenter(Beam, std::clamp(BeamAlpha - DirectionStep, 0.0f, Progress));
-				const FVector NextCenter = EvaluateBeamCenter(Beam, std::clamp(BeamAlpha + DirectionStep, 0.0f, Progress));
-				const FVector BeamDir = SafeNormalizeBeam(NextCenter - PrevCenter, BeamDelta * (1.0f / BeamLen));
-				const FVector Center = ApplyBeamNoise(Source, EvaluateBeamCenter(Beam, BeamAlpha), BeamDir, BeamAlpha, static_cast<float>(BeamIndex));
+				const float T = static_cast<float>(PointIdx) /
+					static_cast<float>(std::max(ThisPointCount - 1, 1));
+				const float ArcAt = VisibleLen * T;
+
+				FVector Center, EdgeDir;
+				SampleAt(ArcAt, Center, EdgeDir);
+				const FVector LocalDir = SafeNormalizeBeam(EdgeDir, FVector::UpVector);
+
 				const float Taper = ApplyBeamTaper(Beam.TaperMethod, Beam.TaperFactor, Beam.TaperScale, T);
 				const float HalfWidth = std::max(0.0f, Beam.Width * Taper) * 0.5f;
 
 				const FVector ToCamera = SafeNormalizeBeam(Frame.CameraPosition - Center, FVector::UpVector);
-				FVector SideAxis = SafeNormalizeBeam(ToCamera.Cross(BeamDir), FVector::ForwardVector);
+				FVector SideAxis = SafeNormalizeBeam(ToCamera.Cross(LocalDir), FVector::ForwardVector);
 				if (SheetIdx > 0)
 				{
 					const float SheetAngle = Pi * static_cast<float>(SheetIdx) / static_cast<float>(SheetCount);
-					SideAxis = SafeNormalizeBeam(RotateAroundAxis(SideAxis, BeamDir, SheetAngle), SideAxis);
+					SideAxis = SafeNormalizeBeam(RotateAroundAxis(SideAxis, LocalDir, SheetAngle), SideAxis);
 				}
 
 				const float U = (Source.TextureTileDistance > 0.0f)
-					? (VisibleLen * T) / Source.TextureTileDistance
+					? ArcAt / Source.TextureTileDistance
 					: T * static_cast<float>(std::max(1, Source.TextureTile));
 
 				FBeamParticleInstanceVertex Left;
@@ -859,7 +930,7 @@ void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(const FFrameCon
 				PackedVertices.push_back(Right);
 			}
 
-			for (int32 SegIdx = 0; SegIdx < SegmentCount; ++SegIdx)
+			for (int32 SegIdx = 0; SegIdx < ThisSegmentCount; ++SegIdx)
 			{
 				const uint32 P0Left  = SheetVertexBase + static_cast<uint32>(SegIdx) * 2u;
 				const uint32 P0Right = P0Left + 1u;
@@ -875,7 +946,7 @@ void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(const FFrameCon
 			}
 		}
 
-		IndicesEmitted += IndicesPerBeam;
+		IndicesEmitted += static_cast<uint32>(ThisSegmentCount) * 6u * static_cast<uint32>(SheetCount);
 	}
 
 	Draw.IndexCount = IndicesEmitted;
@@ -896,6 +967,7 @@ void FParticleSystemSceneProxy::FRibbonParticlePacker::ResetFrame()
 bool FParticleSystemSceneProxy::FRibbonParticlePacker::PrepareDrawBuffer(
 	ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FDrawCommandBuffer& Out) const
 {
+	PARTICLE_SCOPE_STAT(EParticleStatTimer::UploadRibbonBuffers);
 	if (!HasPackedRibbons())
 	{
 		return false;

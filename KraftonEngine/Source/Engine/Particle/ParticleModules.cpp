@@ -1,4 +1,4 @@
-#include "Particle/ParticleModule.h"
+﻿#include "Particle/ParticleModule.h"
 
 #include "Component/ParticleSystemComponent.h"
 #include "GameFramework/World.h"
@@ -298,7 +298,7 @@ uint32 UParticleModuleCollision::RequiredBytes(UParticleModuleTypeDataBase* Type
 {
 	(void)TypeData;
 	return sizeof(FParticleCollisionPayload);
-}
+}       
 
 void UParticleModuleCollision::FinalUpdate(const FUpdateContext& Context)
 {
@@ -573,40 +573,6 @@ UParticleModule* UParticleModuleSize::CloneForLOD(UParticleLODLevel* NewOuter) c
 	Copy->StartSize = StartSize;
 	Copy->StartSizeMin = StartSizeMin;
 	Copy->StartSizeMax = StartSizeMax;
-	return Copy;
-}
-
-UParticleModule* UParticleModuleBeamSource::CloneForLOD(UParticleLODLevel* NewOuter) const
-{
-	UParticleModuleBeamSource* Copy = GUObjectArray.CreateObject<UParticleModuleBeamSource>(NewOuter);
-	CopyModuleBaseTo(Copy);
-	Copy->SourcePoint = SourcePoint;
-	Copy->SourceTangentMethod = SourceTangentMethod;
-	Copy->SourceTangent = SourceTangent;
-	return Copy;
-}
-
-UParticleModule* UParticleModuleBeamTarget::CloneForLOD(UParticleLODLevel* NewOuter) const
-{
-	UParticleModuleBeamTarget* Copy = GUObjectArray.CreateObject<UParticleModuleBeamTarget>(NewOuter);
-	CopyModuleBaseTo(Copy);
-	Copy->TargetPoint = TargetPoint;
-	Copy->TargetTangentMethod = TargetTangentMethod;
-	Copy->TargetTangent = TargetTangent;
-	return Copy;
-}
-
-UParticleModule* UParticleModuleBeamNoise::CloneForLOD(UParticleLODLevel* NewOuter) const
-{
-	UParticleModuleBeamNoise* Copy = GUObjectArray.CreateObject<UParticleModuleBeamNoise>(NewOuter);
-	CopyModuleBaseTo(Copy);
-	Copy->NoiseAmplitude = NoiseAmplitude;
-	Copy->NoiseFrequency = NoiseFrequency;
-	Copy->NoiseSpeed = NoiseSpeed;
-	Copy->NoiseSeed = NoiseSeed;
-	Copy->bLowFreqEnabled = bLowFreqEnabled;
-	Copy->NoiseRangeMin = NoiseRangeMin;
-	Copy->NoiseRangeMax = NoiseRangeMax;
 	return Copy;
 }
 

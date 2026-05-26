@@ -5,6 +5,9 @@
 #include "Materials/MaterialManager.h"
 #include "Mesh/MeshManager.h"
 #include "Object/ObjectFactory.h"
+#include "Particle/BeamModule/ParticleModuleBeamNoise.h"
+#include "Particle/BeamModule/ParticleModuleBeamSource.h"
+#include "Particle/BeamModule/ParticleModuleBeamTarget.h"
 #include "Particle/ParticleEmitter.h"
 #include "Particle/ParticleLODLevel.h"
 #include "Particle/ParticleModule.h"
@@ -127,13 +130,25 @@ namespace ParticleKeys
 	static constexpr const char* TargetData = "TargetData";
 	static constexpr const char* TargetName = "TargetName";
 	static constexpr const char* TargetPercentage = "TargetPercentage";
-	static constexpr const char* NoiseAmplitude = "NoiseAmplitude";
-	static constexpr const char* NoiseFrequency = "NoiseFrequency";
-	static constexpr const char* NoiseSpeed = "NoiseSpeed";
-	static constexpr const char* NoiseSeed = "NoiseSeed";
-	static constexpr const char* bLowFreqEnabled = "bLowFreqEnabled";
-	static constexpr const char* NoiseRangeMin = "NoiseRangeMin";
-	static constexpr const char* NoiseRangeMax = "NoiseRangeMax";
+	static constexpr const char* SourceMethod = "SourceMethod";
+	static constexpr const char* SourceName = "SourceName";
+	static constexpr const char* bSourceAbsolute = "bSourceAbsolute";
+	static constexpr const char* bLockSource = "bLockSource";
+	static constexpr const char* Source = "Source";
+	static constexpr const char* bLockSourceTangent = "bLockSourceTangent";
+	static constexpr const char* SourceStrength = "SourceStrength";
+	static constexpr const char* TargetMethod = "TargetMethod";
+	static constexpr const char* bTargetAbsolute = "bTargetAbsolute";
+	static constexpr const char* bLockTarget = "bLockTarget";
+	static constexpr const char* Target = "Target";
+	static constexpr const char* bLockTargetTangent = "bLockTargetTangent";
+	static constexpr const char* TargetStrength = "TargetStrength";
+	static constexpr const char* bLowFreqEnabled = "bLowFreq_Enabled";
+	static constexpr const char* Frequency = "Frequency";
+	static constexpr const char* FrequencyDistance = "FrequencyDistance";
+	static constexpr const char* NoiseRange = "NoiseRange";
+	static constexpr const char* NoiseLockTime = "NoiseLockTime";
+	static constexpr const char* bTargetNoise = "bTargetNoise";
 	static constexpr const char* Mesh = "Mesh";
 	static constexpr const char* MeshPath = "MeshPath";
 	static constexpr const char* Ribbon = "Ribbon";
@@ -514,25 +529,34 @@ json::JSON SerializeModule(UParticleModule* Module)
 	}
 	else if (UParticleModuleBeamSource* Source = Cast<UParticleModuleBeamSource>(Module))
 	{
-		Object[ParticleKeys::SourcePoint] = MakeVectorJSON(Source->SourcePoint);
-		Object[ParticleKeys::SourceTangentMethod] = static_cast<int32>(Source->SourceTangentMethod);
+		Object[ParticleKeys::SourceMethod] = static_cast<int32>(Source->SourceMethod);
+		Object[ParticleKeys::SourceName] = Source->SourceName.ToString();
+		Object[ParticleKeys::bSourceAbsolute] = Source->bSourceAbsolute;
+		Object[ParticleKeys::bLockSource] = Source->bLockSource;
+		Object[ParticleKeys::Source] = MakeVectorJSON(Source->Source);
+		Object[ParticleKeys::bLockSourceTangent] = Source->bLockSourceTangent;
 		Object[ParticleKeys::SourceTangent] = MakeVectorJSON(Source->SourceTangent);
+		Object[ParticleKeys::SourceStrength] = Source->SourceStrength;
 	}
 	else if (UParticleModuleBeamTarget* Target = Cast<UParticleModuleBeamTarget>(Module))
 	{
-		Object[ParticleKeys::TargetPoint] = MakeVectorJSON(Target->TargetPoint);
-		Object[ParticleKeys::TargetTangentMethod] = static_cast<int32>(Target->TargetTangentMethod);
+		Object[ParticleKeys::TargetMethod] = static_cast<int32>(Target->TargetMethod);
+		Object[ParticleKeys::TargetName] = Target->TargetName.ToString();
+		Object[ParticleKeys::bTargetAbsolute] = Target->bTargetAbsolute;
+		Object[ParticleKeys::bLockTarget] = Target->bLockTarget;
+		Object[ParticleKeys::Target] = MakeVectorJSON(Target->Target);
+		Object[ParticleKeys::bLockTargetTangent] = Target->bLockTargetTangent;
 		Object[ParticleKeys::TargetTangent] = MakeVectorJSON(Target->TargetTangent);
+		Object[ParticleKeys::TargetStrength] = Target->TargetStrength;
 	}
 	else if (UParticleModuleBeamNoise* Noise = Cast<UParticleModuleBeamNoise>(Module))
 	{
-		Object[ParticleKeys::NoiseAmplitude] = Noise->NoiseAmplitude;
-		Object[ParticleKeys::NoiseFrequency] = Noise->NoiseFrequency;
-		Object[ParticleKeys::NoiseSpeed] = Noise->NoiseSpeed;
-		Object[ParticleKeys::NoiseSeed] = Noise->NoiseSeed;
-		Object[ParticleKeys::bLowFreqEnabled] = Noise->bLowFreqEnabled;
-		Object[ParticleKeys::NoiseRangeMin] = MakeVectorJSON(Noise->NoiseRangeMin);
-		Object[ParticleKeys::NoiseRangeMax] = MakeVectorJSON(Noise->NoiseRangeMax);
+		Object[ParticleKeys::bLowFreqEnabled] = Noise->bLowFreq_Enabled;
+		Object[ParticleKeys::Frequency] = Noise->Frequency;
+		Object[ParticleKeys::FrequencyDistance] = Noise->FrequencyDistance;
+		Object[ParticleKeys::NoiseRange] = MakeVectorJSON(Noise->NoiseRange);
+		Object[ParticleKeys::NoiseLockTime] = Noise->NoiseLockTime;
+		Object[ParticleKeys::bTargetNoise] = Noise->bTargetNoise;
 	}
 	else if (UParticleModuleCollision* Collision = Cast<UParticleModuleCollision>(Module))
 	{
@@ -937,37 +961,46 @@ UParticleModule* DeserializeModule(json::JSON& Object, UParticleLODLevel* Outer)
 	else if (Type == "BeamSource")
 	{
 		UParticleModuleBeamSource* Source = GUObjectArray.CreateObject<UParticleModuleBeamSource>(Outer);
-		Source->SourcePoint = ReadVectorJSON(Object, ParticleKeys::SourcePoint, Source->SourcePoint);
-		if (Object.hasKey(ParticleKeys::SourceTangentMethod))
+		if (Object.hasKey(ParticleKeys::SourceMethod))
 		{
-			const int32 Value = static_cast<int32>(Object[ParticleKeys::SourceTangentMethod].ToInt());
-			Source->SourceTangentMethod = static_cast<EBeamTangentMethod>(std::clamp(Value, 0, static_cast<int32>(PEBTANM_MAX) - 1));
+			const int32 Value = static_cast<int32>(Object[ParticleKeys::SourceMethod].ToInt());
+			Source->SourceMethod = static_cast<EBeam2SourceTargetMethod>(std::clamp(Value, 0, static_cast<int32>(PEB2STM_Actor)));
 		}
+		if (Object.hasKey(ParticleKeys::SourceName)) Source->SourceName = FName(Object[ParticleKeys::SourceName].ToString());
+		if (Object.hasKey(ParticleKeys::bSourceAbsolute)) Source->bSourceAbsolute = Object[ParticleKeys::bSourceAbsolute].ToBool();
+		if (Object.hasKey(ParticleKeys::bLockSource)) Source->bLockSource = Object[ParticleKeys::bLockSource].ToBool();
+		Source->Source = ReadVectorJSON(Object, ParticleKeys::Source, Source->Source);
+		if (Object.hasKey(ParticleKeys::bLockSourceTangent)) Source->bLockSourceTangent = Object[ParticleKeys::bLockSourceTangent].ToBool();
 		Source->SourceTangent = ReadVectorJSON(Object, ParticleKeys::SourceTangent, Source->SourceTangent);
+		if (Object.hasKey(ParticleKeys::SourceStrength)) Source->SourceStrength = std::max(0.0f, static_cast<float>(Object[ParticleKeys::SourceStrength].ToFloat()));
 		Module = Source;
 	}
 	else if (Type == "BeamTarget")
 	{
 		UParticleModuleBeamTarget* Target = GUObjectArray.CreateObject<UParticleModuleBeamTarget>(Outer);
-		Target->TargetPoint = ReadVectorJSON(Object, ParticleKeys::TargetPoint, Target->TargetPoint);
-		if (Object.hasKey(ParticleKeys::TargetTangentMethod))
+		if (Object.hasKey(ParticleKeys::TargetMethod))
 		{
-			const int32 Value = static_cast<int32>(Object[ParticleKeys::TargetTangentMethod].ToInt());
-			Target->TargetTangentMethod = static_cast<EBeamTangentMethod>(std::clamp(Value, 0, static_cast<int32>(PEBTANM_MAX) - 1));
+			const int32 Value = static_cast<int32>(Object[ParticleKeys::TargetMethod].ToInt());
+			Target->TargetMethod = static_cast<EBeam2SourceTargetMethod>(std::clamp(Value, 0, static_cast<int32>(PEB2STM_Actor)));
 		}
+		if (Object.hasKey(ParticleKeys::TargetName)) Target->TargetName = FName(Object[ParticleKeys::TargetName].ToString());
+		if (Object.hasKey(ParticleKeys::bTargetAbsolute)) Target->bTargetAbsolute = Object[ParticleKeys::bTargetAbsolute].ToBool();
+		if (Object.hasKey(ParticleKeys::bLockTarget)) Target->bLockTarget = Object[ParticleKeys::bLockTarget].ToBool();
+		Target->Target = ReadVectorJSON(Object, ParticleKeys::Target, Target->Target);
+		if (Object.hasKey(ParticleKeys::bLockTargetTangent)) Target->bLockTargetTangent = Object[ParticleKeys::bLockTargetTangent].ToBool();
 		Target->TargetTangent = ReadVectorJSON(Object, ParticleKeys::TargetTangent, Target->TargetTangent);
+		if (Object.hasKey(ParticleKeys::TargetStrength)) Target->TargetStrength = std::max(0.0f, static_cast<float>(Object[ParticleKeys::TargetStrength].ToFloat()));
 		Module = Target;
 	}
 	else if (Type == "BeamNoise")
 	{
 		UParticleModuleBeamNoise* Noise = GUObjectArray.CreateObject<UParticleModuleBeamNoise>(Outer);
-		if (Object.hasKey(ParticleKeys::NoiseAmplitude)) Noise->NoiseAmplitude = std::max(0.0f, static_cast<float>(Object[ParticleKeys::NoiseAmplitude].ToFloat()));
-		if (Object.hasKey(ParticleKeys::NoiseFrequency)) Noise->NoiseFrequency = std::max(0.0f, static_cast<float>(Object[ParticleKeys::NoiseFrequency].ToFloat()));
-		if (Object.hasKey(ParticleKeys::NoiseSpeed)) Noise->NoiseSpeed = std::max(0.0f, static_cast<float>(Object[ParticleKeys::NoiseSpeed].ToFloat()));
-		if (Object.hasKey(ParticleKeys::NoiseSeed)) Noise->NoiseSeed = static_cast<float>(Object[ParticleKeys::NoiseSeed].ToFloat());
-		if (Object.hasKey(ParticleKeys::bLowFreqEnabled)) Noise->bLowFreqEnabled = Object[ParticleKeys::bLowFreqEnabled].ToBool();
-		Noise->NoiseRangeMin = ReadVectorJSON(Object, ParticleKeys::NoiseRangeMin, Noise->NoiseRangeMin);
-		Noise->NoiseRangeMax = ReadVectorJSON(Object, ParticleKeys::NoiseRangeMax, Noise->NoiseRangeMax);
+		if (Object.hasKey(ParticleKeys::bLowFreqEnabled)) Noise->bLowFreq_Enabled = Object[ParticleKeys::bLowFreqEnabled].ToBool();
+		if (Object.hasKey(ParticleKeys::Frequency)) Noise->Frequency = std::clamp(static_cast<int32>(Object[ParticleKeys::Frequency].ToInt()), 0, 64);
+		if (Object.hasKey(ParticleKeys::FrequencyDistance)) Noise->FrequencyDistance = std::max(0.0f, static_cast<float>(Object[ParticleKeys::FrequencyDistance].ToFloat()));
+		Noise->NoiseRange = ReadVectorJSON(Object, ParticleKeys::NoiseRange, Noise->NoiseRange);
+		if (Object.hasKey(ParticleKeys::NoiseLockTime)) Noise->NoiseLockTime = std::max(0.0f, static_cast<float>(Object[ParticleKeys::NoiseLockTime].ToFloat()));
+		if (Object.hasKey(ParticleKeys::bTargetNoise)) Noise->bTargetNoise = Object[ParticleKeys::bTargetNoise].ToBool();
 		Module = Noise;
 	}
 	else if (Type == ParticleKeys::Collision)

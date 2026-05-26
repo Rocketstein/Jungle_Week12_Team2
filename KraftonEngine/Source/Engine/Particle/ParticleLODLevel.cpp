@@ -35,6 +35,13 @@ void UParticleLODLevel::ClassifyModulesByRole()
 			TypeDataModule = TypeData;
 		}
 
+		// Beam helper modules (Source/Target/Noise/etc.) are driven by their owning
+		// TypeData module, not the generic spawn/update loop. Keep them out.
+		if (Module->GetModuleType() == EPMT_Beam)
+		{
+			continue;
+		}
+
 		if (Module->IsOnSpawnModule())
 		{
 			OnSpawnModules.push_back(Module);
