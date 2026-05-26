@@ -245,7 +245,6 @@ FParticleSystemSceneProxy* UParticleSystemComponent::GetSceneProxy() const
 void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
 	ClearParticleCollisionEvents();
 
 	UParticleSystem* ParticleTemplate = Template.Get();
