@@ -2,19 +2,19 @@
 
 FObjectPtr::FObjectPtr(UObject* InObject)
 {
-	DebugPtr = InObject;
+	Handle = InObject;
 }
 
 FObjectPtr::FObjectPtr(int32 Index)
 {
 	const auto& Items = GUObjectArray.GetItems();
-	if (Index < Items.size()) DebugPtr = Items[Index].Object;
-	else DebugPtr = nullptr;
+	if (Index < Items.size()) Handle = Items[Index].Object;
+	else Handle = nullptr;
 }
 
 FObjectPtr& FObjectPtr::operator=(UObject* Other)
 {
-	DebugPtr = Other;
+	Handle = Other;
 }
 
 FObjectPtr& FObjectPtr::operator=(std::nullptr_t)
@@ -25,32 +25,32 @@ FObjectPtr& FObjectPtr::operator=(std::nullptr_t)
 
 UObject* FObjectPtr::Get() const
 {
-	return DebugPtr;
+	return Handle;
 }
 
 bool FObjectPtr::IsValid() const 
 {
-	if (DebugPtr) return true;
+	if (Handle) return true;
 
 	return false;
 }
 
 UClass* FObjectPtr::GetClass() const 
 {
-	if (!DebugPtr) return nullptr;
-	return DebugPtr->GetClass();
+	if (!Handle) return nullptr;
+	return Handle->GetClass();
 }
 
 FName FObjectPtr::GetFName() const
 {
-	if (!DebugPtr) return nullptr;
-	return DebugPtr->GetFName();
+	if (!Handle) return nullptr;
+	return Handle->GetFName();
 }
 
 FString FObjectPtr::GetName() const 
 {
-	if (!DebugPtr) return nullptr;
-	return DebugPtr->GetName();
+	if (!Handle) return "";
+	return Handle->GetName();
 }
 
 FString FObjectPtr::GetPathName() const
@@ -60,8 +60,8 @@ FString FObjectPtr::GetPathName() const
 
 FObjectPtr FObjectPtr::GetOuter() const
 {
-	if (!DebugPtr) return nullptr;
-	return FObjectPtr(DebugPtr->GetOuter());
+	if (!Handle) return nullptr;
+	return FObjectPtr(Handle->GetOuter());
 }
 
 FObjectPtr FObjectPtr::GetPackage() const
@@ -76,5 +76,6 @@ bool FObjectPtr::IsIn(FObjectPtr SomeOuter) const
 
 bool FObjectPtr::IsA(const UClass* SomeBase) const
 {
-
+	if (!Handle || !SomeBase) return false;
+	return Handle->GetClass()->IsChildOf(SomeBase);
 }
