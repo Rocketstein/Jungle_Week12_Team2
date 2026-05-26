@@ -123,11 +123,8 @@ PS_Input_Particle VS(VS_Input_ParticleSprite Input)
 float4 PS(PS_Input_Particle Input) : SV_Target
 {
     float4 Col = DiffuseTexture.Sample(LinearClampSampler, Input.texcoord);
-    float AlphaBase = Col.a;
-    if (AlphaSource == 1)
-    {
-        AlphaBase = max(max(Col.r, Col.g), Col.b);
-    }
+    float LuminanceAlpha = max(max(Col.r, Col.g), Col.b);
+    float AlphaBase = (AlphaSource == 1) ? LuminanceAlpha : Col.a;
 
     float AlphaRange = max(1.0f - AlphaThreshold, 0.0001f);
     float Alpha = saturate((AlphaBase - AlphaThreshold) / AlphaRange);
