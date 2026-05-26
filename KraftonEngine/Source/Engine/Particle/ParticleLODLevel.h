@@ -28,7 +28,7 @@ public:
 	UParticleModuleEventGenerator* EventGenerator = nullptr;
 
 	TArray<UParticleModuleSpawnBase*> SpawningModules;
-	TArray<UParticleModule*> SpawnModules;
+	TArray<UParticleModule*> OnSpawnModules;
 	TArray<UParticleModule*> UpdateModules;
 	TArray<UParticleModule*> FinalUpdateModules;
 	TArray<UParticleModuleEventReceiverBase*> EventReceiverModules;
@@ -36,7 +36,7 @@ public:
 	uint32 ConvertedModules : 1 = false;
 	int32 PeakActiveParticles = 0; //예상 최대 particle값
 
-	virtual void UpdateModuleLists();
+	virtual void ClassifyModulesByRole();
 	virtual int32 CalculateMaxActiveParticleCount();
 	int32 GetModuleIndex(UParticleModule* InModule);
 	UParticleModule* GetModuleAtIndex(int32 InIndex);

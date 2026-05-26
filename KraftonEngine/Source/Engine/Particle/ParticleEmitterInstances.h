@@ -22,7 +22,7 @@ struct FParticleEmitterInstanceFixLayout
 
 struct FParticleEmitterInstance : FParticleEmitterInstanceFixLayout
 {
-	UParticleEmitter* SpriteTemplate = nullptr;
+	UParticleEmitter* EmitterTemplate = nullptr;
 
 	// Owner
 	UParticleSystemComponent* Component = nullptr;

@@ -901,7 +901,7 @@ UParticleLODLevel* DeserializeLODLevel(json::JSON& Object, UParticleEmitter* Out
 	}
 
 	RestoreLegacyDisabledModules(LOD, bAllowLegacyRestore);
-	LOD->UpdateModuleLists();
+	LOD->ClassifyModulesByRole();
 	return LOD;
 }
 
@@ -932,7 +932,7 @@ UParticleEmitter* DeserializeEmitter(json::JSON& Object, UParticleSystem* Outer,
 		Emitter->LODLevels.push_back(DeserializeLODLevel(DefaultLOD, Emitter, bAllowLegacyRestore));
 	}
 
-	Emitter->UpdateModuleLists();
+	Emitter->ClassifyModulesByRole();
 	return Emitter;
 }
 

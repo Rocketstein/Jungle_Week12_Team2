@@ -150,7 +150,7 @@ struct FRibbonPointData
 	uint32 SpawnSequence = 0;
 };
 
-struct FRibbonTrailData
+struct FRibbonTrailSection
 {
 	int32 FirstPoint = 0;
 	int32 PointCount = 0;
@@ -159,7 +159,7 @@ struct FRibbonTrailData
 struct FDynamicRibbonEmitterReplayData : public FDynamicRenderableEmitterReplayDataBase
 {
 	TArray<FRibbonPointData> Points;
-	TArray<FRibbonTrailData> Trails;
+	TArray<FRibbonTrailSection> Trails;
 
 	int32 SheetsPerTrail = 1;
 	int32 MaxTessellationBetweenParticles = 1;

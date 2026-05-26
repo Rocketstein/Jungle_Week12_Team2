@@ -50,7 +50,8 @@ public:
 	int32 DecideLODLevel(const FParticleLODContext& Context) const;
 	void SetForcedLODLevel(int32 InLODLevel);
 	void ClearForcedLODLevel();
-	
+	void BuildInstances(UParticleSystem* ParticleSystemTemplate);
+
 	//Related To Collision
 	void QueueParticleCollisionEvent(const FParticleEventCollideData& EventData);
 	void DispatchParticleCollisionEvents();

@@ -3,11 +3,12 @@
 #include "Core/EngineTypes.h"
 #include "Core/CollisionTypes.h"
 #include "Object/Object.h"
-#include "Particle/ParticleEmitter.h"
+#include "Particle/ParticleEmitterTypes.h"
 #include "ParticleModule.generated.h"
 
 struct FParticleEmitterInstance;
 class UMaterialInterface;
+class UParticleEmitter;
 class UParticleModuleTypeDataBase;
 class UStaticMesh;
 class UParticleLODLevel;
@@ -111,7 +112,7 @@ public:
 	virtual uint32 PrepPerInstanceBlock(FParticleEmitterInstance* Owner, void* InstData) { (void)Owner; (void)InstData; return 0; }
 	virtual void SetToSensibleDefaults(UParticleEmitter* Owner) { (void)Owner; }
 	virtual EModuleType GetModuleType() const { return EPMT_General; }
-	virtual bool IsSpawnModule() const { return bSpawnModule != 0; }
+	virtual bool IsOnSpawnModule() const { return bSpawnModule != 0; }
 	virtual bool IsUpdateModule() const { return bUpdateModule != 0; }
 	virtual bool IsSizeMultiplyLife() { return false; }
 	virtual bool TouchesMeshRotation() const { return false; }
@@ -159,7 +160,7 @@ public:
 	uint32 bProcessBurstList : 1 = false;
 
 	EModuleType GetModuleType() const override { return EPMT_Spawn; }
-	bool IsSpawnModule() const override { return true; }
+	bool IsOnSpawnModule() const override { return true; }
 
 	virtual bool GetSpawnAmount(const FContext& Context, int32 Offset, float OldLeftover, float DeltaTime, int32& Number, float& Rate)
 	{

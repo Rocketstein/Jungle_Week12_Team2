@@ -445,9 +445,9 @@ UParticleEmitter* FParticleEditorWidget::CreateDefaultEmitter(const FString& Emi
 		LOD->Modules.push_back(ColorOverLife);
 	}
 
-	LOD->UpdateModuleLists();
+	LOD->ClassifyModulesByRole();
 	Emitter->LODLevels.push_back(LOD);
-	Emitter->UpdateModuleLists();
+	Emitter->ClassifyModulesByRole();
 	return Emitter;
 }
 
@@ -942,7 +942,7 @@ void FParticleEditorWidget::ApplyEmitterEdit()
 {
 	if (UParticleEmitter* Emitter = GetSelectedEmitter())
 	{
-		Emitter->UpdateModuleLists();
+		Emitter->ClassifyModulesByRole();
 	}
 
 	RestartPreviewSystem();

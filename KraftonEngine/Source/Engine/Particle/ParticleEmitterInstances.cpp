@@ -29,27 +29,27 @@ FParticleEmitterInstance::~FParticleEmitterInstance()
 
 void FParticleEmitterInstance::InitParameters(UParticleEmitter* InTemplate)
 {
-	SpriteTemplate = InTemplate;
-	if (SpriteTemplate)
+	EmitterTemplate = InTemplate;
+	if (EmitterTemplate)
 	{
-		SpriteTemplate->UpdateModuleLists();
-		SpriteTemplate->CacheEmitterModuleInfo();
+		EmitterTemplate->ClassifyModulesByRole();
+		EmitterTemplate->CacheEmitterModuleInfo();
 	}
 
 	SetCurrentLODLevel(0);
-	ParticleSize = SpriteTemplate ? SpriteTemplate->ParticleSize : static_cast<int32>(sizeof(FBaseParticle));
-	TypeDataOffset = SpriteTemplate ? SpriteTemplate->TypeDataOffset : 0;
-	TypeDataInstanceOffset = SpriteTemplate ? SpriteTemplate->TypeDataInstanceOffset : -1;
+	ParticleSize = EmitterTemplate ? EmitterTemplate->ParticleSize : static_cast<int32>(sizeof(FBaseParticle));
+	TypeDataOffset = EmitterTemplate ? EmitterTemplate->TypeDataOffset : 0;
+	TypeDataInstanceOffset = EmitterTemplate ? EmitterTemplate->TypeDataInstanceOffset : -1;
 
-	if (SpriteTemplate && SpriteTemplate->ReqInstanceBytes > 0)
+	if (EmitterTemplate && EmitterTemplate->ReqInstanceBytes > 0)
 	{
-		if (!InstanceData || SpriteTemplate->ReqInstanceBytes > InstancePayloadSize)
+		if (!InstanceData || EmitterTemplate->ReqInstanceBytes > InstancePayloadSize)
 		{
-			uint8* NewInstanceData = static_cast<uint8*>(std::realloc(InstanceData, SpriteTemplate->ReqInstanceBytes));
+			uint8* NewInstanceData = static_cast<uint8*>(std::realloc(InstanceData, EmitterTemplate->ReqInstanceBytes));
 			if (NewInstanceData)
 			{
 				InstanceData = NewInstanceData;
-				InstancePayloadSize = SpriteTemplate->ReqInstanceBytes;
+				InstancePayloadSize = EmitterTemplate->ReqInstanceBytes;
 			}
 			else
 			{
@@ -60,7 +60,7 @@ void FParticleEmitterInstance::InitParameters(UParticleEmitter* InTemplate)
 		if (InstanceData)
 		{
 			std::memset(InstanceData, 0, InstancePayloadSize);
-			for (UParticleModule* ParticleModule : SpriteTemplate->ModulesNeedingInstanceData)
+			for (UParticleModule* ParticleModule : EmitterTemplate->ModulesNeedingInstanceData)
 			{
 				if (ParticleModule)
 				{
@@ -88,15 +88,15 @@ void FParticleEmitterInstance::InitParameters(UParticleEmitter* InTemplate)
 	LastDeltaTime = 0.0f;
 	ResetBurstList();
 
-	const int32 InitialCount = SpriteTemplate ? std::max(SpriteTemplate->InitialAllocationCount, 0) : 0;
+	const int32 InitialCount = EmitterTemplate ? std::max(EmitterTemplate->InitialAllocationCount, 0) : 0;
 	Resize(InitialCount);
 }
 
 void FParticleEmitterInstance::RebuildTemplateModuleList()
 {
-	if (SpriteTemplate)
+	if (EmitterTemplate)
 	{
-		SpriteTemplate->UpdateModuleLists();
+		EmitterTemplate->ClassifyModulesByRole();
 	}
 }
 
@@ -147,7 +147,7 @@ bool FParticleEmitterInstance::Resize(int32 NewMaxActiveParticles, bool bSetMaxA
 void FParticleEmitterInstance::SetCurrentLODLevel(int32 LODLevel)
 {
 	CurrentLODLevelIndex = std::max(0, LODLevel);
-	CurrentLODLevel = SpriteTemplate ? SpriteTemplate->GetBestLODLevel(CurrentLODLevelIndex) : nullptr;
+	CurrentLODLevel = EmitterTemplate ? EmitterTemplate->GetBestLODLevel(CurrentLODLevelIndex) : nullptr;
 }
 
 void FParticleEmitterInstance::Tick(float DeltaTime, int32 LODLevel, bool bSuppressSpawning)
@@ -205,7 +205,7 @@ void FParticleEmitterInstance::Tick_ModuleUpdate(float DeltaTime, UParticleLODLe
 		return;
 	}
 
-	UParticleLODLevel* HighestLODLevel = SpriteTemplate ? SpriteTemplate->GetLODLevel(0) : nullptr;
+	UParticleLODLevel* HighestLODLevel = EmitterTemplate ? EmitterTemplate->GetLODLevel(0) : nullptr;
 
 	// Update modules are processed in order, and the same module in different LOD levels shares the same instance data offset.
 	for (int32 ModuleIndex = 0; ModuleIndex < static_cast<int32>(InCurrentLODLevel->UpdateModules.size()); ++ModuleIndex)
@@ -240,7 +240,7 @@ void FParticleEmitterInstance::Tick_ModuleFinalUpdate(float DeltaTime, UParticle
 		return;
 	}
 
-	UParticleLODLevel* HighestLODLevel = SpriteTemplate ? SpriteTemplate->GetLODLevel(0) : nullptr;
+	UParticleLODLevel* HighestLODLevel = EmitterTemplate ? EmitterTemplate->GetLODLevel(0) : nullptr;
 	for (int32 ModuleIndex = 0; ModuleIndex < static_cast<int32>(InCurrentLODLevel->FinalUpdateModules.size()); ++ModuleIndex)
 	{
 		UParticleModule* Module = InCurrentLODLevel->FinalUpdateModules[ModuleIndex];
@@ -291,7 +291,7 @@ float FParticleEmitterInstance::Spawn(float DeltaTime)
 	const float OldLeftover = SpawnFraction;
 	bool bProcessSpawnRate = true;
 	bool bProcessBurstList = true;
-	UParticleLODLevel* HighestLODLevel = SpriteTemplate ? SpriteTemplate->GetLODLevel(0) : nullptr;
+	UParticleLODLevel* HighestLODLevel = EmitterTemplate ? EmitterTemplate->GetLODLevel(0) : nullptr;
 
 	// Spawning modules are processed in order, and the same module in different LOD levels shares the same instance data offset.
 	for (int32 SpawnModIndex = 0; SpawnModIndex < static_cast<int32>(CurrentLODLevel->SpawningModules.size()); ++SpawnModIndex)
@@ -430,17 +430,17 @@ void FParticleEmitterInstance::SpawnParticles(int32 Count, float StartTime, floa
 
 		if (CurrentLODLevel)
 		{
-			UParticleLODLevel* HighestLODLevel = SpriteTemplate ? SpriteTemplate->GetLODLevel(0) : nullptr;
-			for (int32 ModuleIndex = 0; ModuleIndex < static_cast<int32>(CurrentLODLevel->SpawnModules.size()); ++ModuleIndex)
+			UParticleLODLevel* HighestLODLevel = EmitterTemplate ? EmitterTemplate->GetLODLevel(0) : nullptr;
+			for (int32 ModuleIndex = 0; ModuleIndex < static_cast<int32>(CurrentLODLevel->OnSpawnModules.size()); ++ModuleIndex)
 			{
-				UParticleModule* Module = CurrentLODLevel->SpawnModules[ModuleIndex];
+				UParticleModule* Module = CurrentLODLevel->OnSpawnModules[ModuleIndex];
 				if (!Module)
 				{
 					continue;
 				}
 
-				UParticleModule* OffsetModule = (HighestLODLevel && ModuleIndex < static_cast<int32>(HighestLODLevel->SpawnModules.size()))
-					? HighestLODLevel->SpawnModules[ModuleIndex]
+				UParticleModule* OffsetModule = (HighestLODLevel && ModuleIndex < static_cast<int32>(HighestLODLevel->OnSpawnModules.size()))
+					? HighestLODLevel->OnSpawnModules[ModuleIndex]
 					: Module;
 				UParticleModule::FSpawnContext Context(*this, static_cast<int32>(GetModuleDataOffset(OffsetModule)), SpawnTime, &Particle);
 				Module->Spawn(Context);
@@ -622,24 +622,24 @@ uint32 FParticleEmitterInstance::RequiredBytes()
 
 uint32 FParticleEmitterInstance::GetModuleDataOffset(UParticleModule* Module)
 {
-	if (!SpriteTemplate || !Module)
+	if (!EmitterTemplate || !Module)
 	{
 		return 0;
 	}
 
-	const auto Offset = SpriteTemplate->ModuleOffsetMap.find(Module);
-	return Offset != SpriteTemplate->ModuleOffsetMap.end() ? Offset->second : 0;
+	const auto Offset = EmitterTemplate->ModuleOffsetMap.find(Module);
+	return Offset != EmitterTemplate->ModuleOffsetMap.end() ? Offset->second : 0;
 }
 
 uint8* FParticleEmitterInstance::GetModuleInstanceData(UParticleModule* Module)
 {
-	if (!SpriteTemplate || !InstanceData || !Module)
+	if (!EmitterTemplate || !InstanceData || !Module)
 	{
 		return nullptr;
 	}
 
-	const auto Offset = SpriteTemplate->ModuleInstanceOffsetMap.find(Module);
-	if (Offset == SpriteTemplate->ModuleInstanceOffsetMap.end() || Offset->second >= static_cast<uint32>(InstancePayloadSize))
+	const auto Offset = EmitterTemplate->ModuleInstanceOffsetMap.find(Module);
+	if (Offset == EmitterTemplate->ModuleInstanceOffsetMap.end() || Offset->second >= static_cast<uint32>(InstancePayloadSize))
 	{
 		return nullptr;
 	}

@@ -54,18 +54,18 @@ UParticleLODLevel* UParticleEmitter::DuplicateLODLevelForEmitter(UParticleLODLev
 		}
 	}
 
-	NewLOD->UpdateModuleLists();
+	NewLOD->ClassifyModulesByRole();
 	return NewLOD;
 }
 
 //기존 Asset을 보고 런타임때 참고할 Module배열을 만든다.
-void UParticleEmitter::UpdateModuleLists()
+void UParticleEmitter::ClassifyModulesByRole()
 {
 	for (UParticleLODLevel* LODLevel : LODLevels)
 	{
 		if (LODLevel)
 		{
-			LODLevel->UpdateModuleLists();
+			LODLevel->ClassifyModulesByRole();
 		}
 	}
 }
@@ -104,7 +104,7 @@ void UParticleEmitter::SyncLODLevelsToSystemCount(int32 LODCount)
 		}
 
 		LODLevels[Index]->SetLevelIndex(Index);
-		LODLevels[Index]->UpdateModuleLists();
+		LODLevels[Index]->ClassifyModulesByRole();
 	}
 }
 
@@ -160,6 +160,85 @@ bool UParticleEmitter::CalculateMaxActiveParticleCount()
 	return true;
 }
 
+void UParticleEmitter::CalculateTypeParticleSizeAndOffsets(UParticleModuleTypeDataBase* HighTypeData)
+{
+	if (HighTypeData)
+	{
+		const int32 ReqBytes = static_cast<int32>(HighTypeData->RequiredBytes(nullptr));
+		if (ReqBytes > 0)
+		{
+			TypeDataOffset = ParticleSize;
+			ParticleSize += ReqBytes;
+		}
+
+		const int32 TempInstanceBytes = static_cast<int32>(HighTypeData->RequiredBytesPerInstance());
+		if (TempInstanceBytes > 0)
+		{
+			TypeDataInstanceOffset = ReqInstanceBytes;
+			ReqInstanceBytes += TempInstanceBytes;
+		}
+	}
+}
+
+bool UParticleEmitter::CalculatePerParticleSizeAndOffsets(UParticleModuleTypeDataBase* HighTypeData, int32 ModuleIdx, UParticleModule* ParticleModule)
+{
+	if (!ParticleModule || ParticleModule->GetModuleType() == EPMT_TypeData)
+	{
+		return true;
+	}
+
+	const int32 ReqBytes = static_cast<int32>(ParticleModule->RequiredBytes(HighTypeData));
+	if (ReqBytes > 0)
+	{
+		//ModuleIdx에 있는 Module 넣는다.
+		ModuleOffsetMap.emplace(ParticleModule, static_cast<uint32>(ParticleSize));
+		//TODO : LOD배열 전체 순회는 별로 좋지 않은것 같은데,,
+		//다른 LOD에 같은 ModuleIdx에있는 아이들의 Offset도 넣어준다
+		for (int32 LODIdx = 1; LODIdx < static_cast<int32>(LODLevels.size()); ++LODIdx)
+		{
+			UParticleLODLevel* CurLODLevel = LODLevels[LODIdx];
+			if (!CurLODLevel)
+			{
+				continue;
+			}
+
+			UParticleModule* LODModule = CurLODLevel->GetModuleAtIndex(ModuleIdx);
+			if (LODModule)
+			{
+				ModuleOffsetMap.emplace(LODModule, static_cast<uint32>(ParticleSize));
+			}
+		}
+		ParticleSize += ReqBytes;
+	}
+	return false;
+}
+
+void UParticleEmitter::CalculatePerInstanceParticleSizeAndOffset(int32 ModuleIdx, UParticleModule* ParticleModule, const int32 TempInstanceBytes)
+{
+	if (TempInstanceBytes > 0)
+	{
+		ModuleInstanceOffsetMap.emplace(ParticleModule, static_cast<uint32>(ReqInstanceBytes));
+		ModulesNeedingInstanceData.push_back(ParticleModule);
+
+		for (int32 LODIdx = 1; LODIdx < static_cast<int32>(LODLevels.size()); ++LODIdx)
+		{
+			UParticleLODLevel* CurLODLevel = LODLevels[LODIdx];
+			if (!CurLODLevel)
+			{
+				continue;
+			}
+
+			UParticleModule* LODModule = CurLODLevel->GetModuleAtIndex(ModuleIdx);
+			if (LODModule)
+			{
+				ModuleInstanceOffsetMap.emplace(LODModule, static_cast<uint32>(ReqInstanceBytes));
+			}
+		}
+
+		ReqInstanceBytes += TempInstanceBytes;
+	}
+}
+
 //각 모듈의 per-particle payload offset과 per-instance payload offset구하는과정
 void UParticleEmitter::CacheEmitterModuleInfo()
 {
@@ -178,78 +257,18 @@ void UParticleEmitter::CacheEmitterModuleInfo()
 		return;
 	}
 
-	HighLODLevel->UpdateModuleLists();
+	HighLODLevel->ClassifyModulesByRole();
 
 	UParticleModuleTypeDataBase* HighTypeData = HighLODLevel->TypeDataModule;
-	if (HighTypeData)
-	{
-		const int32 ReqBytes = static_cast<int32>(HighTypeData->RequiredBytes(nullptr));
-		if (ReqBytes > 0)
-		{
-			TypeDataOffset = ParticleSize;
-			ParticleSize += ReqBytes;
-		}
-
-		const int32 TempInstanceBytes = static_cast<int32>(HighTypeData->RequiredBytesPerInstance());
-		if (TempInstanceBytes > 0)
-		{
-			TypeDataInstanceOffset = ReqInstanceBytes;
-			ReqInstanceBytes += TempInstanceBytes;
-		}
-	}
+	CalculateTypeParticleSizeAndOffsets(HighTypeData);
 
 	for (int32 ModuleIdx = 0; ModuleIdx < static_cast<int32>(HighLODLevel->Modules.size()); ++ModuleIdx)
 	{
 		UParticleModule* ParticleModule = HighLODLevel->Modules[ModuleIdx];
-		if (!ParticleModule || ParticleModule->GetModuleType() == EPMT_TypeData)
-		{
-			continue;
-		}
-
-		const int32 ReqBytes = static_cast<int32>(ParticleModule->RequiredBytes(HighTypeData));
-		if (ReqBytes > 0)
-		{
-			ModuleOffsetMap.emplace(ParticleModule, static_cast<uint32>(ParticleSize));
-			for (int32 LODIdx = 1; LODIdx < static_cast<int32>(LODLevels.size()); ++LODIdx)
-			{
-				UParticleLODLevel* CurLODLevel = LODLevels[LODIdx];
-				if (!CurLODLevel)
-				{
-					continue;
-				}
-
-				UParticleModule* LODModule = CurLODLevel->GetModuleAtIndex(ModuleIdx);
-				if (LODModule)
-				{
-					ModuleOffsetMap.emplace(LODModule, static_cast<uint32>(ParticleSize));
-				}
-			}
-			ParticleSize += ReqBytes;
-		}
+		if (CalculatePerParticleSizeAndOffsets(HighTypeData, ModuleIdx, ParticleModule)) continue;
 
 		const int32 TempInstanceBytes = static_cast<int32>(ParticleModule->RequiredBytesPerInstance());
-		if (TempInstanceBytes > 0)
-		{
-			ModuleInstanceOffsetMap.emplace(ParticleModule, static_cast<uint32>(ReqInstanceBytes));
-			ModulesNeedingInstanceData.push_back(ParticleModule);
-
-			for (int32 LODIdx = 1; LODIdx < static_cast<int32>(LODLevels.size()); ++LODIdx)
-			{
-				UParticleLODLevel* CurLODLevel = LODLevels[LODIdx];
-				if (!CurLODLevel)
-				{
-					continue;
-				}
-
-				UParticleModule* LODModule = CurLODLevel->GetModuleAtIndex(ModuleIdx);
-				if (LODModule)
-				{
-					ModuleInstanceOffsetMap.emplace(LODModule, static_cast<uint32>(ReqInstanceBytes));
-				}
-			}
-
-			ReqInstanceBytes += TempInstanceBytes;
-		}
+		CalculatePerInstanceParticleSizeAndOffset(ModuleIdx, ParticleModule, TempInstanceBytes);
 	}
 }
 
