@@ -881,6 +881,128 @@ void FParticleEditorWidget::SetEmitterTypeData(int32 EmitterIndex, EEmitterTypeD
 	ResetPreviewCameraToParticleBounds();
 }
 
+void FParticleEditorWidget::MoveEmitterToIndex(int32 SourceEmitterIndex, int32 TargetInsertIndex)
+{
+	if (!EditingParticleSystem)
+	{
+		return;
+	}
+
+	const int32 EmitterCount = static_cast<int32>(EditingParticleSystem->Emitters.size());
+	if (SourceEmitterIndex < 0 || SourceEmitterIndex >= EmitterCount)
+	{
+		return;
+	}
+
+	TargetInsertIndex = std::clamp(TargetInsertIndex, 0, EmitterCount);
+	if (TargetInsertIndex == SourceEmitterIndex || TargetInsertIndex == SourceEmitterIndex + 1)
+	{
+		return;
+	}
+
+	UParticleEmitter* SelectedEmitter = GetSelectedEmitter();
+	UParticleEmitter* MovedEmitter = EditingParticleSystem->Emitters[SourceEmitterIndex];
+	EditingParticleSystem->Emitters.erase(EditingParticleSystem->Emitters.begin() + SourceEmitterIndex);
+	if (SourceEmitterIndex < TargetInsertIndex)
+	{
+		--TargetInsertIndex;
+	}
+	EditingParticleSystem->Emitters.insert(EditingParticleSystem->Emitters.begin() + TargetInsertIndex, MovedEmitter);
+
+	if (SelectedEmitter)
+	{
+		auto SelectedIt = std::find(EditingParticleSystem->Emitters.begin(), EditingParticleSystem->Emitters.end(), SelectedEmitter);
+		if (SelectedIt != EditingParticleSystem->Emitters.end())
+		{
+			SelectedEmitterIndex = static_cast<int32>(std::distance(EditingParticleSystem->Emitters.begin(), SelectedIt));
+		}
+	}
+	else
+	{
+		SelectedEmitterIndex = std::clamp(TargetInsertIndex, 0, static_cast<int32>(EditingParticleSystem->Emitters.size()) - 1);
+	}
+	bParticleSystemSelected = false;
+	RestartPreviewSystem();
+	MarkDirty();
+}
+
+void FParticleEditorWidget::MoveModuleToEmitterAtIndex(int32 SourceEmitterIndex, UParticleModule* Module, int32 TargetEmitterIndex, int32 TargetInsertIndex)
+{
+	if (!EditingParticleSystem || !Module ||
+		SourceEmitterIndex < 0 || SourceEmitterIndex >= static_cast<int32>(EditingParticleSystem->Emitters.size()) ||
+		TargetEmitterIndex < 0 || TargetEmitterIndex >= static_cast<int32>(EditingParticleSystem->Emitters.size()))
+	{
+		return;
+	}
+
+	UParticleEmitter* SourceEmitter = EditingParticleSystem->Emitters[SourceEmitterIndex];
+	UParticleEmitter* TargetEmitter = EditingParticleSystem->Emitters[TargetEmitterIndex];
+	UParticleLODLevel* SourceLOD = GetSelectedLODLevel(SourceEmitter);
+	UParticleLODLevel* TargetLOD = GetSelectedLODLevel(TargetEmitter);
+	if (!SourceEmitter || !TargetEmitter || !SourceLOD || !TargetLOD || Module->IsA<UParticleModuleTypeDataBase>())
+	{
+		return;
+	}
+
+	auto ModuleIt = std::find(SourceLOD->Modules.begin(), SourceLOD->Modules.end(), Module);
+	if (ModuleIt == SourceLOD->Modules.end())
+	{
+		return;
+	}
+
+	const bool bBeamModule = Module->IsA<UParticleModuleBeamBase>();
+	const bool bTargetIsBeam = TargetLOD->TypeDataModule && TargetLOD->TypeDataModule->IsA<UParticleModuleTypeDataBeam2>();
+	if (bBeamModule && !bTargetIsBeam)
+	{
+		return;
+	}
+
+	const int32 SourceModuleIndex = static_cast<int32>(std::distance(SourceLOD->Modules.begin(), ModuleIt));
+	TargetInsertIndex = std::clamp(TargetInsertIndex, 0, static_cast<int32>(TargetLOD->Modules.size()));
+
+	if (SourceLOD == TargetLOD)
+	{
+		if (TargetInsertIndex == SourceModuleIndex || TargetInsertIndex == SourceModuleIndex + 1)
+		{
+			return;
+		}
+
+		UParticleModule* MovedModule = Module;
+		SourceLOD->Modules.erase(ModuleIt);
+		if (SourceModuleIndex < TargetInsertIndex)
+		{
+			--TargetInsertIndex;
+		}
+		SourceLOD->Modules.insert(SourceLOD->Modules.begin() + TargetInsertIndex, MovedModule);
+
+		SourceEmitter->ClassifyModulesByRole();
+		SelectedEmitterIndex = TargetEmitterIndex;
+		SelectedModule = MovedModule;
+		bParticleSystemSelected = false;
+		RestartPreviewSystem();
+		MarkDirty();
+		return;
+	}
+
+	UParticleModule* MovedModule = Module->CloneForLOD(TargetLOD);
+	if (!MovedModule)
+	{
+		return;
+	}
+
+	TargetLOD->Modules.insert(TargetLOD->Modules.begin() + TargetInsertIndex, MovedModule);
+	SourceLOD->Modules.erase(ModuleIt);
+	GUObjectArray.DestroyObject(Module);
+
+	SourceEmitter->ClassifyModulesByRole();
+	TargetEmitter->ClassifyModulesByRole();
+	SelectedEmitterIndex = TargetEmitterIndex;
+	SelectedModule = MovedModule;
+	bParticleSystemSelected = false;
+	RestartPreviewSystem();
+	MarkDirty();
+}
+
 void FParticleEditorWidget::DeleteModuleFromEmitter(int32 EmitterIndex, UParticleModule* Module)
 {
 	if (!EditingParticleSystem || !Module || EmitterIndex < 0 || EmitterIndex >= static_cast<int32>(EditingParticleSystem->Emitters.size()))
@@ -1686,9 +1808,24 @@ void FParticleEditorWidget::RenderEmitterList()
 	int32 EmitterToAddModule = -1;
 	int32 EmitterToDeleteModule = -1;
 	int32 EmitterToSetTypeData = -1;
+	int32 EmitterDragSource = -1;
+	int32 EmitterDragInsertIndex = -1;
+	int32 ModuleDragSourceEmitter = -1;
+	int32 ModuleDragTargetEmitter = -1;
+	int32 ModuleDragInsertIndex = -1;
 	UParticleModule* ModuleToDelete = nullptr;
+	UParticleModule* ModuleDragToMove = nullptr;
 	EAddableModuleType ModuleTypeToAdd = EAddableModuleType::Lifetime;
 	EEmitterTypeData TypeDataToSet = EEmitterTypeData::Sprite;
+	struct FEmitterDragPayload
+	{
+		int32 SourceEmitterIndex = -1;
+	};
+	struct FModuleDragPayload
+	{
+		int32 SourceEmitterIndex = -1;
+		UParticleModule* Module = nullptr;
+	};
 	auto QueueAddModule = [&](int32 EmitterIndex, EAddableModuleType ModuleType)
 	{
 		EmitterToAddModule = EmitterIndex;
@@ -1698,6 +1835,35 @@ void FParticleEditorWidget::RenderEmitterList()
 	{
 		EmitterToSetTypeData = EmitterIndex;
 		TypeDataToSet = TypeData;
+	};
+	auto QueueEmitterDrop = [&](int32 SourceEmitterIndex, int32 TargetInsertIndex)
+	{
+		EmitterDragSource = SourceEmitterIndex;
+		EmitterDragInsertIndex = TargetInsertIndex;
+	};
+	auto QueueModuleDrop = [&](int32 SourceEmitterIndex, UParticleModule* Module, int32 TargetEmitterIndex, int32 TargetInsertIndex)
+	{
+		ModuleDragSourceEmitter = SourceEmitterIndex;
+		ModuleDragToMove = Module;
+		ModuleDragTargetEmitter = TargetEmitterIndex;
+		ModuleDragInsertIndex = TargetInsertIndex;
+	};
+	auto CanMoveModuleToEmitter = [&](UParticleModule* Module, int32 TargetEmitterIndex) -> bool
+	{
+		if (!EditingParticleSystem || !Module || TargetEmitterIndex < 0 ||
+			TargetEmitterIndex >= static_cast<int32>(EditingParticleSystem->Emitters.size()) ||
+			Module->IsA<UParticleModuleTypeDataBase>())
+		{
+			return false;
+		}
+
+		if (!Module->IsA<UParticleModuleBeamBase>())
+		{
+			return true;
+		}
+
+		UParticleLODLevel* TargetLOD = GetSelectedLODLevel(EditingParticleSystem->Emitters[TargetEmitterIndex]);
+		return TargetLOD && TargetLOD->TypeDataModule && TargetLOD->TypeDataModule->IsA<UParticleModuleTypeDataBeam2>();
 	};
 	auto DrawTypeDataContextMenu = [&](int32 EmitterIndex, UParticleLODLevel* LOD)
 	{
@@ -1812,7 +1978,6 @@ void FParticleEditorWidget::RenderEmitterList()
 			ImGui::EndMenu();
 		}
 
-		ImGui::Separator();
 		if (ImGui::MenuItem("Delete Emitter"))
 		{
 			EmitterToDelete = EmitterIndex;
@@ -1857,6 +2022,33 @@ void FParticleEditorWidget::RenderEmitterList()
 			bParticleSystemSelected = false;
 		}
 		ImGui::PopStyleColor(3);
+		if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+		{
+			const FEmitterDragPayload Payload{ Index };
+			ImGui::SetDragDropPayload("PARTICLE_EMITTER", &Payload, sizeof(Payload));
+			ImGui::TextUnformatted(Label.c_str());
+			ImGui::EndDragDropSource();
+		}
+		if (ImGui::BeginDragDropTarget())
+		{
+			if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("PARTICLE_EMITTER"))
+			{
+				const FEmitterDragPayload* Drag = static_cast<const FEmitterDragPayload*>(Payload->Data);
+				const ImVec2 Min = ImGui::GetItemRectMin();
+				const ImVec2 Max = ImGui::GetItemRectMax();
+				const bool bInsertAfter = ImGui::GetIO().MousePos.x > (Min.x + Max.x) * 0.5f;
+				QueueEmitterDrop(Drag->SourceEmitterIndex, Index + (bInsertAfter ? 1 : 0));
+			}
+			if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("PARTICLE_MODULE"))
+			{
+				const FModuleDragPayload* Drag = static_cast<const FModuleDragPayload*>(Payload->Data);
+				if (Drag && Drag->Module && CanMoveModuleToEmitter(Drag->Module, Index))
+				{
+					QueueModuleDrop(Drag->SourceEmitterIndex, Drag->Module, Index, static_cast<int32>(LOD->Modules.size()));
+				}
+			}
+			ImGui::EndDragDropTarget();
+		}
 		if (ImGui::BeginPopupContextItem("EmitterHeaderContext"))
 		{
 			SelectedEmitterIndex = Index;
@@ -1874,6 +2066,12 @@ void FParticleEditorWidget::RenderEmitterList()
 			}
 
 			ImGui::PushID(Module);
+			auto ModuleIt = std::find(LOD->Modules.begin(), LOD->Modules.end(), Module);
+			const bool bMovableModule = ModuleIt != LOD->Modules.end() && !Module->IsA<UParticleModuleTypeDataBase>();
+			const int32 ActualModuleIndex = bMovableModule
+				? static_cast<int32>(std::distance(LOD->Modules.begin(), ModuleIt))
+				: -1;
+
 			const bool bSelected = !bParticleSystemSelected && Index == SelectedEmitterIndex && Module == GetSelectedModule();
 			const ImU32 RowColor = GetModuleRowColor(bSelected, ModuleIndex);
 			ImGui::PushStyleColor(ImGuiCol_Header, RowColor);
@@ -1887,6 +2085,33 @@ void FParticleEditorWidget::RenderEmitterList()
 				bParticleSystemSelected = false;
 			}
 			ImGui::PopStyleColor(3);
+			if (bMovableModule && ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+			{
+				const FModuleDragPayload Payload{ Index, Module };
+				ImGui::SetDragDropPayload("PARTICLE_MODULE", &Payload, sizeof(Payload));
+				ImGui::TextUnformatted(ModuleName.c_str());
+				ImGui::EndDragDropSource();
+			}
+			if (ImGui::BeginDragDropTarget())
+			{
+				if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("PARTICLE_MODULE"))
+				{
+					const FModuleDragPayload* Drag = static_cast<const FModuleDragPayload*>(Payload->Data);
+					if (Drag && Drag->Module && CanMoveModuleToEmitter(Drag->Module, Index))
+					{
+						int32 TargetInsertIndex = 0;
+						if (ActualModuleIndex >= 0)
+						{
+							const ImVec2 Min = ImGui::GetItemRectMin();
+							const ImVec2 Max = ImGui::GetItemRectMax();
+							const bool bInsertAfter = ImGui::GetIO().MousePos.y > (Min.y + Max.y) * 0.5f;
+							TargetInsertIndex = ActualModuleIndex + (bInsertAfter ? 1 : 0);
+						}
+						QueueModuleDrop(Drag->SourceEmitterIndex, Drag->Module, Index, TargetInsertIndex);
+					}
+				}
+				ImGui::EndDragDropTarget();
+			}
 			if (ImGui::BeginPopupContextItem("ModuleRowContext"))
 			{
 				SelectedEmitterIndex = Index;
@@ -1981,6 +2206,14 @@ void FParticleEditorWidget::RenderEmitterList()
 	else if (EmitterToDeleteModule >= 0)
 	{
 		DeleteModuleFromEmitter(EmitterToDeleteModule, ModuleToDelete);
+	}
+	else if (EmitterDragSource >= 0)
+	{
+		MoveEmitterToIndex(EmitterDragSource, EmitterDragInsertIndex);
+	}
+	else if (ModuleDragSourceEmitter >= 0)
+	{
+		MoveModuleToEmitterAtIndex(ModuleDragSourceEmitter, ModuleDragToMove, ModuleDragTargetEmitter, ModuleDragInsertIndex);
 	}
 	else if (EmitterToAddModule >= 0)
 	{
