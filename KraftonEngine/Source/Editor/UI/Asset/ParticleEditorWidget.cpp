@@ -420,6 +420,7 @@ void FParticleEditorWidget::Open(UObject* Object)
 	SelectedEmitterIndex = 0;
 	SelectedLODIndex = 0;
 	SelectedModule = nullptr;
+	bParticleSystemSelected = false;
 	SyncAssetNameBuffer();
 	EnsureDefaultSystem();
 	InitializePreviewWorld();
@@ -434,6 +435,7 @@ void FParticleEditorWidget::Close()
 	PreviewActor = nullptr;
 	SelectedLODIndex = 0;
 	SelectedModule = nullptr;
+	bParticleSystemSelected = false;
 	AssetNameBuffer[0] = '\0';
 }
 
@@ -481,6 +483,7 @@ void FParticleEditorWidget::EnsureDefaultSystem()
 		EditingParticleSystem->NormalizeLODData();
 		SelectedLODIndex = ClampLODIndex(SelectedLODIndex);
 		SelectedModule = GetSelectedRequiredModule();
+		bParticleSystemSelected = false;
 	}
 }
 
@@ -724,6 +727,7 @@ void FParticleEditorWidget::AddModuleToEmitter(int32 EmitterIndex, EAddableModul
 	LOD->Modules.push_back(NewModule);
 	SelectedEmitterIndex = EmitterIndex;
 	SelectedModule = NewModule;
+	bParticleSystemSelected = false;
 	ApplyEmitterEdit();
 }
 
@@ -832,6 +836,7 @@ void FParticleEditorWidget::SetEmitterTypeData(int32 EmitterIndex, EEmitterTypeD
 	SelectedModule = SelectedLOD && SelectedLOD->TypeDataModule
 		? static_cast<UParticleModule*>(SelectedLOD->TypeDataModule)
 		: static_cast<UParticleModule*>(SelectedLOD ? SelectedLOD->RequiredModule : nullptr);
+	bParticleSystemSelected = false;
 	ApplyEmitterEdit();
 	ResetPreviewCameraToParticleBounds();
 }
@@ -865,6 +870,7 @@ void FParticleEditorWidget::DeleteModuleFromEmitter(int32 EmitterIndex, UParticl
 	{
 		SelectedEmitterIndex = EmitterIndex;
 		SelectedModule = LOD->RequiredModule;
+		bParticleSystemSelected = false;
 		if (!SelectedModule)
 		{
 			SelectedModule = LOD->SpawnModule;
@@ -886,6 +892,7 @@ void FParticleEditorWidget::DeleteEmitter(int32 EmitterIndex)
 	EditingParticleSystem->Emitters.erase(EditingParticleSystem->Emitters.begin() + EmitterIndex);
 
 	SelectedModule = nullptr;
+	bParticleSystemSelected = false;
 	if (EditingParticleSystem->Emitters.empty())
 	{
 		SelectedEmitterIndex = 0;
@@ -1120,7 +1127,10 @@ int32 FParticleEditorWidget::ClampLODIndex(int32 LODIndex) const
 void FParticleEditorWidget::SetSelectedLODIndex(int32 LODIndex)
 {
 	SelectedLODIndex = ClampLODIndex(LODIndex);
-	SelectedModule = GetSelectedRequiredModule();
+	if (!bParticleSystemSelected)
+	{
+		SelectedModule = GetSelectedRequiredModule();
+	}
 	ApplySelectedLODToPreview(true);
 }
 
@@ -1590,6 +1600,7 @@ void FParticleEditorWidget::RenderEmitterList()
 			EditingParticleSystem->NormalizeLODData();
 			SelectedEmitterIndex = NewIndex;
 			SelectedModule = GetSelectedRequiredModule();
+			bParticleSystemSelected = false;
 			RestartPreviewSystem();
 			MarkDirty();
 		}
@@ -1599,6 +1610,13 @@ void FParticleEditorWidget::RenderEmitterList()
 
 	if (!EditingParticleSystem || EditingParticleSystem->Emitters.empty())
 	{
+		if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) &&
+			ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
+			!ImGui::IsAnyItemHovered())
+		{
+			bParticleSystemSelected = true;
+			SelectedModule = nullptr;
+		}
 		ImGui::TextDisabled("No emitters.");
 		ImGui::EndChild();
 		return;
@@ -1751,7 +1769,7 @@ void FParticleEditorWidget::RenderEmitterList()
 		ImGui::BeginGroup();
 		ImGui::BeginChild("EmitterColumn", ImVec2(190.0f, 0.0f), true);
 
-		const bool bEmitterSelected = Index == SelectedEmitterIndex;
+		const bool bEmitterSelected = !bParticleSystemSelected && Index == SelectedEmitterIndex;
 		const FString Label = GetEmitterDisplayName(Emitter, Index);
 		ImGui::PushStyleColor(ImGuiCol_Header, IM_COL32(255, 124, 0, 255));
 		ImGui::PushStyleColor(ImGuiCol_HeaderHovered, IM_COL32(255, 146, 42, 255));
@@ -1760,12 +1778,14 @@ void FParticleEditorWidget::RenderEmitterList()
 		{
 			SelectedEmitterIndex = Index;
 			SelectedModule = LOD->RequiredModule;
+			bParticleSystemSelected = false;
 		}
 		ImGui::PopStyleColor(3);
 		if (ImGui::BeginPopupContextItem("EmitterHeaderContext"))
 		{
 			SelectedEmitterIndex = Index;
 			SelectedModule = LOD->RequiredModule;
+			bParticleSystemSelected = false;
 			DrawEmitterContextMenu(Index);
 			ImGui::EndPopup();
 		}
@@ -1778,7 +1798,7 @@ void FParticleEditorWidget::RenderEmitterList()
 			}
 
 			ImGui::PushID(Module);
-			const bool bSelected = Index == SelectedEmitterIndex && Module == GetSelectedModule();
+			const bool bSelected = !bParticleSystemSelected && Index == SelectedEmitterIndex && Module == GetSelectedModule();
 			const ImU32 RowColor = GetModuleRowColor(bSelected, ModuleIndex);
 			ImGui::PushStyleColor(ImGuiCol_Header, RowColor);
 			ImGui::PushStyleColor(ImGuiCol_HeaderHovered, bSelected ? RowColor : IM_COL32(78, 80, 92, 255));
@@ -1788,19 +1808,21 @@ void FParticleEditorWidget::RenderEmitterList()
 			{
 				SelectedEmitterIndex = Index;
 				SelectedModule = Module;
+				bParticleSystemSelected = false;
 			}
 			ImGui::PopStyleColor(3);
 			if (ImGui::BeginPopupContextItem("ModuleRowContext"))
 			{
 				SelectedEmitterIndex = Index;
 				SelectedModule = Module;
+				bParticleSystemSelected = false;
 				DrawModuleContextMenu(Index, LOD, Module);
 				ImGui::EndPopup();
 			}
 			ImGui::PopID();
 		};
 
-		const bool bTypeDataSelected = Index == SelectedEmitterIndex && LOD->TypeDataModule && SelectedModule == LOD->TypeDataModule;
+		const bool bTypeDataSelected = !bParticleSystemSelected && Index == SelectedEmitterIndex && LOD->TypeDataModule && SelectedModule == LOD->TypeDataModule;
 		ImGui::PushID("TypeData");
 		ImGui::PushStyleColor(ImGuiCol_Header, bTypeDataSelected ? IM_COL32(245, 215, 42, 255) : IM_COL32(34, 36, 43, 255));
 		ImGui::PushStyleColor(ImGuiCol_HeaderHovered, bTypeDataSelected ? IM_COL32(245, 215, 42, 255) : IM_COL32(58, 61, 72, 255));
@@ -1812,6 +1834,7 @@ void FParticleEditorWidget::RenderEmitterList()
 			SelectedModule = LOD->TypeDataModule
 				? static_cast<UParticleModule*>(LOD->TypeDataModule)
 				: static_cast<UParticleModule*>(LOD->RequiredModule);
+			bParticleSystemSelected = false;
 		}
 		ImGui::PopStyleColor(3);
 		if (ImGui::BeginPopupContextItem("TypeDataContext"))
@@ -1820,6 +1843,7 @@ void FParticleEditorWidget::RenderEmitterList()
 			SelectedModule = LOD->TypeDataModule
 				? static_cast<UParticleModule*>(LOD->TypeDataModule)
 				: static_cast<UParticleModule*>(LOD->RequiredModule);
+			bParticleSystemSelected = false;
 			DrawTypeDataContextMenu(Index, LOD);
 			ImGui::EndPopup();
 		}
@@ -1841,8 +1865,17 @@ void FParticleEditorWidget::RenderEmitterList()
 		{
 			SelectedEmitterIndex = Index;
 			SelectedModule = GetSelectedModule();
+			bParticleSystemSelected = false;
 			DrawEmitterContextMenu(Index);
 			ImGui::EndPopup();
+		}
+
+		if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) &&
+			ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
+			!ImGui::IsAnyItemHovered())
+		{
+			bParticleSystemSelected = true;
+			SelectedModule = nullptr;
 		}
 
 		ImGui::EndChild();
@@ -1853,6 +1886,14 @@ void FParticleEditorWidget::RenderEmitterList()
 		{
 			ImGui::SameLine();
 		}
+	}
+
+	if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) &&
+		ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
+		!ImGui::IsAnyItemHovered())
+	{
+		bParticleSystemSelected = true;
+		SelectedModule = nullptr;
 	}
 
 	ImGui::EndChild();
@@ -1912,6 +1953,11 @@ void FParticleEditorWidget::RenderCurvePanel()
 
 bool FParticleEditorWidget::RenderDetailsPanel()
 {
+	if (bParticleSystemSelected)
+	{
+		return RenderParticleSystemDetails();
+	}
+
 	UParticleEmitter* Emitter = GetSelectedEmitter();
 	UParticleModule* Module = GetSelectedModule();
 	SelectedModule = Module;
@@ -1927,6 +1973,44 @@ bool FParticleEditorWidget::RenderDetailsPanel()
 	ImGui::Separator();
 
 	bChanged |= RenderModuleDetails(Module);
+
+	return bChanged;
+}
+
+bool FParticleEditorWidget::RenderParticleSystemDetails()
+{
+	if (!EditingParticleSystem)
+	{
+		ImGui::TextDisabled("No particle system.");
+		return false;
+	}
+
+	EditingParticleSystem->NormalizeLODData();
+
+	bool bChanged = false;
+	ImGui::TextUnformatted("Particle System");
+	ImGui::TextDisabled("%s", EditingParticleSystem->GetName().c_str());
+	ImGui::Separator();
+
+	if (ImGui::CollapsingHeader("LOD", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		const int32 LODCount = EditingParticleSystem->GetLODCount();
+		ImGui::TextDisabled("%d LOD distance%s", LODCount, LODCount == 1 ? "" : "s");
+
+		for (int32 LODIndex = 0; LODIndex < LODCount; ++LODIndex)
+		{
+			ImGui::PushID(LODIndex);
+			float Distance = EditingParticleSystem->GetLODDistance(LODIndex);
+			char Label[64] = {};
+			std::snprintf(Label, sizeof(Label), "LOD Distance %d", LODIndex);
+			if (ImGui::DragFloat(Label, &Distance, 1.0f, 0.0f, 0.0f, "%.2f"))
+			{
+				bChanged |= EditingParticleSystem->SetLODDistance(LODIndex, Distance);
+				SelectedLODIndex = ClampLODIndex(SelectedLODIndex);
+			}
+			ImGui::PopID();
+		}
+	}
 
 	return bChanged;
 }
