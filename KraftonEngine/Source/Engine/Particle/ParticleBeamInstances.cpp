@@ -136,10 +136,11 @@ FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
 	const FVector WorldBeamDelta = WorldTarget - WorldSource;
 	const FVector WorldSourceTangent = ComponentToWorld.TransformVector(LocalSourceTangent);
 	const FVector WorldTargetTangent = ComponentToWorld.TransformVector(LocalTargetTangent);
+	const bool bUseParticleInstanceData = !BeamModule->bAlwaysOn;
 	NewEmitterReplayData->Beams.reserve(LogicalBeamCount);
 	for (int32 i = 0; i < LogicalBeamCount; ++i)
 	{
-		const FBaseParticle* Particle = (i < ActiveParticles && ParticleIndices)
+		const FBaseParticle* Particle = (bUseParticleInstanceData && i < ActiveParticles && ParticleIndices)
 			? GetParticleDirect(ParticleIndices[i])
 			: nullptr;
 		const FVector BeamOffset = Particle ? (Particle->Location - Location) : FVector::ZeroVector;
