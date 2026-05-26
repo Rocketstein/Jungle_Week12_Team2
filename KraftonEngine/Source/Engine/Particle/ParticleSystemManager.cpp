@@ -416,6 +416,7 @@ json::JSON SerializeParticleSystem(UParticleSystem* ParticleSystem)
 
 	if (ParticleSystem)
 	{
+		Root[ParticleKeys::Name] = ParticleSystem->GetName();
 		ParticleSystem->NormalizeLODData();
 	}
 
@@ -828,6 +829,14 @@ void DeserializeParticleSystem(UParticleSystem* ParticleSystem, const FString& P
 
 	const int32 Version = Root.hasKey(ParticleKeys::Version) ? static_cast<int32>(Root[ParticleKeys::Version].ToInt()) : 1;
 	const bool bAllowLegacyRestore = Version < ParticleSystemVersion;
+	if (Root.hasKey(ParticleKeys::Name))
+	{
+		const FString AssetName = Root[ParticleKeys::Name].ToString();
+		if (!AssetName.empty())
+		{
+			ParticleSystem->SetFName(FName(AssetName));
+		}
+	}
 
 	if (Root.hasKey(ParticleKeys::LODDistances))
 	{
@@ -931,4 +940,57 @@ bool FParticleSystemManager::Save(UParticleSystem* ParticleSystem)
 	FAssetImportMetadata Metadata;
 	json::JSON Root = SerializeParticleSystem(ParticleSystem);
 	return FAssetPackage::SaveStringPayload(Path, EAssetPackageType::ParticleSystem, Metadata, Root.dump());
+}
+
+bool FParticleSystemManager::Rename(UParticleSystem* ParticleSystem, const FString& NewName)
+{
+	if (!ParticleSystem || NewName.empty())
+	{
+		return false;
+	}
+
+	const FString OldPathString = FPaths::MakeProjectRelative(ParticleSystem->GetAssetPathFileName());
+	if (OldPathString.empty())
+	{
+		return false;
+	}
+
+	std::filesystem::path OldPath(FPaths::ToWide(OldPathString));
+	if (!OldPath.is_absolute())
+	{
+		OldPath = std::filesystem::path(FPaths::RootDir()) / OldPath;
+	}
+	OldPath = OldPath.lexically_normal();
+
+	std::filesystem::path NewPath = OldPath.parent_path() / (FPaths::ToWide(NewName) + L".uasset");
+	NewPath = NewPath.lexically_normal();
+
+	if (OldPath == NewPath)
+	{
+		ParticleSystem->SetFName(FName(NewName));
+		return Save(ParticleSystem);
+	}
+
+	if (std::filesystem::exists(NewPath))
+	{
+		return false;
+	}
+
+	std::error_code Error;
+	if (std::filesystem::exists(OldPath))
+	{
+		std::filesystem::rename(OldPath, NewPath, Error);
+		if (Error)
+		{
+			return false;
+		}
+	}
+
+	const FString NewPathString = FPaths::MakeProjectRelative(FPaths::ToUtf8(NewPath.generic_wstring()));
+	LoadedParticleSystems.erase(OldPathString);
+	ParticleSystem->SetAssetPathFileName(NewPathString);
+	ParticleSystem->SetFName(FName(NewName));
+	LoadedParticleSystems[NewPathString] = ParticleSystem;
+
+	return Save(ParticleSystem);
 }

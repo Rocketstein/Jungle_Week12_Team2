@@ -1,6 +1,7 @@
 #include "ParticleEditorWidget.h"
 
 #include "Component/ParticleSystemComponent.h"
+#include "Editor/EditorEngine.h"
 #include "Editor/UI/ContentBrowser/ContentItem.h"
 #include "Editor/UI/EditorTextureManager.h"
 #include "GameFramework/AActor.h"
@@ -25,6 +26,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <cstring>
 #include <imgui.h>
 
 namespace
@@ -131,6 +133,24 @@ namespace
 
 		ImGui::EndDragDropTarget();
 		return Material;
+	}
+
+	bool IsValidAssetFileStem(const FString& Name)
+	{
+		if (Name.empty())
+		{
+			return false;
+		}
+
+		static constexpr const char* InvalidChars = "<>:\"/\\|?*";
+		for (unsigned char Ch : Name)
+		{
+			if (Ch < 32 || std::strchr(InvalidChars, Ch))
+			{
+				return false;
+			}
+		}
+		return true;
 	}
 
 	void DrawHorizontalSplitter(float& TopHeight, float MinTopHeight, float MinBottomHeight, float AvailableHeight, const char* Id)
@@ -280,6 +300,7 @@ void FParticleEditorWidget::Open(UObject* Object)
 	SelectedEmitterIndex = 0;
 	SelectedLODIndex = 0;
 	SelectedModule = nullptr;
+	SyncAssetNameBuffer();
 	EnsureDefaultSystem();
 	InitializePreviewWorld();
 }
@@ -293,6 +314,7 @@ void FParticleEditorWidget::Close()
 	PreviewActor = nullptr;
 	SelectedLODIndex = 0;
 	SelectedModule = nullptr;
+	AssetNameBuffer[0] = '\0';
 }
 
 void FParticleEditorWidget::Tick(float DeltaTime)
@@ -852,6 +874,57 @@ void FParticleEditorWidget::ApplyEmitterEdit()
 	MarkDirty();
 }
 
+void FParticleEditorWidget::SyncAssetNameBuffer()
+{
+	const FString Name = EditingParticleSystem ? EditingParticleSystem->GetName() : FString();
+	std::snprintf(AssetNameBuffer, sizeof(AssetNameBuffer), "%s", Name.c_str());
+}
+
+void FParticleEditorWidget::CommitAssetNameEdit()
+{
+	if (!EditingParticleSystem)
+	{
+		return;
+	}
+
+	FString NewName = AssetNameBuffer;
+	const size_t First = NewName.find_first_not_of(" \t\r\n");
+	if (First == FString::npos)
+	{
+		SyncAssetNameBuffer();
+		return;
+	}
+
+	const size_t Last = NewName.find_last_not_of(" \t\r\n");
+	NewName = NewName.substr(First, Last - First + 1);
+
+	if (!IsValidAssetFileStem(NewName))
+	{
+		SyncAssetNameBuffer();
+		return;
+	}
+
+	if (NewName == EditingParticleSystem->GetName())
+	{
+		SyncAssetNameBuffer();
+		return;
+	}
+
+	if (FParticleSystemManager::Get().Rename(EditingParticleSystem, NewName))
+	{
+		SyncAssetNameBuffer();
+		ClearDirty();
+		if (EditorEngine)
+		{
+			EditorEngine->RefreshContentBrowser();
+		}
+	}
+	else
+	{
+		SyncAssetNameBuffer();
+	}
+}
+
 int32 FParticleEditorWidget::GetLODCount() const
 {
 	return EditingParticleSystem ? EditingParticleSystem->GetLODCount() : 1;
@@ -1186,6 +1259,7 @@ void FParticleEditorWidget::RenderToolbar()
 {
 	if (ImGui::Button("Save"))
 	{
+		CommitAssetNameEdit();
 		if (FParticleSystemManager::Get().Save(EditingParticleSystem))
 		{
 			ClearDirty();
@@ -1243,6 +1317,20 @@ void FParticleEditorWidget::RenderToolbar()
 	if (DrawParticleToolbarButton("DeleteLOD", L"Cascade_DeleteLOD_512x.png", "Delete LOD", SelectedLODIndex <= 0 || LODCount <= 1))
 	{
 		DeleteSelectedLOD();
+	}
+	ImGui::SameLine();
+	ImGui::TextDisabled("|");
+	ImGui::SameLine();
+	ImGui::TextUnformatted("Name:");
+	ImGui::SameLine();
+	ImGui::SetNextItemWidth(180.0f);
+	if (ImGui::InputText("##ParticleSystemName", AssetNameBuffer, sizeof(AssetNameBuffer), ImGuiInputTextFlags_EnterReturnsTrue))
+	{
+		CommitAssetNameEdit();
+	}
+	if (ImGui::IsItemDeactivatedAfterEdit())
+	{
+		CommitAssetNameEdit();
 	}
 	ImGui::SameLine();
 	ImGui::TextDisabled("|");

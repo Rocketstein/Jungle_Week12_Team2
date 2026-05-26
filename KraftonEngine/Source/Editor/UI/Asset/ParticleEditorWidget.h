@@ -90,6 +90,8 @@ private:
 	FString GetModuleDisplayName(UParticleModule* Module) const;
 	FString GetTypeDataDisplayName(UParticleLODLevel* LOD) const;
 	void ApplyEmitterEdit();
+	void SyncAssetNameBuffer();
+	void CommitAssetNameEdit();
 
 private:
 	SWindow ParticleViewportWindow;
@@ -106,4 +108,5 @@ private:
 	uint32 InstanceId = 0;
 	FName PreviewWorldHandle = FName::None;
 	FString WindowIdSuffix;
+	char AssetNameBuffer[128] = {};
 };
