@@ -7,6 +7,11 @@
 
 void FEditorControlWidget::Render(float DeltaTime)
 {
+	Render(DeltaTime, nullptr);
+}
+
+void FEditorControlWidget::Render(float DeltaTime, bool* bOpen)
+{
 	(void)DeltaTime;
 	if (!EditorEngine)
 	{
@@ -16,7 +21,7 @@ void FEditorControlWidget::Render(float DeltaTime)
 	ImGui::SetNextWindowCollapsed(false, ImGuiCond_Once);
 	ImGui::SetNextWindowSize(ImVec2(500.0f, 480.0f), ImGuiCond_Once);
 
-	if (!ImGui::Begin("Control Panel"))
+	if (!ImGui::Begin("Control Panel", bOpen))
 	{
 		ImGui::End();
 		return;

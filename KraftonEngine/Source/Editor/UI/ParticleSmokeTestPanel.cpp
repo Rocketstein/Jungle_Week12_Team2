@@ -11,6 +11,11 @@
 
 void FParticleSmokeTestPanel::Render(UEditorEngine* Editor)
 {
+	Render(Editor, nullptr);
+}
+
+void FParticleSmokeTestPanel::Render(UEditorEngine* Editor, bool* bOpen)
+{
 	if (!Editor) return;
 
 	// Floating window — separate z-layer above the play toolbar / shared toolbar.
@@ -18,7 +23,7 @@ void FParticleSmokeTestPanel::Render(UEditorEngine* Editor)
 	// drag it elsewhere if it's in the way.
 	ImGui::SetNextWindowPos(ImVec2(20.0f, 80.0f), ImGuiCond_FirstUseEver);
 	ImGui::SetNextWindowBgAlpha(0.85f);
-	if (ImGui::Begin("Particle Smoke Tests##transient", nullptr,
+	if (ImGui::Begin("Particle Smoke Tests##transient", bOpen,
 		ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse))
 	{
 		UWorld* World = Editor->GetWorld();

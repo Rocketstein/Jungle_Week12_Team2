@@ -17,7 +17,12 @@ FEditorMaterialInspector::FEditorMaterialInspector(std::filesystem::path InPath)
 
 void FEditorMaterialInspector::Render()
 {
-	bool bIsValid = ImGui::Begin("MaterialInspector");
+	Render(nullptr);
+}
+
+void FEditorMaterialInspector::Render(bool* bOpen)
+{
+	bool bIsValid = ImGui::Begin("MaterialInspector", bOpen);
 	bIsValid &= std::filesystem::exists(MaterialPath);
 	bIsValid &= MaterialPath.extension() == ".mat";
 

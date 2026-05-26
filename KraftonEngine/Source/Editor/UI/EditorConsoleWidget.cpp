@@ -289,10 +289,15 @@ void FEditorConsoleWidget::Clear()
 
 void FEditorConsoleWidget::Render(float DeltaTime)
 {
+	Render(DeltaTime, nullptr);
+}
+
+void FEditorConsoleWidget::Render(float DeltaTime, bool* bOpen)
+{
 	(void)DeltaTime;
 
 	ImGui::SetNextWindowSize(ImVec2(800, 600), ImGuiCond_FirstUseEver);
-	if (!ImGui::Begin("Console"))
+	if (!ImGui::Begin("Console", bOpen))
 	{
 		ImGui::End();
 		return;

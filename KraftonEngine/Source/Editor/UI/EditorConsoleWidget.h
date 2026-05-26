@@ -40,6 +40,7 @@ public:
 	static void AddLog(const char* fmt, ...);
 	virtual void Initialize(UEditorEngine* InEditorEngine) override;
 	virtual void Render(float DeltaTime) override;
+	void Render(float DeltaTime, bool* bOpen);
 	virtual void Shutdown();
 
 	void Clear();

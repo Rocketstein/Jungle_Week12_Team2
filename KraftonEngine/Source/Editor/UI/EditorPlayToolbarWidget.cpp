@@ -90,6 +90,10 @@ void FEditorPlayToolbarWidget::Render(float Width)
 	// Floats in its own ImGui window so the buttons don't fight the shared
 	// viewport toolbar for the same screen real estate. Remove this single call
 	// (and the panel files) once the CPU sim drives the proxy end-to-end.
-	FParticleSmokeTestPanel::Render(Editor);
+	static bool bParticleSmokeTestsOpen = true;
+	if (bParticleSmokeTestsOpen)
+	{
+		FParticleSmokeTestPanel::Render(Editor, &bParticleSmokeTestsOpen);
+	}
 	// -------------------------------------------------------
 }

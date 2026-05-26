@@ -10,12 +10,17 @@
 
 void FEditorStatWidget::Render(float DeltaTime)
 {
+	Render(DeltaTime, nullptr);
+}
+
+void FEditorStatWidget::Render(float DeltaTime, bool* bOpen)
+{
 #if STATS
 	(void)DeltaTime;
 
 	ImGui::SetNextWindowCollapsed(true, ImGuiCond_Once);
 	ImGui::SetNextWindowSize(ImVec2(700.0f, 500.0f), ImGuiCond_Once);
-	ImGui::Begin("Stat Profiler");
+	ImGui::Begin("Stat Profiler", bOpen);
 
 	// Pause / Resume 버튼
 	if (bPaused)

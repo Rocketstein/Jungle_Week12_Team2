@@ -16,6 +16,7 @@ public:
 	FEditorMaterialInspector() = default;
 	FEditorMaterialInspector(std::filesystem::path InPath);
 	void Render();
+	void Render(bool* bOpen);
 
 private:
 	void RenderShaderParameter();
