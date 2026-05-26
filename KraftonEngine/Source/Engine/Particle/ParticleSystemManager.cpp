@@ -25,7 +25,7 @@
 
 namespace
 {
-constexpr int32 ParticleSystemVersion = 3;
+constexpr int32 ParticleSystemVersion = 4;
 
 namespace ParticleKeys
 {
@@ -59,6 +59,7 @@ namespace ParticleKeys
 	static constexpr const char* bKillOnDeactivate = "bKillOnDeactivate";
 	static constexpr const char* bKillOnCompleted = "bKillOnCompleted";
 	static constexpr const char* Rate = "Rate";
+	static constexpr const char* RateDistribution = "RateDistribution";
 	static constexpr const char* BurstList = "BurstList";
 	static constexpr const char* Count = "Count";
 	static constexpr const char* CountLow = "CountLow";
@@ -67,32 +68,58 @@ namespace ParticleKeys
 	static constexpr const char* Lifetime = "Lifetime";
 	static constexpr const char* LifetimeMin = "LifetimeMin";
 	static constexpr const char* LifetimeMax = "LifetimeMax";
+	static constexpr const char* LifetimeDistribution = "LifetimeDistribution";
 	static constexpr const char* StartLocation = "StartLocation";
 	static constexpr const char* StartLocationMin = "StartLocationMin";
 	static constexpr const char* StartLocationMax = "StartLocationMax";
+	static constexpr const char* StartLocationDistribution = "StartLocationDistribution";
 	static constexpr const char* StartVelocity = "StartVelocity";
 	static constexpr const char* StartVelocityMin = "StartVelocityMin";
 	static constexpr const char* StartVelocityMax = "StartVelocityMax";
+	static constexpr const char* StartVelocityDistribution = "StartVelocityDistribution";
 	static constexpr const char* StartRotation = "StartRotation";
 	static constexpr const char* StartRotationMin = "StartRotationMin";
 	static constexpr const char* StartRotationMax = "StartRotationMax";
+	static constexpr const char* StartRotationDistribution = "StartRotationDistribution";
 	static constexpr const char* StartRotationRate = "StartRotationRate";
 	static constexpr const char* StartRotationRateMin = "StartRotationRateMin";
 	static constexpr const char* StartRotationRateMax = "StartRotationRateMax";
+	static constexpr const char* StartRotationRateDistribution = "StartRotationRateDistribution";
 	static constexpr const char* Acceleration = "Acceleration";
+	static constexpr const char* AccelerationDistribution = "AccelerationDistribution";
 	static constexpr const char* StartColor = "StartColor";
 	static constexpr const char* StartColorMin = "StartColorMin";
 	static constexpr const char* StartColorMax = "StartColorMax";
+	static constexpr const char* StartColorDistribution = "StartColorDistribution";
 	static constexpr const char* StartAlpha = "StartAlpha";
 	static constexpr const char* StartAlphaMin = "StartAlphaMin";
 	static constexpr const char* StartAlphaMax = "StartAlphaMax";
+	static constexpr const char* StartAlphaDistribution = "StartAlphaDistribution";
 	static constexpr const char* EndColor = "EndColor";
 	static constexpr const char* EndAlpha = "EndAlpha";
+	static constexpr const char* ColorOverLifeDistribution = "ColorOverLifeDistribution";
+	static constexpr const char* AlphaOverLifeDistribution = "AlphaOverLifeDistribution";
 	static constexpr const char* ColorScaleOverLife = "ColorScaleOverLife";
 	static constexpr const char* AlphaScaleOverLife = "AlphaScaleOverLife";
+	static constexpr const char* ColorScaleOverLifeDistribution = "ColorScaleOverLifeDistribution";
+	static constexpr const char* AlphaScaleOverLifeDistribution = "AlphaScaleOverLifeDistribution";
 	static constexpr const char* StartSize = "StartSize";
 	static constexpr const char* StartSizeMin = "StartSizeMin";
 	static constexpr const char* StartSizeMax = "StartSizeMax";
+	static constexpr const char* StartSizeDistribution = "StartSizeDistribution";
+	static constexpr const char* Mode = "Mode";
+	static constexpr const char* Constant = "Constant";
+	static constexpr const char* Min = "Min";
+	static constexpr const char* Max = "Max";
+	static constexpr const char* ConstantCurve = "ConstantCurve";
+	static constexpr const char* MinCurve = "MinCurve";
+	static constexpr const char* MaxCurve = "MaxCurve";
+	static constexpr const char* Keys = "Keys";
+	static constexpr const char* Value = "Value";
+	static constexpr const char* InterpMode = "InterpMode";
+	static constexpr const char* X = "X";
+	static constexpr const char* Y = "Y";
+	static constexpr const char* Z = "Z";
 	static constexpr const char* Collision = "Collision";
 	static constexpr const char* TraceChannel = "TraceChannel";
 	static constexpr const char* ResponseMode = "ResponseMode";
@@ -220,6 +247,130 @@ FVector ReadVectorOrScalarZJSON(json::JSON& Object, const char* Key, const FVect
 	return DefaultValue;
 }
 
+json::JSON MakeCurveJSON(const FFloatCurve& Curve)
+{
+	json::JSON Object = json::JSON::Make(json::JSON::Class::Object);
+	Object[ParticleKeys::Value] = Curve.DefaultValue;
+	json::JSON Keys = json::Array();
+	for (const FCurveKey& Key : Curve.Keys)
+	{
+		json::JSON KeyObject = json::JSON::Make(json::JSON::Class::Object);
+		KeyObject[ParticleKeys::Time] = Key.Time;
+		KeyObject[ParticleKeys::Value] = Key.Value;
+		KeyObject[ParticleKeys::InterpMode] = static_cast<int32>(Key.InterpMode);
+		Keys.append(KeyObject);
+	}
+	Object[ParticleKeys::Keys] = Keys;
+	return Object;
+}
+
+void ReadCurveJSON(json::JSON& Object, const char* Key, FFloatCurve& Curve)
+{
+	if (!Object.hasKey(Key))
+	{
+		return;
+	}
+
+	json::JSON& CurveObject = Object[Key];
+	if (CurveObject.JSONType() != json::JSON::Class::Object)
+	{
+		return;
+	}
+
+	Curve.Reset();
+	if (CurveObject.hasKey(ParticleKeys::Value))
+	{
+		Curve.DefaultValue = static_cast<float>(CurveObject[ParticleKeys::Value].ToFloat());
+	}
+	if (CurveObject.hasKey(ParticleKeys::Keys) && CurveObject[ParticleKeys::Keys].JSONType() == json::JSON::Class::Array)
+	{
+		for (auto& KeyObject : CurveObject[ParticleKeys::Keys].ArrayRange())
+		{
+			if (!KeyObject.hasKey(ParticleKeys::Time) || !KeyObject.hasKey(ParticleKeys::Value))
+			{
+				continue;
+			}
+
+			const float Time = static_cast<float>(KeyObject[ParticleKeys::Time].ToFloat());
+			const float Value = static_cast<float>(KeyObject[ParticleKeys::Value].ToFloat());
+			int32 InterpMode = static_cast<int32>(ECurveInterpMode::Linear);
+			if (KeyObject.hasKey(ParticleKeys::InterpMode))
+			{
+				InterpMode = std::clamp(static_cast<int32>(KeyObject[ParticleKeys::InterpMode].ToInt()), 0, static_cast<int32>(ECurveInterpMode::Cubic));
+			}
+			Curve.AddKey(Time, Value, static_cast<ECurveInterpMode>(InterpMode));
+		}
+	}
+	Curve.SortKeys();
+	Curve.AutoSetTangents();
+}
+
+json::JSON MakeFloatDistributionJSON(const FParticleDistributionFloat& Distribution)
+{
+	json::JSON Object = json::JSON::Make(json::JSON::Class::Object);
+	Object[ParticleKeys::Mode] = static_cast<int32>(Distribution.Mode);
+	Object[ParticleKeys::Constant] = Distribution.Constant;
+	Object[ParticleKeys::Min] = Distribution.Min;
+	Object[ParticleKeys::Max] = Distribution.Max;
+	Object[ParticleKeys::ConstantCurve] = MakeCurveJSON(Distribution.ConstantCurve);
+	Object[ParticleKeys::MinCurve] = MakeCurveJSON(Distribution.MinCurve);
+	Object[ParticleKeys::MaxCurve] = MakeCurveJSON(Distribution.MaxCurve);
+	return Object;
+}
+
+void ReadFloatDistributionJSON(json::JSON& Object, const char* Key, FParticleDistributionFloat& Distribution)
+{
+	if (!Object.hasKey(Key))
+	{
+		return;
+	}
+
+	json::JSON& DistributionObject = Object[Key];
+	if (DistributionObject.JSONType() != json::JSON::Class::Object)
+	{
+		return;
+	}
+
+	if (DistributionObject.hasKey(ParticleKeys::Mode))
+	{
+		const int32 Mode = std::clamp(static_cast<int32>(DistributionObject[ParticleKeys::Mode].ToInt()), 0, static_cast<int32>(EParticleDistributionMode::UniformCurve));
+		Distribution.Mode = static_cast<EParticleDistributionMode>(Mode);
+	}
+	if (DistributionObject.hasKey(ParticleKeys::Constant)) Distribution.Constant = static_cast<float>(DistributionObject[ParticleKeys::Constant].ToFloat());
+	if (DistributionObject.hasKey(ParticleKeys::Min)) Distribution.Min = static_cast<float>(DistributionObject[ParticleKeys::Min].ToFloat());
+	if (DistributionObject.hasKey(ParticleKeys::Max)) Distribution.Max = static_cast<float>(DistributionObject[ParticleKeys::Max].ToFloat());
+	ReadCurveJSON(DistributionObject, ParticleKeys::ConstantCurve, Distribution.ConstantCurve);
+	ReadCurveJSON(DistributionObject, ParticleKeys::MinCurve, Distribution.MinCurve);
+	ReadCurveJSON(DistributionObject, ParticleKeys::MaxCurve, Distribution.MaxCurve);
+}
+
+json::JSON MakeVectorDistributionJSON(const FParticleDistributionVector& Distribution)
+{
+	json::JSON Object = json::JSON::Make(json::JSON::Class::Object);
+	Object[ParticleKeys::X] = MakeFloatDistributionJSON(Distribution.X);
+	Object[ParticleKeys::Y] = MakeFloatDistributionJSON(Distribution.Y);
+	Object[ParticleKeys::Z] = MakeFloatDistributionJSON(Distribution.Z);
+	return Object;
+}
+
+void ReadVectorDistributionJSON(json::JSON& Object, const char* Key, FParticleDistributionVector& Distribution)
+{
+	if (!Object.hasKey(Key))
+	{
+		return;
+	}
+
+	json::JSON& DistributionObject = Object[Key];
+	if (DistributionObject.JSONType() != json::JSON::Class::Object)
+	{
+		return;
+	}
+
+	ReadFloatDistributionJSON(DistributionObject, ParticleKeys::X, Distribution.X);
+	ReadFloatDistributionJSON(DistributionObject, ParticleKeys::Y, Distribution.Y);
+	ReadFloatDistributionJSON(DistributionObject, ParticleKeys::Z, Distribution.Z);
+}
+
 FString GetParticleMaterialPath(UMaterialInterface* MaterialInterface)
 {
 	UMaterial* Material = MaterialInterface ? MaterialInterface->GetMaterial() : nullptr;
@@ -335,6 +486,7 @@ json::JSON SerializeSpawnModule(UParticleModuleSpawn* Spawn)
 	if (Spawn)
 	{
 		Object[ParticleKeys::Rate] = Spawn->Rate;
+		Object[ParticleKeys::RateDistribution] = MakeFloatDistributionJSON(Spawn->RateDistribution);
 		Object[ParticleKeys::ParticleBurstMethod] = static_cast<int32>(Spawn->ParticleBurstMethod);
 
 		json::JSON Bursts = json::Array();
@@ -468,64 +620,82 @@ json::JSON SerializeModule(UParticleModule* Module)
 	Object[ParticleKeys::Type] = Type;
 	Object[ParticleKeys::bEnabled] = Module->bEnabled != 0;
 
-	if (UParticleModuleLifetime* Lifetime = Cast<UParticleModuleLifetime>(Module))
+	if (UParticleModuleSpawn* Spawn = Cast<UParticleModuleSpawn>(Module))
+	{
+		Object[ParticleKeys::Rate] = Spawn->Rate;
+		Object[ParticleKeys::RateDistribution] = MakeFloatDistributionJSON(Spawn->RateDistribution);
+	}
+	else if (UParticleModuleLifetime* Lifetime = Cast<UParticleModuleLifetime>(Module))
 	{
 		Object[ParticleKeys::Lifetime] = Lifetime->Lifetime;
 		Object[ParticleKeys::LifetimeMin] = Lifetime->LifetimeMin;
 		Object[ParticleKeys::LifetimeMax] = Lifetime->LifetimeMax;
+		Object[ParticleKeys::LifetimeDistribution] = MakeFloatDistributionJSON(Lifetime->LifetimeDistribution);
 	}
 	else if (UParticleModuleLocation* Location = Cast<UParticleModuleLocation>(Module))
 	{
 		Object[ParticleKeys::StartLocation] = MakeVectorJSON(Location->StartLocation);
 		Object[ParticleKeys::StartLocationMin] = MakeVectorJSON(Location->StartLocationMin);
 		Object[ParticleKeys::StartLocationMax] = MakeVectorJSON(Location->StartLocationMax);
+		Object[ParticleKeys::StartLocationDistribution] = MakeVectorDistributionJSON(Location->StartLocationDistribution);
 	}
 	else if (UParticleModuleVelocity* Velocity = Cast<UParticleModuleVelocity>(Module))
 	{
 		Object[ParticleKeys::StartVelocity] = MakeVectorJSON(Velocity->StartVelocity);
 		Object[ParticleKeys::StartVelocityMin] = MakeVectorJSON(Velocity->StartVelocityMin);
 		Object[ParticleKeys::StartVelocityMax] = MakeVectorJSON(Velocity->StartVelocityMax);
+		Object[ParticleKeys::StartVelocityDistribution] = MakeVectorDistributionJSON(Velocity->StartVelocityDistribution);
 	}
 	else if (UParticleModuleInitialRotation* Rotation = Cast<UParticleModuleInitialRotation>(Module))
 	{
 		Object[ParticleKeys::StartRotation] = MakeVectorJSON(Rotation->StartRotationDegrees);
 		Object[ParticleKeys::StartRotationMin] = MakeVectorJSON(Rotation->StartRotationDegreesMin);
 		Object[ParticleKeys::StartRotationMax] = MakeVectorJSON(Rotation->StartRotationDegreesMax);
+		Object[ParticleKeys::StartRotationDistribution] = MakeVectorDistributionJSON(Rotation->StartRotationDistribution);
 	}
 	else if (UParticleModuleInitialRotationRate* RotationRate = Cast<UParticleModuleInitialRotationRate>(Module))
 	{
 		Object[ParticleKeys::StartRotationRate] = MakeVectorJSON(RotationRate->StartRotationRateDegrees);
 		Object[ParticleKeys::StartRotationRateMin] = MakeVectorJSON(RotationRate->StartRotationRateDegreesMin);
 		Object[ParticleKeys::StartRotationRateMax] = MakeVectorJSON(RotationRate->StartRotationRateDegreesMax);
+		Object[ParticleKeys::StartRotationRateDistribution] = MakeVectorDistributionJSON(RotationRate->StartRotationRateDistribution);
 	}
 	else if (UParticleModuleAcceleration* Acceleration = Cast<UParticleModuleAcceleration>(Module))
 	{
 		Object[ParticleKeys::Acceleration] = MakeVectorJSON(Acceleration->Acceleration);
+		Object[ParticleKeys::AccelerationDistribution] = MakeVectorDistributionJSON(Acceleration->AccelerationDistribution);
 	}
 	else if (UParticleModuleColor* Color = Cast<UParticleModuleColor>(Module))
 	{
 		Object[ParticleKeys::StartColor] = MakeVectorJSON(Color->StartColor);
 		Object[ParticleKeys::StartColorMin] = MakeVectorJSON(Color->StartColorMin);
 		Object[ParticleKeys::StartColorMax] = MakeVectorJSON(Color->StartColorMax);
+		Object[ParticleKeys::StartColorDistribution] = MakeVectorDistributionJSON(Color->StartColorDistribution);
 		Object[ParticleKeys::StartAlpha] = Color->StartAlpha;
 		Object[ParticleKeys::StartAlphaMin] = Color->StartAlphaMin;
 		Object[ParticleKeys::StartAlphaMax] = Color->StartAlphaMax;
+		Object[ParticleKeys::StartAlphaDistribution] = MakeFloatDistributionJSON(Color->StartAlphaDistribution);
 	}
 	else if (UParticleModuleColorOverLife* ColorOverLife = Cast<UParticleModuleColorOverLife>(Module))
 	{
 		Object[ParticleKeys::EndColor] = MakeVectorJSON(ColorOverLife->ColorOverLife);
 		Object[ParticleKeys::EndAlpha] = ColorOverLife->AlphaOverLife;
+		Object[ParticleKeys::ColorOverLifeDistribution] = MakeVectorDistributionJSON(ColorOverLife->ColorOverLifeDistribution);
+		Object[ParticleKeys::AlphaOverLifeDistribution] = MakeFloatDistributionJSON(ColorOverLife->AlphaOverLifeDistribution);
 	}
 	else if (UParticleModuleColorScaleOverLife* ColorScale = Cast<UParticleModuleColorScaleOverLife>(Module))
 	{
 		Object[ParticleKeys::ColorScaleOverLife] = MakeVectorJSON(ColorScale->ColorScaleOverLife);
 		Object[ParticleKeys::AlphaScaleOverLife] = ColorScale->AlphaScaleOverLife;
+		Object[ParticleKeys::ColorScaleOverLifeDistribution] = MakeVectorDistributionJSON(ColorScale->ColorScaleOverLifeDistribution);
+		Object[ParticleKeys::AlphaScaleOverLifeDistribution] = MakeFloatDistributionJSON(ColorScale->AlphaScaleOverLifeDistribution);
 	}
 	else if (UParticleModuleSize* Size = Cast<UParticleModuleSize>(Module))
 	{
 		Object[ParticleKeys::StartSize] = MakeVectorJSON(Size->StartSize);
 		Object[ParticleKeys::StartSizeMin] = MakeVectorJSON(Size->StartSizeMin);
 		Object[ParticleKeys::StartSizeMax] = MakeVectorJSON(Size->StartSizeMax);
+		Object[ParticleKeys::StartSizeDistribution] = MakeVectorDistributionJSON(Size->StartSizeDistribution);
 	}
 	else if (UParticleModuleBeamSource* Source = Cast<UParticleModuleBeamSource>(Module))
 	{
@@ -699,6 +869,8 @@ UParticleModuleSpawn* DeserializeSpawnModule(json::JSON& Object, UParticleLODLev
 	{
 		Spawn->Rate = std::max(0.0f, static_cast<float>(Object[ParticleKeys::Rate].ToFloat()));
 	}
+	Spawn->RateDistribution.SetConstant(Spawn->Rate);
+	ReadFloatDistributionJSON(Object, ParticleKeys::RateDistribution, Spawn->RateDistribution);
 	if (Object.hasKey(ParticleKeys::ParticleBurstMethod))
 	{
 		Spawn->ParticleBurstMethod = static_cast<EParticleBurstMethod>(
@@ -864,6 +1036,8 @@ UParticleModule* DeserializeModule(json::JSON& Object, UParticleLODLevel* Outer)
 		}
 		if (Object.hasKey(ParticleKeys::LifetimeMin)) Lifetime->LifetimeMin = std::max(0.0f, static_cast<float>(Object[ParticleKeys::LifetimeMin].ToFloat()));
 		if (Object.hasKey(ParticleKeys::LifetimeMax)) Lifetime->LifetimeMax = std::max(0.0f, static_cast<float>(Object[ParticleKeys::LifetimeMax].ToFloat()));
+		Lifetime->LifetimeDistribution.SetUniform(Lifetime->LifetimeMin, Lifetime->LifetimeMax);
+		ReadFloatDistributionJSON(Object, ParticleKeys::LifetimeDistribution, Lifetime->LifetimeDistribution);
 		Module = Lifetime;
 	}
 	else if (Type == "InitialLocation")
@@ -872,6 +1046,8 @@ UParticleModule* DeserializeModule(json::JSON& Object, UParticleLODLevel* Outer)
 		Location->StartLocation = ReadVectorJSON(Object, ParticleKeys::StartLocation, Location->StartLocation);
 		Location->StartLocationMin = ReadVectorJSON(Object, ParticleKeys::StartLocationMin, Location->StartLocation);
 		Location->StartLocationMax = ReadVectorJSON(Object, ParticleKeys::StartLocationMax, Location->StartLocation);
+		Location->StartLocationDistribution.SetUniform(Location->StartLocationMin, Location->StartLocationMax);
+		ReadVectorDistributionJSON(Object, ParticleKeys::StartLocationDistribution, Location->StartLocationDistribution);
 		Module = Location;
 	}
 	else if (Type == "InitialVelocity")
@@ -880,6 +1056,8 @@ UParticleModule* DeserializeModule(json::JSON& Object, UParticleLODLevel* Outer)
 		Velocity->StartVelocity = ReadVectorJSON(Object, ParticleKeys::StartVelocity, Velocity->StartVelocity);
 		Velocity->StartVelocityMin = ReadVectorJSON(Object, ParticleKeys::StartVelocityMin, Velocity->StartVelocity);
 		Velocity->StartVelocityMax = ReadVectorJSON(Object, ParticleKeys::StartVelocityMax, Velocity->StartVelocity);
+		Velocity->StartVelocityDistribution.SetUniform(Velocity->StartVelocityMin, Velocity->StartVelocityMax);
+		ReadVectorDistributionJSON(Object, ParticleKeys::StartVelocityDistribution, Velocity->StartVelocityDistribution);
 		Module = Velocity;
 	}
 	else if (Type == "InitialRotation")
@@ -893,6 +1071,8 @@ UParticleModule* DeserializeModule(json::JSON& Object, UParticleLODLevel* Outer)
 		}
 		if (Object.hasKey(ParticleKeys::StartRotationMin)) Rotation->StartRotationDegreesMin = ReadVectorOrScalarZJSON(Object, ParticleKeys::StartRotationMin, Rotation->StartRotationDegrees);
 		if (Object.hasKey(ParticleKeys::StartRotationMax)) Rotation->StartRotationDegreesMax = ReadVectorOrScalarZJSON(Object, ParticleKeys::StartRotationMax, Rotation->StartRotationDegrees);
+		Rotation->StartRotationDistribution.SetUniform(Rotation->StartRotationDegreesMin, Rotation->StartRotationDegreesMax);
+		ReadVectorDistributionJSON(Object, ParticleKeys::StartRotationDistribution, Rotation->StartRotationDistribution);
 		Module = Rotation;
 	}
 	else if (Type == "InitialRotationRate")
@@ -906,12 +1086,16 @@ UParticleModule* DeserializeModule(json::JSON& Object, UParticleLODLevel* Outer)
 		}
 		if (Object.hasKey(ParticleKeys::StartRotationRateMin)) RotationRate->StartRotationRateDegreesMin = ReadVectorOrScalarZJSON(Object, ParticleKeys::StartRotationRateMin, RotationRate->StartRotationRateDegrees);
 		if (Object.hasKey(ParticleKeys::StartRotationRateMax)) RotationRate->StartRotationRateDegreesMax = ReadVectorOrScalarZJSON(Object, ParticleKeys::StartRotationRateMax, RotationRate->StartRotationRateDegrees);
+		RotationRate->StartRotationRateDistribution.SetUniform(RotationRate->StartRotationRateDegreesMin, RotationRate->StartRotationRateDegreesMax);
+		ReadVectorDistributionJSON(Object, ParticleKeys::StartRotationRateDistribution, RotationRate->StartRotationRateDistribution);
 		Module = RotationRate;
 	}
 	else if (Type == "Acceleration")
 	{
 		UParticleModuleAcceleration* Acceleration = GUObjectArray.CreateObject<UParticleModuleAcceleration>(Outer);
 		Acceleration->Acceleration = ReadVectorJSON(Object, ParticleKeys::Acceleration, Acceleration->Acceleration);
+		Acceleration->AccelerationDistribution.SetConstant(Acceleration->Acceleration);
+		ReadVectorDistributionJSON(Object, ParticleKeys::AccelerationDistribution, Acceleration->AccelerationDistribution);
 		Module = Acceleration;
 	}
 	else if (Type == "InitialColor")
@@ -928,6 +1112,10 @@ UParticleModule* DeserializeModule(json::JSON& Object, UParticleLODLevel* Outer)
 		}
 		if (Object.hasKey(ParticleKeys::StartAlphaMin)) Color->StartAlphaMin = std::clamp(static_cast<float>(Object[ParticleKeys::StartAlphaMin].ToFloat()), 0.0f, 1.0f);
 		if (Object.hasKey(ParticleKeys::StartAlphaMax)) Color->StartAlphaMax = std::clamp(static_cast<float>(Object[ParticleKeys::StartAlphaMax].ToFloat()), 0.0f, 1.0f);
+		Color->StartColorDistribution.SetUniform(Color->StartColorMin, Color->StartColorMax);
+		Color->StartAlphaDistribution.SetUniform(Color->StartAlphaMin, Color->StartAlphaMax);
+		ReadVectorDistributionJSON(Object, ParticleKeys::StartColorDistribution, Color->StartColorDistribution);
+		ReadFloatDistributionJSON(Object, ParticleKeys::StartAlphaDistribution, Color->StartAlphaDistribution);
 		Module = Color;
 	}
 	else if (Type == "ColorOverLife")
@@ -938,6 +1126,10 @@ UParticleModule* DeserializeModule(json::JSON& Object, UParticleLODLevel* Outer)
 		{
 			ColorOverLife->AlphaOverLife = std::clamp(static_cast<float>(Object[ParticleKeys::EndAlpha].ToFloat()), 0.0f, 1.0f);
 		}
+		ColorOverLife->ColorOverLifeDistribution.SetConstant(ColorOverLife->ColorOverLife);
+		ColorOverLife->AlphaOverLifeDistribution.SetConstant(ColorOverLife->AlphaOverLife);
+		ReadVectorDistributionJSON(Object, ParticleKeys::ColorOverLifeDistribution, ColorOverLife->ColorOverLifeDistribution);
+		ReadFloatDistributionJSON(Object, ParticleKeys::AlphaOverLifeDistribution, ColorOverLife->AlphaOverLifeDistribution);
 		Module = ColorOverLife;
 	}
 	else if (Type == "ColorScaleOverLife")
@@ -948,6 +1140,10 @@ UParticleModule* DeserializeModule(json::JSON& Object, UParticleLODLevel* Outer)
 		{
 			ColorScale->AlphaScaleOverLife = (std::max)(0.0f, static_cast<float>(Object[ParticleKeys::AlphaScaleOverLife].ToFloat()));
 		}
+		ColorScale->ColorScaleOverLifeDistribution.SetConstant(ColorScale->ColorScaleOverLife);
+		ColorScale->AlphaScaleOverLifeDistribution.SetConstant(ColorScale->AlphaScaleOverLife);
+		ReadVectorDistributionJSON(Object, ParticleKeys::ColorScaleOverLifeDistribution, ColorScale->ColorScaleOverLifeDistribution);
+		ReadFloatDistributionJSON(Object, ParticleKeys::AlphaScaleOverLifeDistribution, ColorScale->AlphaScaleOverLifeDistribution);
 		Module = ColorScale;
 	}
 	else if (Type == "InitialSize")
@@ -956,6 +1152,8 @@ UParticleModule* DeserializeModule(json::JSON& Object, UParticleLODLevel* Outer)
 		Size->StartSize = ReadVectorJSON(Object, ParticleKeys::StartSize, Size->StartSize);
 		Size->StartSizeMin = ReadVectorJSON(Object, ParticleKeys::StartSizeMin, Size->StartSize);
 		Size->StartSizeMax = ReadVectorJSON(Object, ParticleKeys::StartSizeMax, Size->StartSize);
+		Size->StartSizeDistribution.SetUniform(Size->StartSizeMin, Size->StartSizeMax);
+		ReadVectorDistributionJSON(Object, ParticleKeys::StartSizeDistribution, Size->StartSizeDistribution);
 		Module = Size;
 	}
 	else if (Type == "BeamSource")

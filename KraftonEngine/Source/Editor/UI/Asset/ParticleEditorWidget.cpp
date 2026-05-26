@@ -32,10 +32,13 @@
 #include "Render/Shader/ShaderManager.h"
 
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <imgui.h>
+#include <string>
+#include <vector>
 
 namespace
 {
@@ -69,6 +72,29 @@ namespace
 	{
 		"Texture Alpha",
 		"Texture Luminance"
+	};
+
+	const char* GDistributionModeNames[] =
+	{
+		"Constant",
+		"Uniform",
+		"Constant Curve",
+		"Uniform Curve"
+	};
+
+	enum class EDistributionTrackRole
+	{
+		Constant,
+		Min,
+		Max,
+	};
+
+	struct FCurveEditorTrack
+	{
+		std::string Label;
+		FParticleDistributionFloat* Distribution = nullptr;
+		EDistributionTrackRole Role = EDistributionTrackRole::Constant;
+		ImU32 Color = IM_COL32_WHITE;
 	};
 
 	const char* GBeamMethodNames[] =
@@ -348,6 +374,404 @@ namespace
 		return bClicked && !bDisabled;
 	}
 
+	void EnsureCurveHasDefaultKeys(FFloatCurve& Curve, float StartValue, float EndValue)
+	{
+		if (!Curve.Keys.empty())
+		{
+			return;
+		}
+
+		Curve.Reset();
+		Curve.DefaultValue = EndValue;
+		Curve.AddKey(0.0f, StartValue);
+		Curve.AddKey(1.0f, EndValue);
+		Curve.SortKeys();
+		Curve.AutoSetTangents();
+	}
+
+	void SetFloatDistributionMode(FParticleDistributionFloat& Distribution, EParticleDistributionMode Mode)
+	{
+		if (Distribution.Mode == Mode)
+		{
+			return;
+		}
+
+		const float StartValue = Distribution.Evaluate(0.0f);
+		const float EndValue = Distribution.Evaluate(1.0f);
+		const float MinValue = (std::min)(Distribution.Min, Distribution.Max);
+		const float MaxValue = (std::max)(Distribution.Min, Distribution.Max);
+
+		switch (Mode)
+		{
+		case EParticleDistributionMode::Constant:
+			Distribution.SetConstant(EndValue);
+			break;
+		case EParticleDistributionMode::Uniform:
+			Distribution.SetUniform(MinValue, MaxValue);
+			break;
+		case EParticleDistributionMode::ConstantCurve:
+			Distribution.SetConstantCurve(0.0f, StartValue, 1.0f, EndValue);
+			break;
+		case EParticleDistributionMode::UniformCurve:
+			Distribution.SetUniformCurve(0.0f, MinValue, MaxValue, 1.0f, MinValue, MaxValue);
+			break;
+		default:
+			break;
+		}
+	}
+
+	bool RenderFloatDistributionControls(const char* Label, FParticleDistributionFloat& Distribution, float Speed, float MinValue, float MaxValue)
+	{
+		bool bChanged = false;
+		ImGui::PushID(Label);
+		if (ImGui::TreeNode(Label))
+		{
+			int Mode = static_cast<int>(Distribution.Mode);
+			if (ImGui::Combo("Distribution", &Mode, GDistributionModeNames, IM_ARRAYSIZE(GDistributionModeNames)))
+			{
+				Mode = std::clamp(Mode, 0, static_cast<int>(EParticleDistributionMode::UniformCurve));
+				SetFloatDistributionMode(Distribution, static_cast<EParticleDistributionMode>(Mode));
+				bChanged = true;
+			}
+
+			if (Distribution.Mode == EParticleDistributionMode::Constant)
+			{
+				float Value = Distribution.Constant;
+				if (ImGui::DragFloat("Constant", &Value, Speed, MinValue, MaxValue))
+				{
+					Distribution.SetConstant(Value);
+					bChanged = true;
+				}
+			}
+			else if (Distribution.Mode == EParticleDistributionMode::Uniform)
+			{
+				float Range[2] = { Distribution.Min, Distribution.Max };
+				if (ImGui::DragFloat2("Uniform Min/Max", Range, Speed, MinValue, MaxValue))
+				{
+					Distribution.SetUniform(Range[0], Range[1]);
+					bChanged = true;
+				}
+			}
+			else
+			{
+				ImGui::TextDisabled("Edit keys in the Curve Editor below.");
+			}
+			ImGui::TreePop();
+		}
+		ImGui::PopID();
+		return bChanged;
+	}
+
+	bool RenderVectorDistributionControls(const char* Label, FParticleDistributionVector& Distribution, float Speed, float MinValue, float MaxValue)
+	{
+		bool bChanged = false;
+		ImGui::PushID(Label);
+		if (ImGui::TreeNode(Label))
+		{
+			bChanged |= RenderFloatDistributionControls("X", Distribution.X, Speed, MinValue, MaxValue);
+			bChanged |= RenderFloatDistributionControls("Y", Distribution.Y, Speed, MinValue, MaxValue);
+			bChanged |= RenderFloatDistributionControls("Z", Distribution.Z, Speed, MinValue, MaxValue);
+			ImGui::TreePop();
+		}
+		ImGui::PopID();
+		return bChanged;
+	}
+
+	void AddFloatDistributionTracks(std::vector<FCurveEditorTrack>& Tracks, const char* Label, FParticleDistributionFloat& Distribution, ImU32 Color)
+	{
+		if (Distribution.Mode == EParticleDistributionMode::Uniform || Distribution.Mode == EParticleDistributionMode::UniformCurve)
+		{
+			Tracks.push_back({ std::string(Label) + " Min", &Distribution, EDistributionTrackRole::Min, Color });
+			Tracks.push_back({ std::string(Label) + " Max", &Distribution, EDistributionTrackRole::Max, IM_COL32(255, 220, 80, 255) });
+			return;
+		}
+
+		Tracks.push_back({ Label, &Distribution, EDistributionTrackRole::Constant, Color });
+	}
+
+	float EvaluateTrackValue(const FCurveEditorTrack& Track, float Time)
+	{
+		if (!Track.Distribution)
+		{
+			return 0.0f;
+		}
+
+		const FParticleDistributionFloat& Distribution = *Track.Distribution;
+		if (Distribution.Mode == EParticleDistributionMode::Uniform || Distribution.Mode == EParticleDistributionMode::UniformCurve)
+		{
+			const bool bMaxTrack = Track.Role == EDistributionTrackRole::Max;
+			const FFloatCurve* Curve = Distribution.GetCurve(bMaxTrack);
+			if (Distribution.Mode == EParticleDistributionMode::UniformCurve && Curve)
+			{
+				return Curve->Evaluate(Time);
+			}
+			return bMaxTrack ? Distribution.Max : Distribution.Min;
+		}
+
+		if (Distribution.Mode == EParticleDistributionMode::ConstantCurve)
+		{
+			return Distribution.ConstantCurve.Evaluate(Time);
+		}
+		return Distribution.Constant;
+	}
+
+	void SetTrackConstantValue(FCurveEditorTrack& Track, float Value)
+	{
+		if (!Track.Distribution)
+		{
+			return;
+		}
+
+		FParticleDistributionFloat& Distribution = *Track.Distribution;
+		if (Distribution.Mode == EParticleDistributionMode::Uniform)
+		{
+			if (Track.Role == EDistributionTrackRole::Max)
+			{
+				Distribution.SetUniform(Distribution.Min, Value);
+			}
+			else
+			{
+				Distribution.SetUniform(Value, Distribution.Max);
+			}
+			return;
+		}
+
+		if (Distribution.Mode == EParticleDistributionMode::Constant)
+		{
+			Distribution.SetConstant(Value);
+		}
+	}
+
+	int32 FindNearestCurveKeyIndex(const FFloatCurve& Curve, float Time, float Value)
+	{
+		int32 BestIndex = -1;
+		float BestDistance = FLT_MAX;
+		for (int32 KeyIndex = 0; KeyIndex < static_cast<int32>(Curve.Keys.size()); ++KeyIndex)
+		{
+			const FCurveKey& Key = Curve.Keys[KeyIndex];
+			const float TimeDelta = Key.Time - Time;
+			const float ValueDelta = Key.Value - Value;
+			const float Distance = TimeDelta * TimeDelta + ValueDelta * ValueDelta;
+			if (Distance < BestDistance)
+			{
+				BestDistance = Distance;
+				BestIndex = KeyIndex;
+			}
+		}
+		return BestIndex;
+	}
+
+	float CalculateNiceTickStep(float Range, float PixelSpan, float MinPixelSpacing)
+	{
+		if (Range <= 0.0f || PixelSpan <= 0.0f)
+		{
+			return 1.0f;
+		}
+
+		const float TargetTickCount = (std::max)(1.0f, PixelSpan / (std::max)(MinPixelSpacing, 1.0f));
+		const float RawStep = Range / TargetTickCount;
+		const float Exponent = std::floor(std::log10((std::max)(RawStep, 1e-6f)));
+		const float Magnitude = std::pow(10.0f, Exponent);
+		const float Normalized = RawStep / Magnitude;
+
+		float NiceNormalized = 10.0f;
+		if (Normalized <= 1.0f)
+		{
+			NiceNormalized = 1.0f;
+		}
+		else if (Normalized <= 2.0f)
+		{
+			NiceNormalized = 2.0f;
+		}
+		else if (Normalized <= 5.0f)
+		{
+			NiceNormalized = 5.0f;
+		}
+
+		return NiceNormalized * Magnitude;
+	}
+
+	int32 GetTickLabelPrecision(float Step)
+	{
+		if (Step <= 0.0f)
+		{
+			return 2;
+		}
+
+		const int32 Precision = static_cast<int32>(std::ceil(-std::log10(Step))) + 1;
+		return std::clamp(Precision, 0, 4);
+	}
+
+	FFloatCurve* GetEditableTrackCurve(FCurveEditorTrack& Track)
+	{
+		if (!Track.Distribution)
+		{
+			return nullptr;
+		}
+
+		FParticleDistributionFloat& Distribution = *Track.Distribution;
+		if (Distribution.Mode == EParticleDistributionMode::Constant)
+		{
+			Distribution.SetConstantCurve(0.0f, Distribution.Constant, 1.0f, Distribution.Constant);
+			Track.Role = EDistributionTrackRole::Constant;
+		}
+		else if (Distribution.Mode == EParticleDistributionMode::Uniform)
+		{
+			Distribution.SetUniformCurve(0.0f, Distribution.Min, Distribution.Max, 1.0f, Distribution.Min, Distribution.Max);
+		}
+
+		if (Distribution.Mode == EParticleDistributionMode::UniformCurve)
+		{
+			const bool bMaxTrack = Track.Role == EDistributionTrackRole::Max;
+			return Distribution.GetCurve(bMaxTrack);
+		}
+		return Distribution.GetCurve(false);
+	}
+
+	FFloatCurve* GetTrackCurveIfAlreadyCurve(FCurveEditorTrack& Track)
+	{
+		if (!Track.Distribution)
+		{
+			return nullptr;
+		}
+
+		FParticleDistributionFloat& Distribution = *Track.Distribution;
+		if (Distribution.Mode == EParticleDistributionMode::UniformCurve)
+		{
+			return Distribution.GetCurve(Track.Role == EDistributionTrackRole::Max);
+		}
+		if (Distribution.Mode == EParticleDistributionMode::ConstantCurve)
+		{
+			return Distribution.GetCurve(false);
+		}
+		return nullptr;
+	}
+
+	void AddVectorDistributionTracks(std::vector<FCurveEditorTrack>& Tracks, const char* Label, FParticleDistributionVector& Distribution)
+	{
+		AddFloatDistributionTracks(Tracks, (std::string(Label) + " X").c_str(), Distribution.X, IM_COL32(230, 80, 80, 255));
+		AddFloatDistributionTracks(Tracks, (std::string(Label) + " Y").c_str(), Distribution.Y, IM_COL32(80, 220, 120, 255));
+		AddFloatDistributionTracks(Tracks, (std::string(Label) + " Z").c_str(), Distribution.Z, IM_COL32(100, 150, 255, 255));
+	}
+
+	void CollectModuleCurveTracks(UParticleModule* Module, std::vector<FCurveEditorTrack>& Tracks)
+	{
+		if (UParticleModuleSpawn* Spawn = Cast<UParticleModuleSpawn>(Module))
+		{
+			AddFloatDistributionTracks(Tracks, "Spawn Rate", Spawn->RateDistribution, IM_COL32(120, 220, 255, 255));
+		}
+		else if (UParticleModuleLifetime* Lifetime = Cast<UParticleModuleLifetime>(Module))
+		{
+			AddFloatDistributionTracks(Tracks, "Lifetime", Lifetime->LifetimeDistribution, IM_COL32(255, 180, 90, 255));
+		}
+		else if (UParticleModuleSize* Size = Cast<UParticleModuleSize>(Module))
+		{
+			AddVectorDistributionTracks(Tracks, "Start Size", Size->StartSizeDistribution);
+		}
+		else if (UParticleModuleVelocity* Velocity = Cast<UParticleModuleVelocity>(Module))
+		{
+			AddVectorDistributionTracks(Tracks, "Start Velocity", Velocity->StartVelocityDistribution);
+		}
+		else if (UParticleModuleLocation* Location = Cast<UParticleModuleLocation>(Module))
+		{
+			AddVectorDistributionTracks(Tracks, "Start Location", Location->StartLocationDistribution);
+		}
+		else if (UParticleModuleInitialRotation* Rotation = Cast<UParticleModuleInitialRotation>(Module))
+		{
+			AddVectorDistributionTracks(Tracks, "Start Rotation", Rotation->StartRotationDistribution);
+		}
+		else if (UParticleModuleInitialRotationRate* RotationRate = Cast<UParticleModuleInitialRotationRate>(Module))
+		{
+			AddVectorDistributionTracks(Tracks, "Start Rotation Rate", RotationRate->StartRotationRateDistribution);
+		}
+		else if (UParticleModuleAcceleration* Acceleration = Cast<UParticleModuleAcceleration>(Module))
+		{
+			AddVectorDistributionTracks(Tracks, "Acceleration", Acceleration->AccelerationDistribution);
+		}
+		else if (UParticleModuleColor* Color = Cast<UParticleModuleColor>(Module))
+		{
+			AddVectorDistributionTracks(Tracks, "Start Color", Color->StartColorDistribution);
+			AddFloatDistributionTracks(Tracks, "Start Alpha", Color->StartAlphaDistribution, IM_COL32(230, 230, 230, 255));
+		}
+		else if (UParticleModuleColorOverLife* ColorOverLife = Cast<UParticleModuleColorOverLife>(Module))
+		{
+			AddVectorDistributionTracks(Tracks, "Color Over Life", ColorOverLife->ColorOverLifeDistribution);
+			AddFloatDistributionTracks(Tracks, "Alpha Over Life", ColorOverLife->AlphaOverLifeDistribution, IM_COL32(230, 230, 230, 255));
+		}
+		else if (UParticleModuleColorScaleOverLife* ColorScale = Cast<UParticleModuleColorScaleOverLife>(Module))
+		{
+			AddVectorDistributionTracks(Tracks, "Color Scale", ColorScale->ColorScaleOverLifeDistribution);
+			AddFloatDistributionTracks(Tracks, "Alpha Scale", ColorScale->AlphaScaleOverLifeDistribution, IM_COL32(230, 230, 230, 255));
+		}
+	}
+
+	void SyncModuleLegacyFromDistributions(UParticleModule* Module)
+	{
+		if (UParticleModuleSpawn* Spawn = Cast<UParticleModuleSpawn>(Module))
+		{
+			Spawn->Rate = (std::max)(0.0f, Spawn->RateDistribution.GetMaxValue());
+		}
+		else if (UParticleModuleLifetime* Lifetime = Cast<UParticleModuleLifetime>(Module))
+		{
+			Lifetime->LifetimeMin = Lifetime->LifetimeDistribution.Evaluate(0.0f);
+			Lifetime->LifetimeMax = Lifetime->LifetimeDistribution.GetMaxValue();
+			Lifetime->Lifetime = Lifetime->LifetimeMax;
+		}
+		else if (UParticleModuleSize* Size = Cast<UParticleModuleSize>(Module))
+		{
+			Size->StartSizeMin = Size->StartSizeDistribution.Evaluate(0.0f);
+			Size->StartSizeMax = Size->StartSizeDistribution.GetMaxValue();
+			Size->StartSize = Size->StartSizeMax;
+		}
+		else if (UParticleModuleVelocity* Velocity = Cast<UParticleModuleVelocity>(Module))
+		{
+			Velocity->StartVelocityMin = Velocity->StartVelocityDistribution.Evaluate(0.0f);
+			Velocity->StartVelocityMax = Velocity->StartVelocityDistribution.GetMaxValue();
+			Velocity->StartVelocity = Velocity->StartVelocityMax;
+		}
+		else if (UParticleModuleLocation* Location = Cast<UParticleModuleLocation>(Module))
+		{
+			Location->StartLocationMin = Location->StartLocationDistribution.Evaluate(0.0f);
+			Location->StartLocationMax = Location->StartLocationDistribution.GetMaxValue();
+			Location->StartLocation = Location->StartLocationMax;
+		}
+		else if (UParticleModuleInitialRotation* Rotation = Cast<UParticleModuleInitialRotation>(Module))
+		{
+			Rotation->StartRotationDegreesMin = Rotation->StartRotationDistribution.Evaluate(0.0f);
+			Rotation->StartRotationDegreesMax = Rotation->StartRotationDistribution.GetMaxValue();
+			Rotation->StartRotationDegrees = Rotation->StartRotationDegreesMax;
+		}
+		else if (UParticleModuleInitialRotationRate* RotationRate = Cast<UParticleModuleInitialRotationRate>(Module))
+		{
+			RotationRate->StartRotationRateDegreesMin = RotationRate->StartRotationRateDistribution.Evaluate(0.0f);
+			RotationRate->StartRotationRateDegreesMax = RotationRate->StartRotationRateDistribution.GetMaxValue();
+			RotationRate->StartRotationRateDegrees = RotationRate->StartRotationRateDegreesMax;
+		}
+		else if (UParticleModuleAcceleration* Acceleration = Cast<UParticleModuleAcceleration>(Module))
+		{
+			Acceleration->Acceleration = Acceleration->AccelerationDistribution.Evaluate(1.0f);
+		}
+		else if (UParticleModuleColor* Color = Cast<UParticleModuleColor>(Module))
+		{
+			Color->StartColorMin = Color->StartColorDistribution.Evaluate(0.0f);
+			Color->StartColorMax = Color->StartColorDistribution.GetMaxValue();
+			Color->StartColor = Color->StartColorMax;
+			Color->StartAlphaMin = Color->StartAlphaDistribution.Evaluate(0.0f);
+			Color->StartAlphaMax = Color->StartAlphaDistribution.GetMaxValue();
+			Color->StartAlpha = Color->StartAlphaMax;
+		}
+		else if (UParticleModuleColorOverLife* ColorOverLife = Cast<UParticleModuleColorOverLife>(Module))
+		{
+			ColorOverLife->ColorOverLife = ColorOverLife->ColorOverLifeDistribution.Evaluate(1.0f);
+			ColorOverLife->AlphaOverLife = std::clamp(ColorOverLife->AlphaOverLifeDistribution.Evaluate(1.0f), 0.0f, 1.0f);
+		}
+		else if (UParticleModuleColorScaleOverLife* ColorScale = Cast<UParticleModuleColorScaleOverLife>(Module))
+		{
+			ColorScale->ColorScaleOverLife = ColorScale->ColorScaleOverLifeDistribution.Evaluate(1.0f);
+			ColorScale->AlphaScaleOverLife = (std::max)(0.0f, ColorScale->AlphaScaleOverLifeDistribution.Evaluate(1.0f));
+		}
+	}
+
 	void DestroyEmitterTree(UParticleEmitter* Emitter)
 	{
 		if (!Emitter)
@@ -550,6 +974,7 @@ UParticleEmitter* FParticleEditorWidget::CreateDefaultEmitter(const FString& Emi
 
 	UParticleModuleSpawn* Spawn = GUObjectArray.CreateObject<UParticleModuleSpawn>(LOD);
 	Spawn->Rate = 20.0f;
+	Spawn->RateDistribution.SetConstant(Spawn->Rate);
 	LOD->SpawnModule = Spawn;
 
 	if (UParticleModule* Lifetime = CreateModule(EAddableModuleType::Lifetime, LOD))
@@ -599,6 +1024,7 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 		Lifetime->Lifetime = 1.0f;
 		Lifetime->LifetimeMin = Lifetime->Lifetime;
 		Lifetime->LifetimeMax = Lifetime->Lifetime;
+		Lifetime->LifetimeDistribution.SetUniform(Lifetime->LifetimeMin, Lifetime->LifetimeMax);
 		return Lifetime;
 	}
 	case EAddableModuleType::Size:
@@ -608,6 +1034,7 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 		Size->StartSize = FVector(12.0f, 12.0f, 1.0f);
 		Size->StartSizeMin = Size->StartSize;
 		Size->StartSizeMax = Size->StartSize;
+		Size->StartSizeDistribution.SetUniform(Size->StartSizeMin, Size->StartSizeMax);
 		return Size;
 	}
 	case EAddableModuleType::Velocity:
@@ -617,6 +1044,7 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 		Velocity->StartVelocity = FVector(0.0f, 0.0f, 35.0f);
 		Velocity->StartVelocityMin = Velocity->StartVelocity;
 		Velocity->StartVelocityMax = Velocity->StartVelocity;
+		Velocity->StartVelocityDistribution.SetUniform(Velocity->StartVelocityMin, Velocity->StartVelocityMax);
 		return Velocity;
 	}
 	case EAddableModuleType::InitialRotation:
@@ -626,6 +1054,7 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 		Rotation->StartRotationDegrees = FVector(0.0f, 0.0f, 360.0f);
 		Rotation->StartRotationDegreesMin = FVector::ZeroVector;
 		Rotation->StartRotationDegreesMax = FVector(0.0f, 0.0f, 360.0f);
+		Rotation->StartRotationDistribution.SetUniform(Rotation->StartRotationDegreesMin, Rotation->StartRotationDegreesMax);
 		return Rotation;
 	}
 	case EAddableModuleType::InitialRotationRate:
@@ -635,6 +1064,7 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 		RotationRate->StartRotationRateDegrees = FVector(0.0f, 0.0f, 90.0f);
 		RotationRate->StartRotationRateDegreesMin = FVector(0.0f, 0.0f, -90.0f);
 		RotationRate->StartRotationRateDegreesMax = FVector(0.0f, 0.0f, 90.0f);
+		RotationRate->StartRotationRateDistribution.SetUniform(RotationRate->StartRotationRateDegreesMin, RotationRate->StartRotationRateDegreesMax);
 		return RotationRate;
 	}
 	case EAddableModuleType::Acceleration:
@@ -642,6 +1072,7 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 		UParticleModuleAcceleration* Acceleration = GUObjectArray.CreateObject<UParticleModuleAcceleration>(Outer);
 		Acceleration->bEnabled = true;
 		Acceleration->Acceleration = FVector(0.0f, 0.0f, -35.0f);
+		Acceleration->AccelerationDistribution.SetConstant(Acceleration->Acceleration);
 		return Acceleration;
 	}
 	case EAddableModuleType::Location:
@@ -651,6 +1082,7 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 		Location->StartLocation = FVector::ZeroVector;
 		Location->StartLocationMin = Location->StartLocation;
 		Location->StartLocationMax = Location->StartLocation;
+		Location->StartLocationDistribution.SetUniform(Location->StartLocationMin, Location->StartLocationMax);
 		return Location;
 	}
 	case EAddableModuleType::Color:
@@ -663,6 +1095,8 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 		Color->StartAlpha = 1.0f;
 		Color->StartAlphaMin = Color->StartAlpha;
 		Color->StartAlphaMax = Color->StartAlpha;
+		Color->StartColorDistribution.SetUniform(Color->StartColorMin, Color->StartColorMax);
+		Color->StartAlphaDistribution.SetUniform(Color->StartAlphaMin, Color->StartAlphaMax);
 		return Color;
 	}
 	case EAddableModuleType::ColorOverLife:
@@ -671,6 +1105,8 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 		ColorOverLife->bEnabled = true;
 		ColorOverLife->ColorOverLife = FVector(1.0f, 1.0f, 1.0f);
 		ColorOverLife->AlphaOverLife = 0.0f;
+		ColorOverLife->ColorOverLifeDistribution.SetConstant(ColorOverLife->ColorOverLife);
+		ColorOverLife->AlphaOverLifeDistribution.SetConstant(ColorOverLife->AlphaOverLife);
 		return ColorOverLife;
 	}
 	case EAddableModuleType::ColorScaleOverLife:
@@ -679,6 +1115,8 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 		ColorScale->bEnabled = true;
 		ColorScale->ColorScaleOverLife = FVector(1.0f, 1.0f, 1.0f);
 		ColorScale->AlphaScaleOverLife = 1.0f;
+		ColorScale->ColorScaleOverLifeDistribution.SetConstant(ColorScale->ColorScaleOverLife);
+		ColorScale->AlphaScaleOverLifeDistribution.SetConstant(ColorScale->AlphaScaleOverLife);
 		return ColorScale;
 	}
 	case EAddableModuleType::BeamSource:
@@ -1659,7 +2097,10 @@ void FParticleEditorWidget::RenderEditorLayout()
 	ImGui::EndChild();
 	DrawHorizontalSplitter(TopHeight, MinTopHeight, MinBottomHeight, Available.y, "##ParticleHorizontalSplitterRight");
 	ImGui::BeginChild("ParticleCurvePane", ImVec2(0.0f, 0.0f), true);
-	RenderCurvePanel();
+	if (RenderCurvePanel())
+	{
+		ApplyEmitterEdit();
+	}
 	ImGui::EndChild();
 
 	ImGui::EndTable();
@@ -2279,16 +2720,78 @@ void FParticleEditorWidget::RenderEmitterList()
 	}
 }
 
-void FParticleEditorWidget::RenderCurvePanel()
+bool FParticleEditorWidget::RenderCurvePanel()
 {
 	ImGui::TextUnformatted("Curve Editor");
 	ImGui::Separator();
+
+	UParticleModule* Module = GetSelectedModule();
+	std::vector<FCurveEditorTrack> Tracks;
+	CollectModuleCurveTracks(Module, Tracks);
+
+	if (!Module || Tracks.empty())
+	{
+		ImGui::TextDisabled("Select a module with editable distributions.");
+		return false;
+	}
+
+	static int32 SelectedTrack = 0;
+	static int32 SelectedKey = -1;
+	static UParticleModule* ViewModule = nullptr;
+	static float ViewTimeMin = 0.0f;
+	static float ViewTimeMax = 1.0f;
+	static float ViewValueMin = 0.0f;
+	static float ViewValueMax = 1.0f;
+	SelectedTrack = std::clamp(SelectedTrack, 0, static_cast<int32>(Tracks.size()) - 1);
+	if (!Tracks[SelectedTrack].Distribution)
+	{
+		return false;
+	}
+
+	bool bChanged = false;
+	bool bFitViewRequested = false;
+	if (ImGui::Button("Add Key"))
+	{
+		FFloatCurve* SelectedCurve = GetEditableTrackCurve(Tracks[SelectedTrack]);
+		if (!SelectedCurve)
+		{
+			return false;
+		}
+		const float NewTime = std::clamp((ViewTimeMin + ViewTimeMax) * 0.5f, 0.0f, 1.0f);
+		const float NewValue = SelectedCurve->Evaluate(NewTime);
+		SelectedCurve->AddKey(NewTime, NewValue);
+		SelectedCurve->SortKeys();
+		SelectedCurve->AutoSetTangents();
+		SelectedKey = FindNearestCurveKeyIndex(*SelectedCurve, NewTime, NewValue);
+		bChanged = true;
+	}
+	ImGui::SameLine();
+	FFloatCurve* SelectedCurveForDelete = GetTrackCurveIfAlreadyCurve(Tracks[SelectedTrack]);
+	ImGui::BeginDisabled(!SelectedCurveForDelete || SelectedKey < 0 || SelectedKey >= static_cast<int32>(SelectedCurveForDelete->Keys.size()) || SelectedCurveForDelete->Keys.size() <= 1);
+	if (ImGui::Button("Delete Key"))
+	{
+		if (SelectedCurveForDelete)
+		{
+			SelectedCurveForDelete->Keys.erase(SelectedCurveForDelete->Keys.begin() + SelectedKey);
+			SelectedCurveForDelete->AutoSetTangents();
+			SelectedKey = std::clamp(SelectedKey, 0, static_cast<int32>(SelectedCurveForDelete->Keys.size()) - 1);
+			bChanged = true;
+		}
+	}
+	ImGui::EndDisabled();
+	ImGui::SameLine();
+	if (ImGui::Button("Fit"))
+	{
+		bFitViewRequested = true;
+	}
+	ImGui::SameLine();
+	ImGui::TextDisabled("%s", Tracks[SelectedTrack].Label.c_str());
 
 	const ImVec2 Origin = ImGui::GetCursorScreenPos();
 	const ImVec2 Size = ImGui::GetContentRegionAvail();
 	if (Size.x <= 0.0f || Size.y <= 0.0f)
 	{
-		return;
+		return bChanged;
 	}
 
 	ImDrawList* DrawList = ImGui::GetWindowDrawList();
@@ -2297,21 +2800,391 @@ void FParticleEditorWidget::RenderCurvePanel()
 
 	const float TrackWidth = (std::min)(190.0f, Size.x * 0.45f);
 	DrawList->AddRectFilled(Origin, ImVec2(Origin.x + TrackWidth, Max.y), IM_COL32(120, 120, 120, 255));
+	constexpr float AxisLabelWidth = 56.0f;
+	constexpr float AxisLabelHeight = 18.0f;
+	const ImVec2 GraphMin(Origin.x + TrackWidth + AxisLabelWidth, Origin.y + 4.0f);
+	const ImVec2 GraphMax(Max.x - 6.0f, Max.y - AxisLabelHeight);
+	if (GraphMax.x <= GraphMin.x || GraphMax.y <= GraphMin.y)
+	{
+		return bChanged;
+	}
+
+	float AutoValueMin = 0.0f;
+	float AutoValueMax = 1.0f;
+	bool bHasValue = false;
+	for (const FCurveEditorTrack& Track : Tracks)
+	{
+		for (int32 SampleIndex = 0; SampleIndex <= 32; ++SampleIndex)
+		{
+			const float T = static_cast<float>(SampleIndex) / 32.0f;
+			const float Value = EvaluateTrackValue(Track, T);
+			AutoValueMin = bHasValue ? (std::min)(AutoValueMin, Value) : Value;
+			AutoValueMax = bHasValue ? (std::max)(AutoValueMax, Value) : Value;
+			bHasValue = true;
+		}
+	}
+	if (std::abs(AutoValueMax - AutoValueMin) < 0.001f)
+	{
+		AutoValueMax += 1.0f;
+		AutoValueMin -= 1.0f;
+	}
+	const float Padding = (AutoValueMax - AutoValueMin) * 0.12f;
+	AutoValueMin -= Padding;
+	AutoValueMax += Padding;
+
+	if (ViewModule != Module || bFitViewRequested)
+	{
+		ViewModule = Module;
+		ViewTimeMin = 0.0f;
+		ViewTimeMax = 1.0f;
+		ViewValueMin = AutoValueMin;
+		ViewValueMax = AutoValueMax;
+	}
+
+	auto ClampCurveView = [&]()
+	{
+		constexpr float MinTimeSpan = 0.01f;
+		constexpr float MaxTimeSpan = 1.0f;
+		float TimeSpan = ViewTimeMax - ViewTimeMin;
+		if (TimeSpan < MinTimeSpan)
+		{
+			const float Center = (ViewTimeMin + ViewTimeMax) * 0.5f;
+			ViewTimeMin = Center - MinTimeSpan * 0.5f;
+			ViewTimeMax = Center + MinTimeSpan * 0.5f;
+			TimeSpan = MinTimeSpan;
+		}
+		if (TimeSpan > MaxTimeSpan)
+		{
+			const float Center = (ViewTimeMin + ViewTimeMax) * 0.5f;
+			ViewTimeMin = Center - MaxTimeSpan * 0.5f;
+			ViewTimeMax = Center + MaxTimeSpan * 0.5f;
+		}
+		if (ViewTimeMin < 0.0f)
+		{
+			ViewTimeMax -= ViewTimeMin;
+			ViewTimeMin = 0.0f;
+		}
+		if (ViewTimeMax > 1.0f)
+		{
+			const float Overflow = ViewTimeMax - 1.0f;
+			ViewTimeMin -= Overflow;
+			ViewTimeMax = 1.0f;
+		}
+		ViewTimeMin = std::clamp(ViewTimeMin, 0.0f, 1.0f - MinTimeSpan);
+		ViewTimeMax = std::clamp(ViewTimeMax, ViewTimeMin + MinTimeSpan, 1.0f);
+
+		if (std::abs(ViewValueMax - ViewValueMin) < 0.001f)
+		{
+			const float Center = (ViewValueMin + ViewValueMax) * 0.5f;
+			ViewValueMin = Center - 0.5f;
+			ViewValueMax = Center + 0.5f;
+		}
+	};
+	ClampCurveView();
 
 	const ImU32 GridColor = IM_COL32(155, 155, 155, 180);
-	for (float X = Origin.x + TrackWidth; X < Max.x; X += 120.0f)
+	const ImU32 AxisColor = IM_COL32(210, 210, 210, 220);
+	const ImU32 AxisTextColor = IM_COL32(225, 225, 225, 230);
+	ImGuiIO& IO = ImGui::GetIO();
+	const ImVec2 MousePos = IO.MousePos;
+	const bool bMouseInGraph =
+		MousePos.x >= GraphMin.x && MousePos.x <= GraphMax.x &&
+		MousePos.y >= GraphMin.y && MousePos.y <= GraphMax.y;
+
+	if (bMouseInGraph && IO.MouseWheel != 0.0f)
 	{
-		DrawList->AddLine(ImVec2(X, Origin.y), ImVec2(X, Max.y), GridColor);
-	}
-	for (float Y = Origin.y; Y < Max.y; Y += 28.0f)
-	{
-		DrawList->AddLine(ImVec2(Origin.x, Y), ImVec2(Max.x, Y), GridColor);
+		const float TimeUnderMouse = ViewTimeMin + ((MousePos.x - GraphMin.x) / (GraphMax.x - GraphMin.x)) * (ViewTimeMax - ViewTimeMin);
+		const float ValueUnderMouse = ViewValueMin + ((GraphMax.y - MousePos.y) / (GraphMax.y - GraphMin.y)) * (ViewValueMax - ViewValueMin);
+		const float ZoomFactor = IO.MouseWheel > 0.0f ? 0.86f : 1.16f;
+		const float TimeAlpha = std::clamp((TimeUnderMouse - ViewTimeMin) / (ViewTimeMax - ViewTimeMin), 0.0f, 1.0f);
+		const float ValueAlpha = std::clamp((ValueUnderMouse - ViewValueMin) / (ViewValueMax - ViewValueMin), 0.0f, 1.0f);
+		const float NewTimeSpan = (ViewTimeMax - ViewTimeMin) * ZoomFactor;
+		const float NewValueSpan = (ViewValueMax - ViewValueMin) * ZoomFactor;
+		ViewTimeMin = TimeUnderMouse - NewTimeSpan * TimeAlpha;
+		ViewTimeMax = ViewTimeMin + NewTimeSpan;
+		ViewValueMin = ValueUnderMouse - NewValueSpan * ValueAlpha;
+		ViewValueMax = ViewValueMin + NewValueSpan;
+		ClampCurveView();
+		IO.MouseWheel = 0.0f;
 	}
 
-	const ImU32 TextColor = ImGui::GetColorU32(ImGuiCol_Text);
-	DrawList->AddText(ImVec2(Origin.x + 10.0f, Origin.y + 12.0f), TextColor, "SubImageIndex");
-	DrawList->AddText(ImVec2(Origin.x + 10.0f, Origin.y + 42.0f), TextColor, "LifeMultiplier");
-	ImGui::InvisibleButton("##CurveCanvas", Size);
+	const float TimeTickStep = CalculateNiceTickStep(ViewTimeMax - ViewTimeMin, GraphMax.x - GraphMin.x, 72.0f);
+	const float ValueTickStep = CalculateNiceTickStep(ViewValueMax - ViewValueMin, GraphMax.y - GraphMin.y, 36.0f);
+	const int32 TimePrecision = GetTickLabelPrecision(TimeTickStep);
+	const int32 ValuePrecision = GetTickLabelPrecision(ValueTickStep);
+	char LabelBuffer[32];
+	float LastTimeLabelRight = -FLT_MAX;
+	const float FirstTimeTick = std::ceil(ViewTimeMin / TimeTickStep) * TimeTickStep;
+	for (float T = FirstTimeTick; T <= ViewTimeMax + TimeTickStep * 0.5f; T += TimeTickStep)
+	{
+		if (T < ViewTimeMin - TimeTickStep * 0.5f)
+		{
+			continue;
+		}
+		const float X = GraphMin.x + ((T - ViewTimeMin) / (ViewTimeMax - ViewTimeMin)) * (GraphMax.x - GraphMin.x);
+		DrawList->AddLine(ImVec2(X, GraphMin.y), ImVec2(X, GraphMax.y), GridColor);
+		std::snprintf(LabelBuffer, IM_ARRAYSIZE(LabelBuffer), "%.*f", TimePrecision, T);
+		const ImVec2 TextSize = ImGui::CalcTextSize(LabelBuffer);
+		const float TextLeft = X - TextSize.x * 0.5f;
+		const float TextRight = X + TextSize.x * 0.5f;
+		if (TextLeft > LastTimeLabelRight + 6.0f && TextLeft >= GraphMin.x - 2.0f && TextRight <= GraphMax.x + 2.0f)
+		{
+			DrawList->AddText(ImVec2(TextLeft, GraphMax.y + 2.0f), AxisTextColor, LabelBuffer);
+			LastTimeLabelRight = TextRight;
+		}
+	}
+
+	const float FirstValueTick = std::ceil(ViewValueMin / ValueTickStep) * ValueTickStep;
+	float LastValueLabelY = FLT_MAX;
+	for (float Value = FirstValueTick; Value <= ViewValueMax + ValueTickStep * 0.5f; Value += ValueTickStep)
+	{
+		const float Alpha = (Value - ViewValueMin) / (ViewValueMax - ViewValueMin);
+		const float Y = GraphMax.y - Alpha * (GraphMax.y - GraphMin.y);
+		DrawList->AddLine(ImVec2(GraphMin.x, Y), ImVec2(GraphMax.x, Y), GridColor);
+		std::snprintf(LabelBuffer, IM_ARRAYSIZE(LabelBuffer), "%.*f", ValuePrecision, Value);
+		const ImVec2 TextSize = ImGui::CalcTextSize(LabelBuffer);
+		if (std::abs(Y - LastValueLabelY) > TextSize.y + 4.0f)
+		{
+			DrawList->AddText(ImVec2(GraphMin.x - AxisLabelWidth + 4.0f, Y - TextSize.y * 0.5f), AxisTextColor, LabelBuffer);
+			LastValueLabelY = Y;
+		}
+	}
+	DrawList->AddLine(ImVec2(GraphMin.x, GraphMin.y), ImVec2(GraphMin.x, GraphMax.y), AxisColor, 1.0f);
+	DrawList->AddLine(ImVec2(GraphMin.x, GraphMax.y), ImVec2(GraphMax.x, GraphMax.y), AxisColor, 1.0f);
+
+	auto TimeToX = [&](float Time)
+	{
+		const float Alpha = (Time - ViewTimeMin) / (ViewTimeMax - ViewTimeMin);
+		return GraphMin.x + Alpha * (GraphMax.x - GraphMin.x);
+	};
+	auto ValueToY = [&](float Value)
+	{
+		const float Alpha = (Value - ViewValueMin) / (ViewValueMax - ViewValueMin);
+		return GraphMax.y - Alpha * (GraphMax.y - GraphMin.y);
+	};
+	auto XToTime = [&](float X)
+	{
+		const float Alpha = std::clamp((X - GraphMin.x) / (GraphMax.x - GraphMin.x), 0.0f, 1.0f);
+		return std::clamp(ViewTimeMin + Alpha * (ViewTimeMax - ViewTimeMin), 0.0f, 1.0f);
+	};
+	auto YToValue = [&](float Y)
+	{
+		const float Alpha = std::clamp((GraphMax.y - Y) / (GraphMax.y - GraphMin.y), 0.0f, 1.0f);
+		return ViewValueMin + Alpha * (ViewValueMax - ViewValueMin);
+	};
+
+	for (int32 TrackIndex = 0; TrackIndex < static_cast<int32>(Tracks.size()); ++TrackIndex)
+	{
+		const float RowY = Origin.y + 10.0f + TrackIndex * 24.0f;
+		const ImVec2 RowMin(Origin.x, RowY - 4.0f);
+		const ImVec2 RowMax(Origin.x + TrackWidth, RowY + 18.0f);
+		if (TrackIndex == SelectedTrack)
+		{
+			DrawList->AddRectFilled(RowMin, RowMax, IM_COL32(70, 70, 70, 255));
+		}
+		DrawList->AddText(ImVec2(Origin.x + 10.0f, RowY), Tracks[TrackIndex].Color, Tracks[TrackIndex].Label.c_str());
+		if (MousePos.x >= RowMin.x && MousePos.x <= RowMax.x && MousePos.y >= RowMin.y && MousePos.y <= RowMax.y && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+		{
+			SelectedTrack = TrackIndex;
+			SelectedKey = -1;
+		}
+	}
+
+	auto IsMouseNearGraphPoint = [&](const ImVec2& Point, float Radius)
+	{
+		const float DeltaX = MousePos.x - Point.x;
+		const float DeltaY = MousePos.y - Point.y;
+		return DeltaX * DeltaX + DeltaY * DeltaY <= Radius * Radius;
+	};
+
+	bool bMouseOnCurveHandle = false;
+	if (FFloatCurve* HitTestCurve = GetTrackCurveIfAlreadyCurve(Tracks[SelectedTrack]))
+	{
+		for (const FCurveKey& Key : HitTestCurve->Keys)
+		{
+			const ImVec2 KeyPoint(TimeToX(Key.Time), ValueToY(Key.Value));
+			if (KeyPoint.x >= GraphMin.x - 8.0f && KeyPoint.x <= GraphMax.x + 8.0f &&
+				KeyPoint.y >= GraphMin.y - 8.0f && KeyPoint.y <= GraphMax.y + 8.0f &&
+				IsMouseNearGraphPoint(KeyPoint, 9.0f))
+			{
+				bMouseOnCurveHandle = true;
+				break;
+			}
+		}
+	}
+	else
+	{
+		const ImVec2 HandlePoint(TimeToX(0.5f), ValueToY(EvaluateTrackValue(Tracks[SelectedTrack], 0.5f)));
+		bMouseOnCurveHandle =
+			HandlePoint.x >= GraphMin.x - 8.0f && HandlePoint.x <= GraphMax.x + 8.0f &&
+			HandlePoint.y >= GraphMin.y - 8.0f && HandlePoint.y <= GraphMax.y + 8.0f &&
+			IsMouseNearGraphPoint(HandlePoint, 10.0f);
+	}
+
+	bool bGraphBackgroundHovered = false;
+	bool bGraphBackgroundActive = false;
+	if (!bMouseOnCurveHandle)
+	{
+		ImGui::SetCursorScreenPos(GraphMin);
+		ImGui::InvisibleButton(
+			"##CurveGraphBackground",
+			ImVec2(GraphMax.x - GraphMin.x, GraphMax.y - GraphMin.y),
+			ImGuiButtonFlags_MouseButtonLeft);
+		bGraphBackgroundHovered = ImGui::IsItemHovered();
+		bGraphBackgroundActive = ImGui::IsItemActive();
+
+		if (bGraphBackgroundHovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+		{
+			FFloatCurve* CurveToAddKey = GetEditableTrackCurve(Tracks[SelectedTrack]);
+			if (!CurveToAddKey)
+			{
+				return bChanged;
+			}
+			const float NewTime = XToTime(MousePos.x);
+			const float NewValue = YToValue(MousePos.y);
+			CurveToAddKey->AddKey(NewTime, NewValue);
+			CurveToAddKey->SortKeys();
+			CurveToAddKey->AutoSetTangents();
+			SelectedKey = FindNearestCurveKeyIndex(*CurveToAddKey, NewTime, NewValue);
+			bChanged = true;
+		}
+		else if (bGraphBackgroundActive && ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+		{
+			const float TimeDelta = -IO.MouseDelta.x / (GraphMax.x - GraphMin.x) * (ViewTimeMax - ViewTimeMin);
+			const float ValueDelta = IO.MouseDelta.y / (GraphMax.y - GraphMin.y) * (ViewValueMax - ViewValueMin);
+			ViewTimeMin += TimeDelta;
+			ViewTimeMax += TimeDelta;
+			ViewValueMin += ValueDelta;
+			ViewValueMax += ValueDelta;
+			ClampCurveView();
+			SelectedKey = -1;
+		}
+		else if (bGraphBackgroundHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+		{
+			SelectedKey = -1;
+		}
+	}
+
+	if (bGraphBackgroundActive)
+	{
+		ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
+	}
+
+	DrawList->PushClipRect(GraphMin, GraphMax, true);
+	for (int32 TrackIndex = 0; TrackIndex < static_cast<int32>(Tracks.size()); ++TrackIndex)
+	{
+		if (!Tracks[TrackIndex].Distribution)
+		{
+			continue;
+		}
+
+		const ImU32 CurveColor = TrackIndex == SelectedTrack ? Tracks[TrackIndex].Color : IM_COL32(150, 150, 150, 120);
+		ImVec2 PrevPoint(TimeToX(0.0f), ValueToY(EvaluateTrackValue(Tracks[TrackIndex], 0.0f)));
+		for (int32 SampleIndex = 1; SampleIndex <= 64; ++SampleIndex)
+		{
+			const float T = static_cast<float>(SampleIndex) / 64.0f;
+			const ImVec2 Point(TimeToX(T), ValueToY(EvaluateTrackValue(Tracks[TrackIndex], T)));
+			DrawList->AddLine(PrevPoint, Point, CurveColor, TrackIndex == SelectedTrack ? 2.0f : 1.0f);
+			PrevPoint = Point;
+		}
+	}
+
+	FFloatCurve* SelectedCurve = GetTrackCurveIfAlreadyCurve(Tracks[SelectedTrack]);
+	if (SelectedCurve)
+	{
+		for (int32 KeyIndex = 0; KeyIndex < static_cast<int32>(SelectedCurve->Keys.size()); ++KeyIndex)
+		{
+			FCurveKey& Key = SelectedCurve->Keys[KeyIndex];
+			const ImVec2 KeyPoint(TimeToX(Key.Time), ValueToY(Key.Value));
+			if (KeyPoint.x < GraphMin.x - 8.0f || KeyPoint.x > GraphMax.x + 8.0f ||
+				KeyPoint.y < GraphMin.y - 8.0f || KeyPoint.y > GraphMax.y + 8.0f)
+			{
+				continue;
+			}
+
+			const float Radius = KeyIndex == SelectedKey ? 5.0f : 4.0f;
+			DrawList->AddCircleFilled(KeyPoint, Radius, Tracks[SelectedTrack].Color);
+
+			ImGui::SetCursorScreenPos(ImVec2(KeyPoint.x - 6.0f, KeyPoint.y - 6.0f));
+			ImGui::PushID(KeyIndex);
+			ImGui::InvisibleButton("##CurveKey", ImVec2(12.0f, 12.0f));
+			if (ImGui::IsItemClicked())
+			{
+				SelectedKey = KeyIndex;
+			}
+			if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+			{
+				const float NewTime = XToTime(KeyPoint.x + ImGui::GetIO().MouseDelta.x);
+				const float NewValue = YToValue(KeyPoint.y + ImGui::GetIO().MouseDelta.y);
+				Key.Time = NewTime;
+				Key.Value = NewValue;
+				SelectedCurve->SortKeys();
+				SelectedCurve->AutoSetTangents();
+				SelectedKey = FindNearestCurveKeyIndex(*SelectedCurve, NewTime, NewValue);
+				bChanged = true;
+			}
+			ImGui::PopID();
+		}
+	}
+	else
+	{
+		const float HandleTime = 0.5f;
+		const float HandleValue = EvaluateTrackValue(Tracks[SelectedTrack], HandleTime);
+		const ImVec2 KeyPoint(TimeToX(HandleTime), ValueToY(HandleValue));
+		if (KeyPoint.x >= GraphMin.x - 8.0f && KeyPoint.x <= GraphMax.x + 8.0f &&
+			KeyPoint.y >= GraphMin.y - 8.0f && KeyPoint.y <= GraphMax.y + 8.0f)
+		{
+			DrawList->AddCircleFilled(KeyPoint, 4.5f, Tracks[SelectedTrack].Color);
+
+			ImGui::SetCursorScreenPos(ImVec2(KeyPoint.x - 7.0f, KeyPoint.y - 7.0f));
+			ImGui::PushID("ConstantDistributionHandle");
+			ImGui::InvisibleButton("##CurveConstantHandle", ImVec2(14.0f, 14.0f));
+			if (ImGui::IsItemClicked())
+			{
+				SelectedKey = 0;
+			}
+			if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+			{
+				SetTrackConstantValue(Tracks[SelectedTrack], YToValue(KeyPoint.y + IO.MouseDelta.y));
+				bChanged = true;
+			}
+			ImGui::PopID();
+		}
+	}
+	DrawList->PopClipRect();
+
+	ImGui::SetCursorScreenPos(Origin);
+	ImGui::Dummy(Size);
+
+	SelectedCurve = GetTrackCurveIfAlreadyCurve(Tracks[SelectedTrack]);
+	if (SelectedCurve && SelectedKey >= 0 && SelectedKey < static_cast<int32>(SelectedCurve->Keys.size()))
+	{
+		FCurveKey& Key = SelectedCurve->Keys[SelectedKey];
+		ImGui::SetNextItemWidth(90.0f);
+		if (ImGui::DragFloat("Time", &Key.Time, 0.005f, 0.0f, 1.0f, "%.3f"))
+		{
+			Key.Time = std::clamp(Key.Time, 0.0f, 1.0f);
+			const float NewTime = Key.Time;
+			const float NewValue = Key.Value;
+			SelectedCurve->SortKeys();
+			SelectedCurve->AutoSetTangents();
+			SelectedKey = FindNearestCurveKeyIndex(*SelectedCurve, NewTime, NewValue);
+			bChanged = true;
+		}
+		ImGui::SameLine();
+		ImGui::SetNextItemWidth(110.0f);
+		if (ImGui::DragFloat("Value", &Key.Value, 0.01f))
+		{
+			SelectedCurve->AutoSetTangents();
+			bChanged = true;
+		}
+	}
+
+	if (bChanged)
+	{
+		SyncModuleLegacyFromDistributions(Module);
+	}
+	return bChanged;
 }
 
 bool FParticleEditorWidget::RenderDetailsPanel()
@@ -2404,6 +3277,16 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		if (ImGui::DragFloat("Rate", &Rate, 1.0f, 0.0f, 10000.0f))
 		{
 			Spawn->Rate = (std::max)(0.0f, Rate);
+			if (!Spawn->RateDistribution.UsesCurve())
+			{
+				Spawn->RateDistribution.SetConstant(Spawn->Rate);
+			}
+			bChanged = true;
+		}
+
+		if (RenderFloatDistributionControls("Rate Distribution", Spawn->RateDistribution, 1.0f, 0.0f, 10000.0f))
+		{
+			SyncModuleLegacyFromDistributions(Module);
 			bChanged = true;
 		}
 	}
@@ -2414,6 +3297,10 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		{
 			Lifetime->LifetimeMin = (std::max)(0.0f, LifetimeMin);
 			Lifetime->Lifetime = Lifetime->LifetimeMax;
+			if (!Lifetime->LifetimeDistribution.UsesCurve())
+			{
+				Lifetime->LifetimeDistribution.SetUniform(Lifetime->LifetimeMin, Lifetime->LifetimeMax);
+			}
 			bChanged = true;
 		}
 
@@ -2422,6 +3309,16 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		{
 			Lifetime->LifetimeMax = (std::max)(0.0f, LifetimeMax);
 			Lifetime->Lifetime = Lifetime->LifetimeMax;
+			if (!Lifetime->LifetimeDistribution.UsesCurve())
+			{
+				Lifetime->LifetimeDistribution.SetUniform(Lifetime->LifetimeMin, Lifetime->LifetimeMax);
+			}
+			bChanged = true;
+		}
+
+		if (RenderFloatDistributionControls("Lifetime Distribution", Lifetime->LifetimeDistribution, 0.05f, 0.0f, 1000.0f))
+		{
+			SyncModuleLegacyFromDistributions(Module);
 			bChanged = true;
 		}
 	}
@@ -2432,6 +3329,10 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		{
 			Size->StartSizeMin = StartSizeMin;
 			Size->StartSize = Size->StartSizeMax;
+			if (!Size->StartSizeDistribution.UsesCurve())
+			{
+				Size->StartSizeDistribution.SetUniform(Size->StartSizeMin, Size->StartSizeMax);
+			}
 			bChanged = true;
 		}
 
@@ -2440,6 +3341,16 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		{
 			Size->StartSizeMax = StartSizeMax;
 			Size->StartSize = Size->StartSizeMax;
+			if (!Size->StartSizeDistribution.UsesCurve())
+			{
+				Size->StartSizeDistribution.SetUniform(Size->StartSizeMin, Size->StartSizeMax);
+			}
+			bChanged = true;
+		}
+
+		if (RenderVectorDistributionControls("Start Size Distribution", Size->StartSizeDistribution, 0.25f, 0.0f, 10000.0f))
+		{
+			SyncModuleLegacyFromDistributions(Module);
 			bChanged = true;
 		}
 	}
@@ -2450,6 +3361,10 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		{
 			Velocity->StartVelocityMin = StartVelocityMin;
 			Velocity->StartVelocity = Velocity->StartVelocityMax;
+			if (!Velocity->StartVelocityDistribution.UsesCurve())
+			{
+				Velocity->StartVelocityDistribution.SetUniform(Velocity->StartVelocityMin, Velocity->StartVelocityMax);
+			}
 			bChanged = true;
 		}
 
@@ -2458,6 +3373,16 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		{
 			Velocity->StartVelocityMax = StartVelocityMax;
 			Velocity->StartVelocity = Velocity->StartVelocityMax;
+			if (!Velocity->StartVelocityDistribution.UsesCurve())
+			{
+				Velocity->StartVelocityDistribution.SetUniform(Velocity->StartVelocityMin, Velocity->StartVelocityMax);
+			}
+			bChanged = true;
+		}
+
+		if (RenderVectorDistributionControls("Start Velocity Distribution", Velocity->StartVelocityDistribution, 0.5f, -10000.0f, 10000.0f))
+		{
+			SyncModuleLegacyFromDistributions(Module);
 			bChanged = true;
 		}
 	}
@@ -2468,6 +3393,10 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		{
 			Rotation->StartRotationDegreesMin = StartRotationMin;
 			Rotation->StartRotationDegrees = Rotation->StartRotationDegreesMax;
+			if (!Rotation->StartRotationDistribution.UsesCurve())
+			{
+				Rotation->StartRotationDistribution.SetUniform(Rotation->StartRotationDegreesMin, Rotation->StartRotationDegreesMax);
+			}
 			bChanged = true;
 		}
 
@@ -2476,6 +3405,15 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		{
 			Rotation->StartRotationDegreesMax = StartRotationMax;
 			Rotation->StartRotationDegrees = Rotation->StartRotationDegreesMax;
+			if (!Rotation->StartRotationDistribution.UsesCurve())
+			{
+				Rotation->StartRotationDistribution.SetUniform(Rotation->StartRotationDegreesMin, Rotation->StartRotationDegreesMax);
+			}
+			bChanged = true;
+		}
+
+		if (RenderVectorDistributionControls("Start Rotation Distribution", Rotation->StartRotationDistribution, 1.0f, -36000.0f, 36000.0f))
+		{
 			bChanged = true;
 		}
 	}
@@ -2486,6 +3424,10 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		{
 			RotationRate->StartRotationRateDegreesMin = StartRotationRateMin;
 			RotationRate->StartRotationRateDegrees = RotationRate->StartRotationRateDegreesMax;
+			if (!RotationRate->StartRotationRateDistribution.UsesCurve())
+			{
+				RotationRate->StartRotationRateDistribution.SetUniform(RotationRate->StartRotationRateDegreesMin, RotationRate->StartRotationRateDegreesMax);
+			}
 			bChanged = true;
 		}
 
@@ -2494,6 +3436,15 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		{
 			RotationRate->StartRotationRateDegreesMax = StartRotationRateMax;
 			RotationRate->StartRotationRateDegrees = RotationRate->StartRotationRateDegreesMax;
+			if (!RotationRate->StartRotationRateDistribution.UsesCurve())
+			{
+				RotationRate->StartRotationRateDistribution.SetUniform(RotationRate->StartRotationRateDegreesMin, RotationRate->StartRotationRateDegreesMax);
+			}
+			bChanged = true;
+		}
+
+		if (RenderVectorDistributionControls("Start Rotation Rate Distribution", RotationRate->StartRotationRateDistribution, 1.0f, -36000.0f, 36000.0f))
+		{
 			bChanged = true;
 		}
 	}
@@ -2503,6 +3454,16 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		if (ImGui::DragFloat3("Acceleration", &AccelerationValue.X, 0.5f, -10000.0f, 10000.0f))
 		{
 			Acceleration->Acceleration = AccelerationValue;
+			if (!Acceleration->AccelerationDistribution.UsesCurve())
+			{
+				Acceleration->AccelerationDistribution.SetConstant(Acceleration->Acceleration);
+			}
+			bChanged = true;
+		}
+
+		if (RenderVectorDistributionControls("Acceleration Distribution", Acceleration->AccelerationDistribution, 0.5f, -10000.0f, 10000.0f))
+		{
+			SyncModuleLegacyFromDistributions(Module);
 			bChanged = true;
 		}
 	}
@@ -2513,6 +3474,10 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		{
 			Location->StartLocationMin = StartLocationMin;
 			Location->StartLocation = Location->StartLocationMax;
+			if (!Location->StartLocationDistribution.UsesCurve())
+			{
+				Location->StartLocationDistribution.SetUniform(Location->StartLocationMin, Location->StartLocationMax);
+			}
 			bChanged = true;
 		}
 
@@ -2521,6 +3486,16 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		{
 			Location->StartLocationMax = StartLocationMax;
 			Location->StartLocation = Location->StartLocationMax;
+			if (!Location->StartLocationDistribution.UsesCurve())
+			{
+				Location->StartLocationDistribution.SetUniform(Location->StartLocationMin, Location->StartLocationMax);
+			}
+			bChanged = true;
+		}
+
+		if (RenderVectorDistributionControls("Start Location Distribution", Location->StartLocationDistribution, 0.25f, -10000.0f, 10000.0f))
+		{
+			SyncModuleLegacyFromDistributions(Module);
 			bChanged = true;
 		}
 	}
@@ -2531,6 +3506,10 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		{
 			Color->StartColorMin = FVector(StartColorMin[0], StartColorMin[1], StartColorMin[2]);
 			Color->StartColor = Color->StartColorMax;
+			if (!Color->StartColorDistribution.UsesCurve())
+			{
+				Color->StartColorDistribution.SetUniform(Color->StartColorMin, Color->StartColorMax);
+			}
 			bChanged = true;
 		}
 
@@ -2539,6 +3518,10 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		{
 			Color->StartColorMax = FVector(StartColorMax[0], StartColorMax[1], StartColorMax[2]);
 			Color->StartColor = Color->StartColorMax;
+			if (!Color->StartColorDistribution.UsesCurve())
+			{
+				Color->StartColorDistribution.SetUniform(Color->StartColorMin, Color->StartColorMax);
+			}
 			bChanged = true;
 		}
 
@@ -2547,6 +3530,10 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		{
 			Color->StartAlphaMin = std::clamp(StartAlphaMin, 0.0f, 1.0f);
 			Color->StartAlpha = Color->StartAlphaMax;
+			if (!Color->StartAlphaDistribution.UsesCurve())
+			{
+				Color->StartAlphaDistribution.SetUniform(Color->StartAlphaMin, Color->StartAlphaMax);
+			}
 			bChanged = true;
 		}
 
@@ -2555,6 +3542,21 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		{
 			Color->StartAlphaMax = std::clamp(StartAlphaMax, 0.0f, 1.0f);
 			Color->StartAlpha = Color->StartAlphaMax;
+			if (!Color->StartAlphaDistribution.UsesCurve())
+			{
+				Color->StartAlphaDistribution.SetUniform(Color->StartAlphaMin, Color->StartAlphaMax);
+			}
+			bChanged = true;
+		}
+
+		if (RenderVectorDistributionControls("Start Color Distribution", Color->StartColorDistribution, 0.01f, 0.0f, 1.0f))
+		{
+			SyncModuleLegacyFromDistributions(Module);
+			bChanged = true;
+		}
+		if (RenderFloatDistributionControls("Start Alpha Distribution", Color->StartAlphaDistribution, 0.01f, 0.0f, 1.0f))
+		{
+			SyncModuleLegacyFromDistributions(Module);
 			bChanged = true;
 		}
 	}
@@ -2564,6 +3566,10 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		if (ImGui::ColorEdit3("Color Over Life", EndColor))
 		{
 			ColorOverLife->ColorOverLife = FVector(EndColor[0], EndColor[1], EndColor[2]);
+			if (!ColorOverLife->ColorOverLifeDistribution.UsesCurve())
+			{
+				ColorOverLife->ColorOverLifeDistribution.SetConstant(ColorOverLife->ColorOverLife);
+			}
 			bChanged = true;
 		}
 
@@ -2571,6 +3577,21 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		if (ImGui::DragFloat("Alpha Over Life", &EndAlpha, 0.01f, 0.0f, 1.0f))
 		{
 			ColorOverLife->AlphaOverLife = std::clamp(EndAlpha, 0.0f, 1.0f);
+			if (!ColorOverLife->AlphaOverLifeDistribution.UsesCurve())
+			{
+				ColorOverLife->AlphaOverLifeDistribution.SetConstant(ColorOverLife->AlphaOverLife);
+			}
+			bChanged = true;
+		}
+
+		if (RenderVectorDistributionControls("Color Over Life Distribution", ColorOverLife->ColorOverLifeDistribution, 0.01f, 0.0f, 1.0f))
+		{
+			ColorOverLife->ColorOverLife = ColorOverLife->ColorOverLifeDistribution.Evaluate(1.0f);
+			bChanged = true;
+		}
+		if (RenderFloatDistributionControls("Alpha Over Life Distribution", ColorOverLife->AlphaOverLifeDistribution, 0.01f, 0.0f, 1.0f))
+		{
+			ColorOverLife->AlphaOverLife = std::clamp(ColorOverLife->AlphaOverLifeDistribution.Evaluate(1.0f), 0.0f, 1.0f);
 			bChanged = true;
 		}
 	}
@@ -2583,6 +3604,10 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 				(std::max)(0.0f, ScaleValue.X),
 				(std::max)(0.0f, ScaleValue.Y),
 				(std::max)(0.0f, ScaleValue.Z));
+			if (!ColorScale->ColorScaleOverLifeDistribution.UsesCurve())
+			{
+				ColorScale->ColorScaleOverLifeDistribution.SetConstant(ColorScale->ColorScaleOverLife);
+			}
 			bChanged = true;
 		}
 
@@ -2590,6 +3615,21 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		if (ImGui::DragFloat("Alpha Scale Over Life", &AlphaScale, 0.01f, 0.0f, 10.0f))
 		{
 			ColorScale->AlphaScaleOverLife = (std::max)(0.0f, AlphaScale);
+			if (!ColorScale->AlphaScaleOverLifeDistribution.UsesCurve())
+			{
+				ColorScale->AlphaScaleOverLifeDistribution.SetConstant(ColorScale->AlphaScaleOverLife);
+			}
+			bChanged = true;
+		}
+
+		if (RenderVectorDistributionControls("Color Scale Distribution", ColorScale->ColorScaleOverLifeDistribution, 0.01f, 0.0f, 10.0f))
+		{
+			ColorScale->ColorScaleOverLife = ColorScale->ColorScaleOverLifeDistribution.Evaluate(1.0f);
+			bChanged = true;
+		}
+		if (RenderFloatDistributionControls("Alpha Scale Distribution", ColorScale->AlphaScaleOverLifeDistribution, 0.01f, 0.0f, 10.0f))
+		{
+			ColorScale->AlphaScaleOverLife = (std::max)(0.0f, ColorScale->AlphaScaleOverLifeDistribution.Evaluate(1.0f));
 			bChanged = true;
 		}
 	}
