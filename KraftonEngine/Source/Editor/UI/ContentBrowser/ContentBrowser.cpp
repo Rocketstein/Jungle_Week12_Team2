@@ -177,14 +177,21 @@ void FEditorContentBrowserWidget::Initialize(UEditorEngine* InEditor, ID3D11Devi
 
 void FEditorContentBrowserWidget::Render(float DeltaTime)
 {
+	(void)DeltaTime;
+
 	if (!ImGui::Begin("ContentBrowser"))
 	{
 		ImGui::End();
 		return;
 	}
 
-	(void)DeltaTime;
+	RenderBody();
 
+	ImGui::End();
+}
+
+void FEditorContentBrowserWidget::RenderBody()
+{
 	if (ImGui::Button("Import"))
 	{
 		BeginImportSourceFile();
@@ -215,7 +222,6 @@ void FEditorContentBrowserWidget::Render(float DeltaTime)
 
 	if (!ImGui::BeginTable("ContentBrowserLayout", 3, ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersInnerV))
 	{
-		ImGui::End();
 		return;
 	}
 
@@ -255,8 +261,6 @@ void FEditorContentBrowserWidget::Render(float DeltaTime)
 	}
 
 	ImGui::EndTable();
-
-	ImGui::End();
 }
 
 void FEditorContentBrowserWidget::Refresh()
