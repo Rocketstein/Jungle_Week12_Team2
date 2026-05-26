@@ -352,6 +352,9 @@
     <Filter Include="ThirdParty\sol2\include\sol\utility">
       <UniqueIdentifier>{9665cc4b-2b87-76ba-7eb3-a148e4c5a694}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Particle\BeamModule">
+      <UniqueIdentifier>{83c632dd-bc82-43d4-8263-cd7c1d339e9f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\Common\ConstantBuffers.hlsli">
@@ -420,6 +423,9 @@
     <FxCompile Include="Shaders\Lighting\VSMBlur.hlsl">
       <Filter>Shaders\Lighting</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\Particle\ParticleBeam.hlsl">
+      <Filter>Shaders\Particle</Filter>
+    </FxCompile>
     <FxCompile Include="Shaders\Particle\ParticleCommon.hlsli">
       <Filter>Shaders\Particle</Filter>
     </FxCompile>
@@ -482,9 +488,6 @@
     </FxCompile>
     <FxCompile Include="Shaders\UI\SubUV.hlsl">
       <Filter>Shaders\UI</Filter>
-    </FxCompile>
-    <FxCompile Include="Shaders\Particle\ParticleBeam.hlsl">
-      <Filter>Shaders\Particle</Filter>
     </FxCompile>
     <FxCompile Include="Shaders\Particle\ParticleRibbon.hlsl">
       <Filter>Shaders\Particle</Filter>
@@ -1067,6 +1070,9 @@
     <ClCompile Include="Source\Engine\Object\UUIDGenerator.cpp">
       <Filter>Source\Engine\Object</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleBeamInstances.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleEmitter.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
@@ -1389,8 +1395,20 @@
       <Filter>ThirdParty\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Source\Engine\Particle\ParticleBeamInstances.cpp">
-      <Filter>Source\Engine\Particle</Filter>
+    <ClCompile Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamBase.cpp">
+      <Filter>Source\Engine\Particle\BeamModule</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamSource.cpp">
+      <Filter>Source\Engine\Particle\BeamModule</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamTarget.cpp">
+      <Filter>Source\Engine\Particle\BeamModule</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamNoise.cpp">
+      <Filter>Source\Engine\Particle\BeamModule</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\TypeData\ParticleModuleTypeDataBeam2.cpp">
+      <Filter>Source\Engine\Particle\TypeData</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -2096,6 +2114,9 @@
     <ClInclude Include="Source\Engine\Object\UUIDGenerator.h">
       <Filter>Source\Engine\Object</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleBeamInstances.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleEmitter.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
@@ -2127,6 +2148,9 @@
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\TypeData\ParticleModuleTypeDataBeam2.h">
+      <Filter>Source\Engine\Particle\TypeData</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\TypeData\ParticleModuleTypeDataRibbon.h">
       <Filter>Source\Engine\Particle\TypeData</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Physics\IPhysicsScene.h">
@@ -4139,11 +4163,17 @@
     <ClInclude Include="ThirdParty\sol2\include\sol\utility\to_string.hpp">
       <Filter>ThirdParty\sol2\include\sol\utility</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Particle\ParticleBeamInstances.h">
-      <Filter>Source\Engine\Particle</Filter>
+    <ClInclude Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamBase.h">
+      <Filter>Source\Engine\Particle\BeamModule</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Particle\TypeData\ParticleModuleTypeDataRibbon.h">
-      <Filter>Source\Engine\Particle\TypeData</Filter>
+    <ClInclude Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamSource.h">
+      <Filter>Source\Engine\Particle\BeamModule</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamTarget.h">
+      <Filter>Source\Engine\Particle\BeamModule</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamNoise.h">
+      <Filter>Source\Engine\Particle\BeamModule</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
