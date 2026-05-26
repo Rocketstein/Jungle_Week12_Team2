@@ -8,6 +8,7 @@
 #include "Render/Particle/ParticleDynamicData.h"
 #include "Render/Proxy/ParticleSystemSceneProxy.h"
 #include "Particle/ParticleSystemManager.h"
+#include "Profiling/ParticleStats.h"
 
 #include <algorithm>
 #include <cstring>
@@ -273,6 +274,7 @@ FParticleSystemSceneProxy* UParticleSystemComponent::GetSceneProxy() const
 
 void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction)
 {
+	PARTICLE_SCOPE_STAT(EParticleStatTimer::ComponentTick);
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	ClearParticleCollisionEvents();
 
@@ -306,6 +308,7 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 	}
 
 	DispatchParticleCollisionEvents();
+	FParticleStats::Get().RecordComponent(*this);
 
 	TArray<FDynamicEmitterDataBase*> NewRenderData;
 	NewRenderData.reserve(EmitterInstances.size());
@@ -318,7 +321,11 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 			continue;
 		}
 
-		FDynamicEmitterDataBase* DynamicData = CreateDynamicEmitterData(EmitterIndex, EmitterInstance->GetReplayData());
+		FDynamicEmitterDataBase* DynamicData = nullptr;
+		{
+			PARTICLE_SCOPE_STAT(EParticleStatTimer::BuildRenderData);
+			DynamicData = CreateDynamicEmitterData(EmitterIndex, EmitterInstance->GetReplayData());
+		}
 		if (DynamicData)
 		{
 			NewRenderData.push_back(DynamicData);
@@ -332,8 +339,14 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 		return;
 	}
 
-	ParticleSceneProxy->UpdateDynamicData(std::move(NewRenderData));
-	ParticleSceneProxy->UpdateMesh();
+	{
+		PARTICLE_SCOPE_STAT(EParticleStatTimer::UpdateDynamicData);
+		ParticleSceneProxy->UpdateDynamicData(std::move(NewRenderData));
+	}
+	{
+		PARTICLE_SCOPE_STAT(EParticleStatTimer::UpdateMesh);
+		ParticleSceneProxy->UpdateMesh();
+	}
 }
 
 int32 UParticleSystemComponent::DecideLODLevel(const FParticleLODContext& Context) const
@@ -373,6 +386,7 @@ void UParticleSystemComponent::ClearForcedLODLevel()
 
 void UParticleSystemComponent::BuildInstances(UParticleSystem* ParticleSystemTemplate)
 {
+	PARTICLE_SCOPE_STAT(EParticleStatTimer::BuildInstances);
 	for (int32 EmitterInstanceIdx = 0; EmitterInstanceIdx < static_cast<int32>(ParticleSystemTemplate->Emitters.size()); ++EmitterInstanceIdx)
 	{
 		//Particle System안의 Emitter
@@ -395,6 +409,7 @@ void UParticleSystemComponent::BuildInstances(UParticleSystem* ParticleSystemTem
 // 어떤 데이터가 바뀌나?
 void UParticleSystemComponent::InitParticles()
 {
+	PARTICLE_SCOPE_STAT(EParticleStatTimer::InitParticles);
 	ResetParticles(true);
 
 	UParticleSystem* ParticleSystemTemplate = ResolveTemplate();

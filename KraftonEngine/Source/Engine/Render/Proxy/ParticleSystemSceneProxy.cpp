@@ -6,6 +6,7 @@
 #include "Component/ParticleSystemComponent.h"
 #include "Materials/Material.h"
 #include "Mesh/StaticMesh.h"
+#include "Profiling/ParticleStats.h"
 #include "Render/Shader/ShaderManager.h"
 
 #include <algorithm>
@@ -63,6 +64,40 @@ namespace {
 		}
 
 		return TaperScale;
+	}
+
+	uint64 EstimateBeamPackedBytes(const FDynamicBeamEmitterReplayData& Source)
+	{
+		constexpr int32 MaxSegmentsPerBeam = 256;
+		constexpr int32 MaxSheetsPerBeam = 16;
+		const int32 SegmentCount = std::clamp(Source.InterpolationPoints + 1,
+			1, MaxSegmentsPerBeam);
+		const int32 PointCount = SegmentCount + 1;
+		const int32 SheetCount = std::clamp(Source.Sheets,
+			1, MaxSheetsPerBeam);
+		const uint64 BeamCount = static_cast<uint64>(Source.Beams.size());
+		const uint64 VertexCount = BeamCount * static_cast<uint64>(PointCount) * 2ull * static_cast<uint64>(SheetCount);
+		const uint64 IndexCount = BeamCount * static_cast<uint64>(SegmentCount) * 6ull * static_cast<uint64>(SheetCount);
+		return VertexCount * sizeof(FBeamParticleInstanceVertex) + IndexCount * sizeof(uint32);
+	}
+
+	uint64 EstimateRibbonPackedBytes(const FDynamicRibbonEmitterReplayData& Source)
+	{
+		constexpr int32 MaxSheetsPerTrail = 16;
+		const int32 SheetCount = std::clamp(Source.SheetsPerTrail,
+			1, MaxSheetsPerTrail);
+		uint64 VertexCount = 0;
+		uint64 IndexCount = 0;
+		for (const FRibbonTrailSection& Trail : Source.Trails)
+		{
+			if (Trail.PointCount < 2)
+			{
+				continue;
+			}
+			VertexCount += static_cast<uint64>(Trail.PointCount) * 2ull * static_cast<uint64>(SheetCount);
+			IndexCount += static_cast<uint64>(Trail.PointCount - 1) * 6ull * static_cast<uint64>(SheetCount);
+		}
+		return VertexCount * sizeof(FRibbonParticleInstanceVertex) + IndexCount * sizeof(uint32);
 	}
 
 	FVector EvaluateBeamCurve(const FBeamInstanceData& Beam, float Alpha)
@@ -293,6 +328,7 @@ void FParticleSystemSceneProxy::SetEmitterSortingPriority(uint16 EmitterIndex, u
 
 void FParticleSystemSceneProxy::SortEmitters()
 {
+	PARTICLE_SCOPE_STAT(EParticleStatTimer::SortEmitters);
 	const uint16 Count = static_cast<uint16>(EmitterDraws.size());
 	SectionToEmitterDrawIndex.resize(Count);
 	for (uint16 i = 0; i < Count; ++i)
@@ -312,6 +348,7 @@ void FParticleSystemSceneProxy::SortEmitters()
 
 void FParticleSystemSceneProxy::RebuildSectionDraws()
 {
+	PARTICLE_SCOPE_STAT(EParticleStatTimer::RebuildSections);
 	if (SectionToEmitterDrawIndex.size() != EmitterDraws.size())
 	{
 		SortEmitters();
@@ -357,32 +394,61 @@ void FParticleSystemSceneProxy::PackParticles(const FFrameContext& Frame)
 		case DET_Sprite:
 		{
 			const uint32 IndexBefore = IndexCursor;
-			SpritePacker.PackEmitter(Frame,
-				static_cast<FDynamicSpriteEmitterData&>(*DynamicData[DrawIndex]), Draw, IndexCursor);
+			FDynamicSpriteEmitterData& SpriteData = static_cast<FDynamicSpriteEmitterData&>(*DynamicData[DrawIndex]);
+			{
+				PARTICLE_SCOPE_STAT(EParticleStatTimer::PackSprites);
+				SpritePacker.PackEmitter(Frame, SpriteData, Draw, IndexCursor);
+			}
 
 			// Refresh section range so DrawCommandBuilder sees the right slice
 			// even if ActiveParticleCount shrank since UpdateMesh.
 			Draw.FirstIndex = IndexBefore;
 			Draw.IndexCount = IndexCursor - IndexBefore;
+			const uint32 PackedParticleCount = Draw.IndexCount / 6u;
+			const uint64 PackedBytes = static_cast<uint64>(PackedParticleCount)
+				* (4ull * sizeof(FParticleSpriteVertex) + 6ull * sizeof(uint32));
+			FParticleStats::Get().RecordPacking(DET_Sprite, PackedParticleCount, PackedBytes);
 			break;
 		}
 		case DET_Mesh:
 		{
-			MeshPacker.PackEmitter(Frame,
-				static_cast<FDynamicMeshEmitterData&>(*DynamicData[DrawIndex]),
-				Draw);
+			FDynamicMeshEmitterData& MeshData = static_cast<FDynamicMeshEmitterData&>(*DynamicData[DrawIndex]);
+			{
+				PARTICLE_SCOPE_STAT(EParticleStatTimer::PackMeshes);
+				MeshPacker.PackEmitter(Frame, MeshData, Draw);
+			}
+			FParticleStats::Get().RecordPacking(
+				DET_Mesh,
+				Draw.InstanceCount,
+				static_cast<uint64>(Draw.PackedInstances.size()) * sizeof(FMeshParticleInstanceVertex));
 			// Mesh section range stays as UpdateMesh set it (static-mesh IB range
 			// is fixed; InstanceCount is the per-frame variable).
 			break;
 		}
 		case DET_Beam2:
 		{
-			BeamPacker.PackEmitter(Frame, static_cast<FDynamicBeamEmitterData&>(*DynamicData[DrawIndex]), Draw);
+			FDynamicBeamEmitterData& BeamData = static_cast<FDynamicBeamEmitterData&>(*DynamicData[DrawIndex]);
+			{
+				PARTICLE_SCOPE_STAT(EParticleStatTimer::PackBeams);
+				BeamPacker.PackEmitter(Frame, BeamData, Draw);
+			}
+			FParticleStats::Get().RecordPacking(
+				DET_Beam2,
+				static_cast<uint32>(std::max(0, BeamData.BeamSource.ActiveParticleCount)),
+				Draw.IndexCount > 0 ? EstimateBeamPackedBytes(BeamData.BeamSource) : 0);
 			break;
 		}
 		case DET_Ribbon:
 		{
-			RibbonPacker.PackEmitter(Frame, static_cast<FDynamicRibbonEmitterData&>(*DynamicData[DrawIndex]), Draw);
+			FDynamicRibbonEmitterData& RibbonData = static_cast<FDynamicRibbonEmitterData&>(*DynamicData[DrawIndex]);
+			{
+				PARTICLE_SCOPE_STAT(EParticleStatTimer::PackRibbons);
+				RibbonPacker.PackEmitter(Frame, RibbonData, Draw);
+			}
+			FParticleStats::Get().RecordPacking(
+				DET_Ribbon,
+				static_cast<uint32>(std::max(0, RibbonData.RibbonSource.ActiveParticleCount)),
+				Draw.IndexCount > 0 ? EstimateRibbonPackedBytes(RibbonData.RibbonSource) : 0);
 			break;
 		}
 		default:
@@ -444,6 +510,7 @@ bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevic
 
 		if (Hit.bInstanceVBDirty && !Hit.PackedInstances.empty())
 		{
+			PARTICLE_SCOPE_STAT(EParticleStatTimer::UploadMeshInstances);
 			const uint32 Count = static_cast<uint32>(Hit.PackedInstances.size());
 			if (Hit.InstanceVB.GetMaxCount() == 0)
 			{
@@ -501,6 +568,7 @@ bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevic
 bool FParticleSystemSceneProxy::FSpriteParticlePacker::PrepareDrawBuffer(
 	ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FDrawCommandBuffer& Out) const
 {
+	PARTICLE_SCOPE_STAT(EParticleStatTimer::UploadSpriteBuffers);
 	if (!HasPackedSprites())
 	{
 		return false;
@@ -690,6 +758,7 @@ void FParticleSystemSceneProxy::FBeamParticlePacker::ResetFrame()
 bool FParticleSystemSceneProxy::FBeamParticlePacker::PrepareDrawBuffer(
 	ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FDrawCommandBuffer& Out) const
 {
+	PARTICLE_SCOPE_STAT(EParticleStatTimer::UploadBeamBuffers);
 	if (!HasPackedBeams())
 	{
 		return false;
@@ -898,6 +967,7 @@ void FParticleSystemSceneProxy::FRibbonParticlePacker::ResetFrame()
 bool FParticleSystemSceneProxy::FRibbonParticlePacker::PrepareDrawBuffer(
 	ID3D11Device* InDevice, ID3D11DeviceContext* InDeviceContext, FDrawCommandBuffer& Out) const
 {
+	PARTICLE_SCOPE_STAT(EParticleStatTimer::UploadRibbonBuffers);
 	if (!HasPackedRibbons())
 	{
 		return false;
