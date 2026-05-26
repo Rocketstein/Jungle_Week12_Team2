@@ -864,6 +864,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\Object\UUIDGenerator.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleBeamInstances.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEmitter.h" />
+    <ClInclude Include="Source\Engine\Particle\ParticleEmitterTypes.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEmitterInstances.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEventCollideData.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleHelper.h" />

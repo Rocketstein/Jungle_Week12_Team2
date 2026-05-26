@@ -61,9 +61,9 @@ namespace
 			P->BaseVelocity       = FVector::ZeroVector;
 			P->Size               = FVector(10.0f, 10.0f, 0.0f);
 			P->BaseSize           = P->Size;
-			P->Rotation           = 0.0f;
-			P->BaseRotationRate   = 0.0f;
-			P->RotationRate       = 0.0f;
+			P->Rotation           = FVector::ZeroVector;
+			P->BaseRotationRate   = FVector::ZeroVector;
+			P->RotationRate       = FVector::ZeroVector;
 			// Cycle hue around the ring so it is obvious the per-particle color
 			// path is exercised, not just a single constant.
 			P->Color              = FLinearColor(1.0f,

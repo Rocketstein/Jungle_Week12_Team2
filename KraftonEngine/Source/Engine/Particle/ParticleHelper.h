@@ -54,17 +54,17 @@ struct FBaseParticle
 	FVector			OldLocation;			// Last frame's location, used for collision
 	FVector			Location;				// Current location
 
-	// 16 bytes
+	// 24 bytes
 	FVector			BaseVelocity;			// Velocity = BaseVelocity at the start of each frame.
-	float			Rotation;				// Rotation of particle (in Radians)
+	FVector			Rotation;				// Rotation of particle (in Radians, X/Roll, Y/Pitch, Z/Yaw)
 
-	// 16 bytes
+	// 24 bytes
 	FVector			Velocity;				// Current velocity, gets reset to BaseVelocity each frame to allow 
-	float			BaseRotationRate;		// Initial angular velocity of particle (in Radians per second)
+	FVector			BaseRotationRate;		// Initial angular velocity of particle (in Radians per second)
 
-	// 16 bytes
+	// 24 bytes
 	FVector 		BaseSize;				// Size = BaseSize at the start of each frame
-	float			RotationRate;			// Current rotation rate, gets reset to BaseRotationRate each frame
+	FVector			RotationRate;			// Current rotation rate, gets reset to BaseRotationRate each frame
 
 	// 16 bytes
 	FVector			Size;					// Current size, gets reset to BaseSize each frame

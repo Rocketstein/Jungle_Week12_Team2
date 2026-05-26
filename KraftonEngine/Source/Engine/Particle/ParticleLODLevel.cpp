@@ -5,10 +5,10 @@
 #include <algorithm>
 #include <cmath>
 
-void UParticleLODLevel::UpdateModuleLists()
+void UParticleLODLevel::ClassifyModulesByRole()
 {
 	SpawningModules.clear();
-	SpawnModules.clear();
+	OnSpawnModules.clear();
 	UpdateModules.clear();
 	FinalUpdateModules.clear();
 	TypeDataModule = nullptr;
@@ -35,9 +35,9 @@ void UParticleLODLevel::UpdateModuleLists()
 			TypeDataModule = TypeData;
 		}
 
-		if (Module->IsSpawnModule())
+		if (Module->IsOnSpawnModule())
 		{
-			SpawnModules.push_back(Module);
+			OnSpawnModules.push_back(Module);
 		}
 
 		if (Module->IsUpdateModule())

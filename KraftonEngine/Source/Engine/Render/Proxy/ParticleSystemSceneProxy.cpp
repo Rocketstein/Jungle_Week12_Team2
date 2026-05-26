@@ -6,6 +6,7 @@
 #include "Component/ParticleSystemComponent.h"
 #include "Materials/Material.h"
 #include "Mesh/StaticMesh.h"
+#include "Render/Shader/ShaderManager.h"
 
 #include <algorithm>
 #include <cmath>
@@ -487,6 +488,8 @@ bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevic
 
 	if (Hit.Type == DET_Mesh && Hit.MeshGeom && Hit.InstanceCount > 0)
 	{
+		Cmd.Shader = FShaderManager::Get().GetOrCreate(EShaderPath::ParticleMesh);
+
 		if (Hit.bInstanceVBDirty && !Hit.PackedInstances.empty())
 		{
 			const uint32 Count = static_cast<uint32>(Hit.PackedInstances.size());
@@ -638,7 +641,7 @@ void FParticleSystemSceneProxy::FSpriteParticlePacker::PackEmitter(const FFrameC
 			V.Size = FVector(P.Size.X, P.Size.Y, /*subImageLerp*/ 0.0f);
 			V.UV = FVector2{ float(corner & 1), float((corner >> 1) & 1) };  // 0,0..1,1
 			V.Color = FVector4(P.Color.R, P.Color.G, P.Color.B, P.Color.A);
-			V.Rotation = P.Rotation;
+			V.Rotation = P.Rotation.Z;
 			V.SubImageIndex = static_cast<float>(SubImageIndex);
 			V.Velocity = P.Velocity;
 			PackedVertices.push_back(V);
@@ -706,7 +709,9 @@ void FParticleSystemSceneProxy::FMeshParticlePacker::PackEmitter(const FFrameCon
 		const FBaseParticle& P = *reinterpret_cast<const FBaseParticle*>(Bytes);
 
 		const FMatrix Model = FMatrix::MakeScaleMatrix(P.Size)
-		                    * FMatrix::MakeRotationZ(P.Rotation)
+		                    * FMatrix::MakeRotationX(P.Rotation.X)
+		                    * FMatrix::MakeRotationY(P.Rotation.Y)
+		                    * FMatrix::MakeRotationZ(P.Rotation.Z)
 		                    * FMatrix::MakeTranslationMatrix(P.Location);
 
 		FMeshParticleInstanceVertex V;
@@ -953,13 +958,14 @@ void FParticleSystemSceneProxy::FRibbonParticlePacker::PackEmitter(const FFrameC
 
 	uint32 ReserveVertexCount = 0;
 	uint32 ReserveIndexCount = 0;
-	for (const FRibbonTrailData& Trail : Source.Trails)
+	//계산을 모르겠누
+	for (const FRibbonTrailSection& Trail : Source.Trails)
 	{
 		if (Trail.PointCount < 2)
 		{
 			continue;
 		}
-		const uint32 PointCount = static_cast<uint32>(Trail.PointCount);
+		const uint32 PointCount = Trail.PointCount;
 		ReserveVertexCount += PointCount * 2u * static_cast<uint32>(SheetCount);
 		ReserveIndexCount += (PointCount - 1u) * 6u * static_cast<uint32>(SheetCount);
 	}
@@ -970,7 +976,7 @@ void FParticleSystemSceneProxy::FRibbonParticlePacker::PackEmitter(const FFrameC
 	constexpr float Pi = 3.14159265358979323846f;
 	uint32 IndicesEmitted = 0;
 
-	for (const FRibbonTrailData& Trail : Source.Trails)
+	for (const FRibbonTrailSection& Trail : Source.Trails)
 	{
 		if (Trail.PointCount < 2 || Trail.FirstPoint < 0)
 		{

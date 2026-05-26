@@ -7,6 +7,7 @@
 #include "Particle/ParticleBeamInstances.h"
 #include "Render/Particle/ParticleDynamicData.h"
 #include "Render/Proxy/ParticleSystemSceneProxy.h"
+#include "Particle/ParticleSystemManager.h"
 
 #include <algorithm>
 #include <cstring>
@@ -105,7 +106,7 @@ FParticleEmitterInstance* CreateEmitterInstance(
 		return nullptr;
 	}
 
-	Emitter->UpdateModuleLists();
+	Emitter->ClassifyModulesByRole();
 	UParticleLODLevel* LOD = Emitter ? Emitter->GetLODLevel(0) : nullptr;
 	if (LOD && LOD->TypeDataModule)
 	{
@@ -183,6 +184,18 @@ UParticleSystemComponent::~UParticleSystemComponent()
 	ResetParticles(true);
 }
 
+void UParticleSystemComponent::BeginPlay()
+{
+	UFXSystemComponent::BeginPlay();
+	InitializeSystem();
+}
+
+void UParticleSystemComponent::PostDuplicate()
+{
+	UFXSystemComponent::PostDuplicate();
+	ResolveTemplate();
+}
+
 void UParticleSystemComponent::PostEditProperty(const char* PropertyName)
 {
 	UPrimitiveComponent::PostEditProperty(PropertyName);
@@ -203,6 +216,7 @@ void UParticleSystemComponent::PostEditProperty(const char* PropertyName)
 	else if (std::strcmp(PropertyName, "Template") == 0)
 	{
 		ResetParticles(true);
+		ResolveTemplate();
 		InitializeSystem();
 	}
 }
@@ -216,6 +230,27 @@ void UParticleSystemComponent::EndPlay()
 UFXSystemAsset* UParticleSystemComponent::GetFXSystemAsset() const
 {
 	return Template.Get();
+}
+
+UParticleSystem* UParticleSystemComponent::ResolveTemplate()
+{
+	if (UParticleSystem* ParticleTemplate = Template.Get())
+	{
+		return ParticleTemplate;
+	}
+
+	const FString TemplatePath = Template.GetPath().ToString();
+	if (TemplatePath.empty() || TemplatePath == "None")
+	{
+		return nullptr;
+	}
+
+	UParticleSystem* LoadedTemplate = FParticleSystemManager::Get().Load(TemplatePath);
+	if (LoadedTemplate)
+	{
+		Template = LoadedTemplate;
+	}
+	return LoadedTemplate;
 }
 
 void UParticleSystemComponent::SetTemplate(UParticleSystem* NewTemplate)
@@ -247,7 +282,7 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	ClearParticleCollisionEvents();
 
-	UParticleSystem* ParticleTemplate = Template.Get();
+	UParticleSystem* ParticleTemplate = ResolveTemplate();
 	if (!ParticleTemplate)
 	{
 		return;
@@ -342,35 +377,12 @@ void UParticleSystemComponent::ClearForcedLODLevel()
 	ForcedLODLevel = -1;
 }
 
-//각 Instance를 채워넣는다
-void UParticleSystemComponent::InitParticles()
+void UParticleSystemComponent::BuildInstances(UParticleSystem* ParticleSystemTemplate)
 {
-	ResetParticles(true);
-
-	UParticleSystem* ParticleTemplate = Template.Get();
-	if (!ParticleTemplate)
-	{
-		return;
-	}
-	//ParticleSystem과 Emitter가 가지는 LODLevels의 갯수를 맞춘다
-	ParticleTemplate->NormalizeLODData();
-	LODDistances = ParticleTemplate->GetLODDistances();
-	const int32 MaxLODIndex = LODDistances.empty() ? 0 : static_cast<int32>(LODDistances.size()) - 1;
-	if (ForcedLODLevel >= 0)
-	{
-		LODLevel = std::clamp(ForcedLODLevel, 0, MaxLODIndex);
-	}
-	else
-	{
-		LODLevel = std::clamp(LODLevel, 0, MaxLODIndex);
-	}
-	
-	EmitterInstances.reserve(ParticleTemplate->Emitters.size());
-	//Particle System(원본)과 같은 크기로 Isntance를 만든다.
-	for (int32 EmitterInstanceIdx = 0; EmitterInstanceIdx < static_cast<int32>(ParticleTemplate->Emitters.size()); ++EmitterInstanceIdx)
+	for (int32 EmitterInstanceIdx = 0; EmitterInstanceIdx < static_cast<int32>(ParticleSystemTemplate->Emitters.size()); ++EmitterInstanceIdx)
 	{
 		//Particle System안의 Emitter
-		UParticleEmitter* Emitter = ParticleTemplate->Emitters[EmitterInstanceIdx];
+		UParticleEmitter* Emitter = ParticleSystemTemplate->Emitters[EmitterInstanceIdx];
 		if (!Emitter)
 		{
 			EmitterInstances.push_back(nullptr);
@@ -382,11 +394,38 @@ void UParticleSystemComponent::InitParticles()
 		Instance->EmitterIndex = EmitterInstanceIdx; //Component의 몇번째 EmitterInstance인지 가르키는 Idx
 		Instance->InitParameters(Emitter); //Instance의 ParticleSize를 계산한다.
 		Instance->SetCurrentLODLevel(LODLevel); //Instance의 LODLevel설정한다
-//		Instance->RebuildTemplateModuleList(); //InitParameters에서 이미 한번하는데 왜 굳이?
 		EmitterInstances.push_back(Instance);
 	}
+}
 
-	LODDistances = ParticleTemplate->GetLODDistances();
+// 어떤 데이터가 바뀌나?
+void UParticleSystemComponent::InitParticles()
+{
+	ResetParticles(true);
+
+	UParticleSystem* ParticleSystemTemplate = ResolveTemplate();
+	if (!ParticleSystemTemplate)
+	{
+		return;
+	}
+	//ParticleSystem과 Emitter가 가지는 LODLevels의 갯수를 맞춘다
+	ParticleSystemTemplate->NormalizeLODData();
+	LODDistances = ParticleSystemTemplate->GetLODDistances();
+	const int32 MaxLODIndex = LODDistances.empty() ? 0 : static_cast<int32>(LODDistances.size()) - 1;
+	if (ForcedLODLevel >= 0)
+	{
+		LODLevel = std::clamp(ForcedLODLevel, 0, MaxLODIndex);
+	}
+	else
+	{
+		LODLevel = std::clamp(LODLevel, 0, MaxLODIndex);
+	}
+	
+	EmitterInstances.reserve(ParticleSystemTemplate->Emitters.size());
+	//Particle System(원본)과 같은 크기로 Instance들을 만든다.
+	BuildInstances(ParticleSystemTemplate);
+
+	LODDistances = ParticleSystemTemplate->GetLODDistances();
 }
 
 void UParticleSystemComponent::ResetParticles(bool bEmptyInstances)

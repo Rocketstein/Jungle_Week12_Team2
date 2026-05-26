@@ -36,6 +36,8 @@ public:
 	~UParticleSystemComponent() override;
 
 	//Important Logics
+	void BeginPlay() override;
+	void PostDuplicate() override;
 	virtual void InitParticles();
 	void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction& ThisTickFunction) override;
 	
@@ -50,7 +52,8 @@ public:
 	int32 DecideLODLevel(const FParticleLODContext& Context) const;
 	void SetForcedLODLevel(int32 InLODLevel);
 	void ClearForcedLODLevel();
-	
+	void BuildInstances(UParticleSystem* ParticleSystemTemplate);
+
 	//Related To Collision
 	void QueueParticleCollisionEvent(const FParticleEventCollideData& EventData);
 	void DispatchParticleCollisionEvents();
@@ -62,6 +65,7 @@ public:
 	//Getter/Setter
 	UFXSystemAsset* GetFXSystemAsset() const override;
 	void SetTemplate(UParticleSystem* NewTemplate);
+	UParticleSystem* ResolveTemplate();
 	
 	
 	UPROPERTY(Edit, Category="Particles", DisplayName="Template", Type=SoftObject, Class=UParticleSystem)

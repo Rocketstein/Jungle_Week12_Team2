@@ -24,8 +24,12 @@
 #include "Slate/SlateApplication.h"
 #include "UI/Toolbar/ViewportToolbar.h"
 #include "Viewport/Viewport.h"
+#include "Mesh/MeshManager.h"
+#include "Mesh/StaticMesh.h"
+#include "Render/Shader/ShaderManager.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <imgui.h>
@@ -33,6 +37,11 @@
 namespace
 {
 	static uint32 GNextParticleEditorInstanceId = 0;
+
+	constexpr const char* DefaultParticleMeshPath =
+		"Asset/Mesh/BasicShape/Sphere_Lowpoly_StaticMesh.uasset";
+	constexpr const char* DefaultParticleMeshMaterialPath =
+		"Asset/Materials/Editor/DefaultParticleMesh.mat";
 
 	const char* GScreenAlignmentNames[] =
 	{
@@ -135,6 +144,92 @@ namespace
 	{
 		UMaterial* Material = MaterialInterface ? MaterialInterface->GetMaterial() : nullptr;
 		return Material ? Material->GetAssetPathFileName() : FString();
+	}
+
+	UStaticMesh* LoadEditorStaticMesh(const FString& MeshPath)
+	{
+		if (MeshPath.empty())
+		{
+			return nullptr;
+		}
+
+		if (UStaticMesh* CachedMesh = FMeshManager::FindStaticMesh(MeshPath))
+		{
+			return CachedMesh;
+		}
+
+		ID3D11Device* Device = GEngine
+			? GEngine->GetRenderer().GetFD3DDevice().GetDevice()
+			: nullptr;
+
+		return Device ? FMeshManager::LoadStaticMesh(MeshPath, Device) : nullptr;
+	}
+
+	UMaterial* GetDefaultParticleMeshMaterial()
+	{
+		return FMaterialManager::Get().GetOrCreateMaterial(DefaultParticleMeshMaterialPath);
+	}
+
+	bool EnsureParticleMeshEmitterDefaults(UParticleModuleRequired* Required)
+	{
+		if (!Required)
+		{
+			return false;
+		}
+
+		bool bChanged = false;
+		if (!Required->Material)
+		{
+			Required->Material = GetDefaultParticleMeshMaterial();
+			bChanged = Required->Material != nullptr;
+		}
+		if (Required->ScreenAlignment != PSA_TypeSpecific)
+		{
+			Required->ScreenAlignment = PSA_TypeSpecific;
+			bChanged = true;
+		}
+		return bChanged;
+	}
+
+	bool ExpandSpriteSizeToMeshVolume(UParticleModuleSize* Size)
+	{
+		if (!Size)
+		{
+			return false;
+		}
+
+		auto ExpandIfSpriteDefault = [](FVector& Value) -> bool
+		{
+			const float TargetUniformSize = (std::max)(Value.X, Value.Y);
+			if (TargetUniformSize <= 1.0f || std::abs(Value.Z - 1.0f) > 0.001f)
+			{
+				return false;
+			}
+
+			Value.Z = TargetUniformSize;
+			return true;
+		};
+
+		bool bChanged = false;
+		bChanged |= ExpandIfSpriteDefault(Size->StartSize);
+		bChanged |= ExpandIfSpriteDefault(Size->StartSizeMin);
+		bChanged |= ExpandIfSpriteDefault(Size->StartSizeMax);
+		return bChanged;
+	}
+
+	bool EnsureParticleMeshSizeDefaults(UParticleLODLevel* LOD)
+	{
+		if (!LOD)
+		{
+			return false;
+		}
+
+		bool bChanged = false;
+		for (UParticleModule* Module : LOD->Modules)
+		{
+			bChanged |= ExpandSpriteSizeToMeshVolume(Cast<UParticleModuleSize>(Module));
+		}
+		return bChanged;
 	}
 
 	UMaterial* AcceptMaterialDrop()
@@ -325,6 +420,7 @@ void FParticleEditorWidget::Open(UObject* Object)
 	SelectedEmitterIndex = 0;
 	SelectedLODIndex = 0;
 	SelectedModule = nullptr;
+	bParticleSystemSelected = false;
 	SyncAssetNameBuffer();
 	EnsureDefaultSystem();
 	InitializePreviewWorld();
@@ -339,6 +435,7 @@ void FParticleEditorWidget::Close()
 	PreviewActor = nullptr;
 	SelectedLODIndex = 0;
 	SelectedModule = nullptr;
+	bParticleSystemSelected = false;
 	AssetNameBuffer[0] = '\0';
 }
 
@@ -386,6 +483,7 @@ void FParticleEditorWidget::EnsureDefaultSystem()
 		EditingParticleSystem->NormalizeLODData();
 		SelectedLODIndex = ClampLODIndex(SelectedLODIndex);
 		SelectedModule = GetSelectedRequiredModule();
+		bParticleSystemSelected = false;
 	}
 }
 
@@ -445,9 +543,9 @@ UParticleEmitter* FParticleEditorWidget::CreateDefaultEmitter(const FString& Emi
 		LOD->Modules.push_back(ColorOverLife);
 	}
 
-	LOD->UpdateModuleLists();
+	LOD->ClassifyModulesByRole();
 	Emitter->LODLevels.push_back(LOD);
-	Emitter->UpdateModuleLists();
+	Emitter->ClassifyModulesByRole();
 	return Emitter;
 }
 
@@ -487,6 +585,31 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 		Velocity->StartVelocityMax = Velocity->StartVelocity;
 		return Velocity;
 	}
+	case EAddableModuleType::InitialRotation:
+	{
+		UParticleModuleInitialRotation* Rotation = GUObjectArray.CreateObject<UParticleModuleInitialRotation>(Outer);
+		Rotation->bEnabled = true;
+		Rotation->StartRotationDegrees = FVector(0.0f, 0.0f, 360.0f);
+		Rotation->StartRotationDegreesMin = FVector::ZeroVector;
+		Rotation->StartRotationDegreesMax = FVector(0.0f, 0.0f, 360.0f);
+		return Rotation;
+	}
+	case EAddableModuleType::InitialRotationRate:
+	{
+		UParticleModuleInitialRotationRate* RotationRate = GUObjectArray.CreateObject<UParticleModuleInitialRotationRate>(Outer);
+		RotationRate->bEnabled = true;
+		RotationRate->StartRotationRateDegrees = FVector(0.0f, 0.0f, 90.0f);
+		RotationRate->StartRotationRateDegreesMin = FVector(0.0f, 0.0f, -90.0f);
+		RotationRate->StartRotationRateDegreesMax = FVector(0.0f, 0.0f, 90.0f);
+		return RotationRate;
+	}
+	case EAddableModuleType::Acceleration:
+	{
+		UParticleModuleAcceleration* Acceleration = GUObjectArray.CreateObject<UParticleModuleAcceleration>(Outer);
+		Acceleration->bEnabled = true;
+		Acceleration->Acceleration = FVector(0.0f, 0.0f, -35.0f);
+		return Acceleration;
+	}
 	case EAddableModuleType::Location:
 	{
 		UParticleModuleLocation* Location = GUObjectArray.CreateObject<UParticleModuleLocation>(Outer);
@@ -501,6 +624,8 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 		UParticleModuleColor* Color = GUObjectArray.CreateObject<UParticleModuleColor>(Outer);
 		Color->bEnabled = true;
 		Color->StartColor = FVector(1.0f, 1.0f, 1.0f);
+		Color->StartColorMin = Color->StartColor;
+		Color->StartColorMax = Color->StartColor;
 		Color->StartAlpha = 1.0f;
 		Color->StartAlphaMin = Color->StartAlpha;
 		Color->StartAlphaMax = Color->StartAlpha;
@@ -513,6 +638,14 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 		ColorOverLife->ColorOverLife = FVector(1.0f, 1.0f, 1.0f);
 		ColorOverLife->AlphaOverLife = 0.0f;
 		return ColorOverLife;
+	}
+	case EAddableModuleType::ColorScaleOverLife:
+	{
+		UParticleModuleColorScaleOverLife* ColorScale = GUObjectArray.CreateObject<UParticleModuleColorScaleOverLife>(Outer);
+		ColorScale->bEnabled = true;
+		ColorScale->ColorScaleOverLife = FVector(1.0f, 1.0f, 1.0f);
+		ColorScale->AlphaScaleOverLife = 1.0f;
+		return ColorScale;
 	}
 	case EAddableModuleType::BeamSource:
 	{
@@ -571,6 +704,8 @@ UParticleModule* FParticleEditorWidget::CreateTypeDataModule(EEmitterTypeData Ty
 	{
 		UParticleModuleTypeDataMesh* Mesh = GUObjectArray.CreateObject<UParticleModuleTypeDataMesh>(Outer);
 		Mesh->bEnabled = true;
+		Mesh->MeshPath = DefaultParticleMeshPath;
+		Mesh->Mesh = LoadEditorStaticMesh(Mesh->MeshPath);
 		return Mesh;
 	}
 	case EEmitterTypeData::Beam:
@@ -627,6 +762,7 @@ void FParticleEditorWidget::AddModuleToEmitter(int32 EmitterIndex, EAddableModul
 	LOD->Modules.push_back(NewModule);
 	SelectedEmitterIndex = EmitterIndex;
 	SelectedModule = NewModule;
+	bParticleSystemSelected = false;
 	ApplyEmitterEdit();
 }
 
@@ -660,6 +796,11 @@ void FParticleEditorWidget::SetEmitterTypeData(int32 EmitterIndex, EEmitterTypeD
 			(TypeData == EEmitterTypeData::Beam && bAlreadyBeam) ||
 			(TypeData == EEmitterTypeData::Ribbon && bAlreadyRibbon))
 		{
+			if (TypeData == EEmitterTypeData::Mesh)
+			{
+				bChanged |= EnsureParticleMeshEmitterDefaults(LOD->RequiredModule);
+				bChanged |= EnsureParticleMeshSizeDefaults(LOD);
+			}
 			continue;
 		}
 
@@ -686,7 +827,12 @@ void FParticleEditorWidget::SetEmitterTypeData(int32 EmitterIndex, EEmitterTypeD
 			LOD->Modules.push_back(NewTypeData);
 		}
 
-		if (TypeData == EEmitterTypeData::Beam)
+		if (TypeData == EEmitterTypeData::Mesh)
+		{
+			bChanged |= EnsureParticleMeshEmitterDefaults(LOD->RequiredModule);
+			bChanged |= EnsureParticleMeshSizeDefaults(LOD);
+		}
+		else if (TypeData == EEmitterTypeData::Beam)
 		{
 			if (LOD->RequiredModule)
 			{
@@ -725,6 +871,7 @@ void FParticleEditorWidget::SetEmitterTypeData(int32 EmitterIndex, EEmitterTypeD
 	SelectedModule = SelectedLOD && SelectedLOD->TypeDataModule
 		? static_cast<UParticleModule*>(SelectedLOD->TypeDataModule)
 		: static_cast<UParticleModule*>(SelectedLOD ? SelectedLOD->RequiredModule : nullptr);
+	bParticleSystemSelected = false;
 	ApplyEmitterEdit();
 	ResetPreviewCameraToParticleBounds();
 }
@@ -758,6 +905,7 @@ void FParticleEditorWidget::DeleteModuleFromEmitter(int32 EmitterIndex, UParticl
 	{
 		SelectedEmitterIndex = EmitterIndex;
 		SelectedModule = LOD->RequiredModule;
+		bParticleSystemSelected = false;
 		if (!SelectedModule)
 		{
 			SelectedModule = LOD->SpawnModule;
@@ -779,6 +927,7 @@ void FParticleEditorWidget::DeleteEmitter(int32 EmitterIndex)
 	EditingParticleSystem->Emitters.erase(EditingParticleSystem->Emitters.begin() + EmitterIndex);
 
 	SelectedModule = nullptr;
+	bParticleSystemSelected = false;
 	if (EditingParticleSystem->Emitters.empty())
 	{
 		SelectedEmitterIndex = 0;
@@ -942,7 +1091,7 @@ void FParticleEditorWidget::ApplyEmitterEdit()
 {
 	if (UParticleEmitter* Emitter = GetSelectedEmitter())
 	{
-		Emitter->UpdateModuleLists();
+		Emitter->ClassifyModulesByRole();
 	}
 
 	RestartPreviewSystem();
@@ -1013,7 +1162,10 @@ int32 FParticleEditorWidget::ClampLODIndex(int32 LODIndex) const
 void FParticleEditorWidget::SetSelectedLODIndex(int32 LODIndex)
 {
 	SelectedLODIndex = ClampLODIndex(LODIndex);
-	SelectedModule = GetSelectedRequiredModule();
+	if (!bParticleSystemSelected)
+	{
+		SelectedModule = GetSelectedRequiredModule();
+	}
 	ApplySelectedLODToPreview(true);
 }
 
@@ -1166,6 +1318,18 @@ FString FParticleEditorWidget::GetModuleDisplayName(UParticleModule* Module) con
 	{
 		return "Initial Velocity";
 	}
+	if (Module->IsA<UParticleModuleInitialRotation>())
+	{
+		return "Initial Rotation";
+	}
+	if (Module->IsA<UParticleModuleInitialRotationRate>())
+	{
+		return "Initial Rotation Rate";
+	}
+	if (Module->IsA<UParticleModuleAcceleration>())
+	{
+		return "Acceleration";
+	}
 	if (Module->IsA<UParticleModuleLocation>())
 	{
 		return "Initial Location";
@@ -1177,6 +1341,10 @@ FString FParticleEditorWidget::GetModuleDisplayName(UParticleModule* Module) con
 	if (Module->IsA<UParticleModuleColorOverLife>())
 	{
 		return "Color Over Life";
+	}
+	if (Module->IsA<UParticleModuleColorScaleOverLife>())
+	{
+		return "Color Scale Over Life";
 	}
 	if (Module->IsA<UParticleModuleBeamSource>())
 	{
@@ -1487,6 +1655,7 @@ void FParticleEditorWidget::RenderEmitterList()
 			EditingParticleSystem->NormalizeLODData();
 			SelectedEmitterIndex = NewIndex;
 			SelectedModule = GetSelectedRequiredModule();
+			bParticleSystemSelected = false;
 			RestartPreviewSystem();
 			MarkDirty();
 		}
@@ -1496,6 +1665,13 @@ void FParticleEditorWidget::RenderEmitterList()
 
 	if (!EditingParticleSystem || EditingParticleSystem->Emitters.empty())
 	{
+		if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) &&
+			ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
+			!ImGui::IsAnyItemHovered())
+		{
+			bParticleSystemSelected = true;
+			SelectedModule = nullptr;
+		}
 		ImGui::TextDisabled("No emitters.");
 		ImGui::EndChild();
 		return;
@@ -1558,6 +1734,18 @@ void FParticleEditorWidget::RenderEmitterList()
 			{
 				QueueAddModule(EmitterIndex, EAddableModuleType::Velocity);
 			}
+			if (ImGui::MenuItem("Initial Rotation"))
+			{
+				QueueAddModule(EmitterIndex, EAddableModuleType::InitialRotation);
+			}
+			if (ImGui::MenuItem("Initial Rotation Rate"))
+			{
+				QueueAddModule(EmitterIndex, EAddableModuleType::InitialRotationRate);
+			}
+			if (ImGui::MenuItem("Acceleration"))
+			{
+				QueueAddModule(EmitterIndex, EAddableModuleType::Acceleration);
+			}
 			if (ImGui::MenuItem("Initial Location"))
 			{
 				QueueAddModule(EmitterIndex, EAddableModuleType::Location);
@@ -1569,6 +1757,10 @@ void FParticleEditorWidget::RenderEmitterList()
 			if (ImGui::MenuItem("Color Over Life"))
 			{
 				QueueAddModule(EmitterIndex, EAddableModuleType::ColorOverLife);
+			}
+			if (ImGui::MenuItem("Color Scale Over Life"))
+			{
+				QueueAddModule(EmitterIndex, EAddableModuleType::ColorScaleOverLife);
 			}
 			UParticleEmitter* MenuEmitter = EditingParticleSystem
 				&& EmitterIndex >= 0
@@ -1648,7 +1840,7 @@ void FParticleEditorWidget::RenderEmitterList()
 		ImGui::BeginGroup();
 		ImGui::BeginChild("EmitterColumn", ImVec2(190.0f, 0.0f), true);
 
-		const bool bEmitterSelected = Index == SelectedEmitterIndex;
+		const bool bEmitterSelected = !bParticleSystemSelected && Index == SelectedEmitterIndex;
 		const FString Label = GetEmitterDisplayName(Emitter, Index);
 		ImGui::PushStyleColor(ImGuiCol_Header, IM_COL32(255, 124, 0, 255));
 		ImGui::PushStyleColor(ImGuiCol_HeaderHovered, IM_COL32(255, 146, 42, 255));
@@ -1657,12 +1849,14 @@ void FParticleEditorWidget::RenderEmitterList()
 		{
 			SelectedEmitterIndex = Index;
 			SelectedModule = LOD->RequiredModule;
+			bParticleSystemSelected = false;
 		}
 		ImGui::PopStyleColor(3);
 		if (ImGui::BeginPopupContextItem("EmitterHeaderContext"))
 		{
 			SelectedEmitterIndex = Index;
 			SelectedModule = LOD->RequiredModule;
+			bParticleSystemSelected = false;
 			DrawEmitterContextMenu(Index);
 			ImGui::EndPopup();
 		}
@@ -1675,7 +1869,7 @@ void FParticleEditorWidget::RenderEmitterList()
 			}
 
 			ImGui::PushID(Module);
-			const bool bSelected = Index == SelectedEmitterIndex && Module == GetSelectedModule();
+			const bool bSelected = !bParticleSystemSelected && Index == SelectedEmitterIndex && Module == GetSelectedModule();
 			const ImU32 RowColor = GetModuleRowColor(bSelected, ModuleIndex);
 			ImGui::PushStyleColor(ImGuiCol_Header, RowColor);
 			ImGui::PushStyleColor(ImGuiCol_HeaderHovered, bSelected ? RowColor : IM_COL32(78, 80, 92, 255));
@@ -1685,19 +1879,21 @@ void FParticleEditorWidget::RenderEmitterList()
 			{
 				SelectedEmitterIndex = Index;
 				SelectedModule = Module;
+				bParticleSystemSelected = false;
 			}
 			ImGui::PopStyleColor(3);
 			if (ImGui::BeginPopupContextItem("ModuleRowContext"))
 			{
 				SelectedEmitterIndex = Index;
 				SelectedModule = Module;
+				bParticleSystemSelected = false;
 				DrawModuleContextMenu(Index, LOD, Module);
 				ImGui::EndPopup();
 			}
 			ImGui::PopID();
 		};
 
-		const bool bTypeDataSelected = Index == SelectedEmitterIndex && LOD->TypeDataModule && SelectedModule == LOD->TypeDataModule;
+		const bool bTypeDataSelected = !bParticleSystemSelected && Index == SelectedEmitterIndex && LOD->TypeDataModule && SelectedModule == LOD->TypeDataModule;
 		ImGui::PushID("TypeData");
 		ImGui::PushStyleColor(ImGuiCol_Header, bTypeDataSelected ? IM_COL32(245, 215, 42, 255) : IM_COL32(34, 36, 43, 255));
 		ImGui::PushStyleColor(ImGuiCol_HeaderHovered, bTypeDataSelected ? IM_COL32(245, 215, 42, 255) : IM_COL32(58, 61, 72, 255));
@@ -1709,6 +1905,7 @@ void FParticleEditorWidget::RenderEmitterList()
 			SelectedModule = LOD->TypeDataModule
 				? static_cast<UParticleModule*>(LOD->TypeDataModule)
 				: static_cast<UParticleModule*>(LOD->RequiredModule);
+			bParticleSystemSelected = false;
 		}
 		ImGui::PopStyleColor(3);
 		if (ImGui::BeginPopupContextItem("TypeDataContext"))
@@ -1717,6 +1914,7 @@ void FParticleEditorWidget::RenderEmitterList()
 			SelectedModule = LOD->TypeDataModule
 				? static_cast<UParticleModule*>(LOD->TypeDataModule)
 				: static_cast<UParticleModule*>(LOD->RequiredModule);
+			bParticleSystemSelected = false;
 			DrawTypeDataContextMenu(Index, LOD);
 			ImGui::EndPopup();
 		}
@@ -1738,8 +1936,17 @@ void FParticleEditorWidget::RenderEmitterList()
 		{
 			SelectedEmitterIndex = Index;
 			SelectedModule = GetSelectedModule();
+			bParticleSystemSelected = false;
 			DrawEmitterContextMenu(Index);
 			ImGui::EndPopup();
+		}
+
+		if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) &&
+			ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
+			!ImGui::IsAnyItemHovered())
+		{
+			bParticleSystemSelected = true;
+			SelectedModule = nullptr;
 		}
 
 		ImGui::EndChild();
@@ -1750,6 +1957,14 @@ void FParticleEditorWidget::RenderEmitterList()
 		{
 			ImGui::SameLine();
 		}
+	}
+
+	if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) &&
+		ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
+		!ImGui::IsAnyItemHovered())
+	{
+		bParticleSystemSelected = true;
+		SelectedModule = nullptr;
 	}
 
 	ImGui::EndChild();
@@ -1809,6 +2024,11 @@ void FParticleEditorWidget::RenderCurvePanel()
 
 bool FParticleEditorWidget::RenderDetailsPanel()
 {
+	if (bParticleSystemSelected)
+	{
+		return RenderParticleSystemDetails();
+	}
+
 	UParticleEmitter* Emitter = GetSelectedEmitter();
 	UParticleModule* Module = GetSelectedModule();
 	SelectedModule = Module;
@@ -1824,6 +2044,44 @@ bool FParticleEditorWidget::RenderDetailsPanel()
 	ImGui::Separator();
 
 	bChanged |= RenderModuleDetails(Module);
+
+	return bChanged;
+}
+
+bool FParticleEditorWidget::RenderParticleSystemDetails()
+{
+	if (!EditingParticleSystem)
+	{
+		ImGui::TextDisabled("No particle system.");
+		return false;
+	}
+
+	EditingParticleSystem->NormalizeLODData();
+
+	bool bChanged = false;
+	ImGui::TextUnformatted("Particle System");
+	ImGui::TextDisabled("%s", EditingParticleSystem->GetName().c_str());
+	ImGui::Separator();
+
+	if (ImGui::CollapsingHeader("LOD", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		const int32 LODCount = EditingParticleSystem->GetLODCount();
+		ImGui::TextDisabled("%d LOD distance%s", LODCount, LODCount == 1 ? "" : "s");
+
+		for (int32 LODIndex = 0; LODIndex < LODCount; ++LODIndex)
+		{
+			ImGui::PushID(LODIndex);
+			float Distance = EditingParticleSystem->GetLODDistance(LODIndex);
+			char Label[64] = {};
+			std::snprintf(Label, sizeof(Label), "LOD Distance %d", LODIndex);
+			if (ImGui::DragFloat(Label, &Distance, 1.0f, 0.0f, 0.0f, "%.2f"))
+			{
+				bChanged |= EditingParticleSystem->SetLODDistance(LODIndex, Distance);
+				SelectedLODIndex = ClampLODIndex(SelectedLODIndex);
+			}
+			ImGui::PopID();
+		}
+	}
 
 	return bChanged;
 }
@@ -1911,6 +2169,51 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 			bChanged = true;
 		}
 	}
+	else if (UParticleModuleInitialRotation* Rotation = Cast<UParticleModuleInitialRotation>(Module))
+	{
+		FVector StartRotationMin = Rotation->StartRotationDegreesMin;
+		if (ImGui::DragFloat3("Start Rotation Min (deg)", &StartRotationMin.X, 1.0f, -36000.0f, 36000.0f))
+		{
+			Rotation->StartRotationDegreesMin = StartRotationMin;
+			Rotation->StartRotationDegrees = Rotation->StartRotationDegreesMax;
+			bChanged = true;
+		}
+
+		FVector StartRotationMax = Rotation->StartRotationDegreesMax;
+		if (ImGui::DragFloat3("Start Rotation Max (deg)", &StartRotationMax.X, 1.0f, -36000.0f, 36000.0f))
+		{
+			Rotation->StartRotationDegreesMax = StartRotationMax;
+			Rotation->StartRotationDegrees = Rotation->StartRotationDegreesMax;
+			bChanged = true;
+		}
+	}
+	else if (UParticleModuleInitialRotationRate* RotationRate = Cast<UParticleModuleInitialRotationRate>(Module))
+	{
+		FVector StartRotationRateMin = RotationRate->StartRotationRateDegreesMin;
+		if (ImGui::DragFloat3("Start Rotation Rate Min (deg/s)", &StartRotationRateMin.X, 1.0f, -36000.0f, 36000.0f))
+		{
+			RotationRate->StartRotationRateDegreesMin = StartRotationRateMin;
+			RotationRate->StartRotationRateDegrees = RotationRate->StartRotationRateDegreesMax;
+			bChanged = true;
+		}
+
+		FVector StartRotationRateMax = RotationRate->StartRotationRateDegreesMax;
+		if (ImGui::DragFloat3("Start Rotation Rate Max (deg/s)", &StartRotationRateMax.X, 1.0f, -36000.0f, 36000.0f))
+		{
+			RotationRate->StartRotationRateDegreesMax = StartRotationRateMax;
+			RotationRate->StartRotationRateDegrees = RotationRate->StartRotationRateDegreesMax;
+			bChanged = true;
+		}
+	}
+	else if (UParticleModuleAcceleration* Acceleration = Cast<UParticleModuleAcceleration>(Module))
+	{
+		FVector AccelerationValue = Acceleration->Acceleration;
+		if (ImGui::DragFloat3("Acceleration", &AccelerationValue.X, 0.5f, -10000.0f, 10000.0f))
+		{
+			Acceleration->Acceleration = AccelerationValue;
+			bChanged = true;
+		}
+	}
 	else if (UParticleModuleLocation* Location = Cast<UParticleModuleLocation>(Module))
 	{
 		FVector StartLocationMin = Location->StartLocationMin;
@@ -1931,10 +2234,19 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 	}
 	else if (UParticleModuleColor* Color = Cast<UParticleModuleColor>(Module))
 	{
-		float StartColor[3] = { Color->StartColor.X, Color->StartColor.Y, Color->StartColor.Z };
-		if (ImGui::ColorEdit3("Start Color", StartColor))
+		float StartColorMin[3] = { Color->StartColorMin.X, Color->StartColorMin.Y, Color->StartColorMin.Z };
+		if (ImGui::ColorEdit3("Start Color Min", StartColorMin))
 		{
-			Color->StartColor = FVector(StartColor[0], StartColor[1], StartColor[2]);
+			Color->StartColorMin = FVector(StartColorMin[0], StartColorMin[1], StartColorMin[2]);
+			Color->StartColor = Color->StartColorMax;
+			bChanged = true;
+		}
+
+		float StartColorMax[3] = { Color->StartColorMax.X, Color->StartColorMax.Y, Color->StartColorMax.Z };
+		if (ImGui::ColorEdit3("Start Color Max", StartColorMax))
+		{
+			Color->StartColorMax = FVector(StartColorMax[0], StartColorMax[1], StartColorMax[2]);
+			Color->StartColor = Color->StartColorMax;
 			bChanged = true;
 		}
 
@@ -1969,6 +2281,82 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 			ColorOverLife->AlphaOverLife = std::clamp(EndAlpha, 0.0f, 1.0f);
 			bChanged = true;
 		}
+	}
+	else if (UParticleModuleColorScaleOverLife* ColorScale = Cast<UParticleModuleColorScaleOverLife>(Module))
+	{
+		FVector ScaleValue = ColorScale->ColorScaleOverLife;
+		if (ImGui::DragFloat3("Color Scale Over Life", &ScaleValue.X, 0.01f, 0.0f, 10.0f))
+		{
+			ColorScale->ColorScaleOverLife = FVector(
+				(std::max)(0.0f, ScaleValue.X),
+				(std::max)(0.0f, ScaleValue.Y),
+				(std::max)(0.0f, ScaleValue.Z));
+			bChanged = true;
+		}
+
+		float AlphaScale = ColorScale->AlphaScaleOverLife;
+		if (ImGui::DragFloat("Alpha Scale Over Life", &AlphaScale, 0.01f, 0.0f, 10.0f))
+		{
+			ColorScale->AlphaScaleOverLife = (std::max)(0.0f, AlphaScale);
+			bChanged = true;
+		}
+	}
+	else if (UParticleModuleTypeDataMesh* MeshTypeData = Cast<UParticleModuleTypeDataMesh>(Module))
+	{
+		const FString CurrentPath = MeshTypeData->MeshPath;
+		const FString PreviewLabel = CurrentPath.empty() ? "None" : CurrentPath.c_str();
+
+		if (ImGui::BeginCombo("Static Mesh", PreviewLabel.c_str()))
+		{
+			const bool bSelectedNone = CurrentPath.empty();
+			if (ImGui::Selectable("None", bSelectedNone))
+			{
+				MeshTypeData->MeshPath.clear();
+				MeshTypeData->Mesh = nullptr;
+				bChanged = true;
+			}
+			if (bSelectedNone)
+			{
+				ImGui::SetItemDefaultFocus();
+			}
+
+			const TArray<FMeshAssetListItem>& MeshFiles = FMeshManager::GetAvailableStaticMeshFiles();
+			for (const FMeshAssetListItem& Item : MeshFiles)
+			{
+				const bool bSelected = CurrentPath == Item.FullPath;
+				if (ImGui::Selectable(Item.DisplayName.c_str(), bSelected))
+				{
+					MeshTypeData->MeshPath = Item.FullPath;
+					MeshTypeData->Mesh = LoadEditorStaticMesh(MeshTypeData->MeshPath);
+					if (UParticleModuleRequired* Required = GetSelectedRequiredModule())
+					{
+						bChanged |= EnsureParticleMeshEmitterDefaults(Required);
+					}
+					UParticleEmitter* Emitter = GetSelectedEmitter();
+					bChanged |= EnsureParticleMeshSizeDefaults(GetSelectedLODLevel(Emitter));
+					bChanged = true;
+				}
+
+				if (bSelected)
+				{
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+
+			ImGui::EndCombo();
+		}
+
+		if (!MeshTypeData->MeshPath.empty() && !MeshTypeData->Mesh)
+		{
+			ImGui::TextDisabled("Mesh path is set, but the mesh is not loaded.");
+		}
+
+		if (UParticleModuleRequired* Required = GetSelectedRequiredModule())
+		{
+			bChanged |= EnsureParticleMeshEmitterDefaults(Required);
+		}
+		UParticleEmitter* Emitter = GetSelectedEmitter();
+		bChanged |= EnsureParticleMeshSizeDefaults(GetSelectedLODLevel(Emitter));
 	}
 	else if (UParticleModuleBeamSource* Source = Cast<UParticleModuleBeamSource>(Module))
 	{
