@@ -79,7 +79,7 @@ struct FBaseParticle
 	// 16 bytes
 	float			RelativeTime;			// Relative time, range is 0 (==spawn) to 1 (==death)
 	float			OneOverMaxLifetime;		// Reciprocal of lifetime
-	float			Placeholder0;
+	uint32			ParticleId;				// Stable id for event validation; slots/direct indices may be reused.
 	float			Placeholder1;
 };
 

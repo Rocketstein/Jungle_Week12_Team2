@@ -86,6 +86,8 @@ struct FParticleEmitterInstance : FParticleEmitterInstanceFixLayout
 	virtual uint32 CalculateParticleStride(uint32 InParticleSize);
 
 	FBaseParticle* GetParticleDirect(int32 DirectIndex) const;
+	virtual void AddCollisionEvent(const FBaseParticle& Particle, uint16 DirectIndex, const FVector& HitLocation,
+		const FVector& HitNormal, float HitTime, bool bParticleWasKilled);
 
 protected:
 	// Spawning and updating functions
