@@ -90,7 +90,7 @@ private:
 	bool RenderParticleSystemDetails();
 	bool RenderRequiredDetails(UParticleModuleRequired* Required);
 	bool RenderModuleDetails(UParticleModule* Module);
-	void RenderCurvePanel();
+	bool RenderCurvePanel();
 
 	UParticleEmitter* GetSelectedEmitter() const;
 	UParticleModuleRequired* GetSelectedRequiredModule() const;
