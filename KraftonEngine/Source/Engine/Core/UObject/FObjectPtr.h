@@ -36,12 +36,12 @@ public:
 	void Reset() { Handle = nullptr; }
 
 	// ---- state ----
-	bool IsValid() const;            // not null AND not pending-kill
-	bool IsResolved() const { return true; }  // always true in design (A);
+	bool IsValid() const;						// not null AND not pending-kill (pendingkill is a TODO w/ GC)
+	bool IsResolved() const { return true; }	// always true in design (A);
 	// kept for API parity with Unreal
 
 // ---- metadata (resolve, then forward) ----
-	UClass* GetClass()    const;
+	UClass*	   GetClass()    const;
 	FName      GetFName()    const;
 	FString    GetName()     const;
 	FString    GetPathName() const;
