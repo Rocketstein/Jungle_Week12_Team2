@@ -50,7 +50,7 @@ cbuffer BeamParamBuffer : register(b3)
     float  BeamNoiseAmplitude;
     float  BeamNoiseFrequency;
     float  BeamNoisePhase;
-    float  _BeamPad0;
+    uint   BeamCount;
     float3 BeamNoiseRangeMin;
     float  _BeamPad1;
     float3 BeamNoiseRangeMax;

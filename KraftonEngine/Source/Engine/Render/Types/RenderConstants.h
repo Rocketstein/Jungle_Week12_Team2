@@ -243,7 +243,7 @@ struct FBeamParamConstants
 	float   NoiseAmplitude = 0.0f;
 	float   NoiseFrequency = 0.0f;
 	float   NoisePhase = 0.0f;
-	float   _Pad0 = 0.0f;
+	uint32  BeamCount = 1;
 	FVector NoiseRangeMin = FVector::ZeroVector;
 	float   _Pad1 = 0.0f;
 	FVector NoiseRangeMax = FVector::ZeroVector;

@@ -25,7 +25,7 @@
     "BeamUseTangents" : 0.000000,
     "BeamWidth" : 0.000000,
     "_BeamPad" : [0.000000, 0.000000],
-    "_BeamPad0" : 0.000000,
+    "BeamCount" : 1.000000,
     "_BeamPad1" : 0.000000,
     "_BeamPad2" : 0.000000
   },

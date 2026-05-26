@@ -609,6 +609,8 @@ void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(FDynamicBeamEmi
 	const int32 PointCount = SegmentCount + 1;
 	const int32 SheetCount = std::clamp(Source.Sheets,
 		1, static_cast<int32>(MaxSheetsPerBeam));
+	const int32 BeamCount = std::clamp(Source.MaxBeamCount,
+		1, static_cast<int32>(MaxBeamsPerEmitter));
 
 	FBeamParamConstants& P = Draw.BeamParams;
 	P.Source              = Source.Source;
@@ -630,11 +632,12 @@ void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(FDynamicBeamEmi
 	P.NoiseFrequency      = std::max(0.0f, Source.NoiseFrequency);
 	P.NoisePhase          = Source.NoisePhase;
 	P.NoiseSeed           = Source.NoiseSeed;
+	P.BeamCount           = static_cast<uint32>(BeamCount);
 	P.NoiseRangeMin       = Source.NoiseRangeMin;
 	P.NoiseRangeMax       = Source.NoiseRangeMax;
 	Draw.bBeamParamCBDirty = true;
 
-	Draw.IndexCount = static_cast<uint32>(SegmentCount) * 6 * static_cast<uint32>(SheetCount);
+	Draw.IndexCount = static_cast<uint32>(SegmentCount) * 6 * static_cast<uint32>(SheetCount) * static_cast<uint32>(BeamCount);
 	bAnyBeamReady = true;
 }
 

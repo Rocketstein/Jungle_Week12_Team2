@@ -55,16 +55,16 @@ float Noise01(float Seed)
     return frac(sin(Seed) * 43758.5453123f);
 }
 
-float3 BeamNoiseSample(float SampleIndex)
+float3 BeamNoiseSample(float SampleIndex, float BeamIndex)
 {
-    float Seed = BeamNoiseSeed + SampleIndex * 17.137f;
+    float Seed = BeamNoiseSeed + BeamIndex * 101.73f + SampleIndex * 17.137f;
     return lerp(
         BeamNoiseRangeMin,
         BeamNoiseRangeMax,
         float3(Noise01(Seed + 11.0f), Noise01(Seed + 29.0f), Noise01(Seed + 47.0f)));
 }
 
-float3 ApplyBeamNoise(float3 Center, float3 BeamDir, float T)
+float3 ApplyBeamNoise(float3 Center, float3 BeamDir, float T, float BeamIndex)
 {
     if (BeamNoiseFrequency <= 0.0f)
     {
@@ -74,13 +74,13 @@ float3 ApplyBeamNoise(float3 Center, float3 BeamDir, float T)
     float3 AxisA = SafeNormalizeBeam(cross(BeamDir, float3(0, 0, 1)), float3(0, 1, 0));
     float3 AxisB = SafeNormalizeBeam(cross(BeamDir, AxisA), float3(0, 0, 1));
     float EndpointFade = sin(saturate(T) * 3.14159265359f);
-    float Phase = BeamNoisePhase + BeamNoiseSeed * 6.28318530718f;
+    float Phase = BeamNoisePhase + (BeamNoiseSeed + BeamIndex * 0.61803398875f) * 6.28318530718f;
     float WaveA = sin((T * BeamNoiseFrequency) * 6.28318530718f + Phase);
     float WaveB = cos((T * BeamNoiseFrequency * 1.37f) * 6.28318530718f - Phase);
     float NoiseCoord = saturate(T) * BeamNoiseFrequency;
     float NoiseIndex = floor(NoiseCoord);
     float NoiseAlpha = frac(NoiseCoord);
-    float3 UniformRange = lerp(BeamNoiseSample(NoiseIndex), BeamNoiseSample(NoiseIndex + 1.0f), NoiseAlpha);
+    float3 UniformRange = lerp(BeamNoiseSample(NoiseIndex, BeamIndex), BeamNoiseSample(NoiseIndex + 1.0f, BeamIndex), NoiseAlpha);
     float3 AxisNoise = (AxisA * WaveA + AxisB * WaveB) * BeamNoiseAmplitude;
     return Center + (UniformRange + AxisNoise) * EndpointFade;
 }
@@ -89,8 +89,12 @@ PS_Input_Particle VS(uint vid : SV_VertexID)
 {
     uint segmentCount     = max(BeamPointCount, 2u) - 1u;
     uint verticesPerSheet = segmentCount * 6u;
-    uint sheetIdx         = vid / verticesPerSheet;
-    uint localVid         = vid - sheetIdx * verticesPerSheet;
+    uint sheetCount       = max(BeamSheetCount, 1u);
+    uint verticesPerBeam  = verticesPerSheet * sheetCount;
+    uint beamIdx          = vid / verticesPerBeam;
+    uint beamVid          = vid - beamIdx * verticesPerBeam;
+    uint sheetIdx         = beamVid / verticesPerSheet;
+    uint localVid         = beamVid - sheetIdx * verticesPerSheet;
     uint segIdx           = localVid / 6u;
     uint cornerIdx        = localVid % 6u;
     uint2 Corner   = BeamCorner[cornerIdx];
@@ -104,17 +108,16 @@ PS_Input_Particle VS(uint vid : SV_VertexID)
     float  BeamLen   = length(BeamDelta);
     float3 BeamDir   = EvaluateBeamDirection(T, PointCountF);
 
-    float3 Center    = ApplyBeamNoise(EvaluateBeamCenter(T), BeamDir, T);
+    float3 Center    = ApplyBeamNoise(EvaluateBeamCenter(T), BeamDir, T, (float)beamIdx);
     float  Taper     = ApplyBeamTaper(BeamTaperMethod, BeamTaperFactor, BeamTaperScale, T);
     float  HalfWidth = max(0.0f, BeamWidth * Taper) * 0.5f;
     float  SideSign  = (side == 0) ? -1.0f : 1.0f;
 
     float3 ToCamera  = SafeNormalizeBeam(CameraWorldPos - Center, float3(0, 0, 1));
     float3 SideAxis  = SafeNormalizeBeam(cross(ToCamera, BeamDir), float3(1, 0, 0));
-    uint SheetCount  = max(BeamSheetCount, 1u);
     if (sheetIdx > 0u)
     {
-        float SheetAngle = 3.14159265359f * (float)sheetIdx / (float)SheetCount;
+        float SheetAngle = 3.14159265359f * (float)sheetIdx / (float)sheetCount;
         SideAxis = SafeNormalizeBeam(RotateAroundAxis(SideAxis, BeamDir, SheetAngle), SideAxis);
     }
     float3 WorldPos  = Center + SideAxis * (HalfWidth * SideSign);

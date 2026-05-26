@@ -108,7 +108,8 @@ private:
 	{
 		static constexpr uint32 MaxSegmentsPerBeam = 256;
 		static constexpr uint32 MaxSheetsPerBeam   = 16;
-		static constexpr uint32 MaxIndexCount      = MaxSegmentsPerBeam * 6 * MaxSheetsPerBeam;
+		static constexpr uint32 MaxBeamsPerEmitter = 64;
+		static constexpr uint32 MaxIndexCount      = MaxSegmentsPerBeam * 6 * MaxSheetsPerBeam * MaxBeamsPerEmitter;
 
 		void ResetFrame() { bAnyBeamReady = false; }
 		void PackEmitter(FDynamicBeamEmitterData& Emitter, FEmitterDraw& Draw);

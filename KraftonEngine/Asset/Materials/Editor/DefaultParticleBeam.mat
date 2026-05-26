@@ -6,6 +6,7 @@
     "BeamAlpha" : 0.000000,
     "BeamColor" : [0.000000, 0.000000, 0.000000],
     "BeamNoiseAmplitude" : 0.000000,
+    "BeamCount" : 1.000000,
     "BeamNoiseFrequency" : 0.000000,
     "BeamNoisePhase" : 0.000000,
     "BeamNoiseRangeMax" : [0.000000, 0.000000, 0.000000],
