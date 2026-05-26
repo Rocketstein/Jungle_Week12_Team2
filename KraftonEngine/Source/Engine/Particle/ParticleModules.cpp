@@ -1,4 +1,4 @@
-#include "Particle/ParticleModule.h"
+﻿#include "Particle/ParticleModule.h"
 
 #include "Component/ParticleSystemComponent.h"
 #include "GameFramework/World.h"
@@ -207,7 +207,7 @@ uint32 UParticleModuleCollision::RequiredBytes(UParticleModuleTypeDataBase* Type
 {
 	(void)TypeData;
 	return sizeof(FParticleCollisionPayload);
-}
+}       
 
 void UParticleModuleCollision::FinalUpdate(const FUpdateContext& Context)
 {
