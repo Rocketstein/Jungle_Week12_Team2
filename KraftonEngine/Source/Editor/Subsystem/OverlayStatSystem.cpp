@@ -6,6 +6,7 @@
 #include "Engine/Profiling/MemoryStats.h"
 #include "Engine/Profiling/ShadowStats.h"
 #include "Engine/Profiling/SkinningStats.h"
+#include "Engine/Profiling/ParticleStats.h"
 #include "Engine/Profiling/GPUProfiler.h"
 #include "Engine/Render/Types/RenderFeatureSettings.h"
 #include "Slate/SWindow.h"
@@ -283,6 +284,112 @@ void FOverlayStatSystem::BuildSkinningLines(TArray<FString>& OutLines) const
 #endif
 }
 
+void FOverlayStatSystem::BuildParticleLines(TArray<FString>& OutLines) const
+{
+#if STATS
+	char Buffer[192] = {};
+	const FParticleStatsSnapshot& Snapshot = FParticleStats::Get().GetSnapshot();
+
+	OutLines.push_back(FString("--- Particle ---"));
+	snprintf(Buffer, sizeof(Buffer), "Components : %u  Emitters : %u",
+		Snapshot.ComponentCount,
+		Snapshot.EmitterCount);
+	OutLines.push_back(FString(Buffer));
+
+	snprintf(Buffer, sizeof(Buffer), "Particles : %u / %u",
+		Snapshot.ActiveParticleCount,
+		Snapshot.MaxParticleCount);
+	OutLines.push_back(FString(Buffer));
+
+	char SimBytesText[64] = {};
+	char PackedBytesText[64] = {};
+	FormatBytesValue(SimBytesText, sizeof(SimBytesText), Snapshot.SimMemoryBytes);
+	FormatBytesValue(PackedBytesText, sizeof(PackedBytesText), Snapshot.PackedBytes);
+	snprintf(Buffer, sizeof(Buffer), "Memory : Sim %s  Packed %s", SimBytesText, PackedBytesText);
+	OutLines.push_back(FString(Buffer));
+
+	const EDynamicEmitterType Types[] = { DET_Sprite, DET_Mesh, DET_Beam2, DET_Ribbon };
+	for (EDynamicEmitterType Type : Types)
+	{
+		const FParticleTypeStats& TypeStats = Snapshot.TypeStats[static_cast<int32>(Type)];
+		char TypeSimBytesText[64] = {};
+		char TypePackedBytesText[64] = {};
+		FormatBytesValue(TypeSimBytesText, sizeof(TypeSimBytesText), TypeStats.SimMemoryBytes);
+		FormatBytesValue(TypePackedBytesText, sizeof(TypePackedBytesText), TypeStats.PackedBytes);
+		snprintf(Buffer, sizeof(Buffer), "%s : E %u  P %u  Pack %u  Sim %s  Packed %s",
+			FParticleStats::GetTypeName(Type),
+			TypeStats.EmitterCount,
+			TypeStats.ActiveParticleCount,
+			TypeStats.PackedPrimitiveCount,
+			TypeSimBytesText,
+			TypePackedBytesText);
+		OutLines.push_back(FString(Buffer));
+	}
+
+	OutLines.push_back(FString("--- Particle CPU ---"));
+	const EParticleStatTimer SimTimers[] =
+	{
+		EParticleStatTimer::ComponentTick,
+		EParticleStatTimer::InitParticles,
+		EParticleStatTimer::BuildInstances,
+		EParticleStatTimer::EmitterTick,
+		EParticleStatTimer::KillParticles,
+		EParticleStatTimer::ResetParticleParameters,
+		EParticleStatTimer::UpdateModules,
+		EParticleStatTimer::Spawn,
+		EParticleStatTimer::OnSpawnModules,
+		EParticleStatTimer::TypeDataSpawn,
+		EParticleStatTimer::PostUpdateModules,
+		EParticleStatTimer::ParticleUpdate,
+		EParticleStatTimer::FinalUpdateModules,
+		EParticleStatTimer::BuildRenderData,
+		EParticleStatTimer::UpdateDynamicData,
+		EParticleStatTimer::UpdateMesh,
+	};
+
+	for (EParticleStatTimer Timer : SimTimers)
+	{
+		const int32 TimerIndex = static_cast<int32>(Timer);
+		const FParticleTimerSnapshot& TimerStats = Snapshot.Timers[TimerIndex];
+		snprintf(Buffer, sizeof(Buffer), "%s : %.3f ms (avg %.3f, calls %u)",
+			FParticleStats::GetTimerName(Timer),
+			TimerStats.LastSeconds * 1000.0,
+			TimerStats.AvgSeconds * 1000.0,
+			TimerStats.CallCount);
+		OutLines.push_back(FString(Buffer));
+	}
+
+	OutLines.push_back(FString("--- Particle Render ---"));
+	const EParticleStatTimer RenderTimers[] =
+	{
+		EParticleStatTimer::SortEmitters,
+		EParticleStatTimer::PackSprites,
+		EParticleStatTimer::PackMeshes,
+		EParticleStatTimer::PackBeams,
+		EParticleStatTimer::PackRibbons,
+		EParticleStatTimer::RebuildSections,
+		EParticleStatTimer::UploadSpriteBuffers,
+		EParticleStatTimer::UploadMeshInstances,
+		EParticleStatTimer::UploadBeamBuffers,
+		EParticleStatTimer::UploadRibbonBuffers,
+	};
+
+	for (EParticleStatTimer Timer : RenderTimers)
+	{
+		const int32 TimerIndex = static_cast<int32>(Timer);
+		const FParticleTimerSnapshot& TimerStats = Snapshot.Timers[TimerIndex];
+		snprintf(Buffer, sizeof(Buffer), "%s : %.3f ms (avg %.3f, calls %u)",
+			FParticleStats::GetTimerName(Timer),
+			TimerStats.LastSeconds * 1000.0,
+			TimerStats.AvgSeconds * 1000.0,
+			TimerStats.CallCount);
+		OutLines.push_back(FString(Buffer));
+	}
+#else
+	OutLines.push_back(FString("Particle stats unavailable (STATS=0)"));
+#endif
+}
+
 void FOverlayStatSystem::BuildLines(const UEditorEngine& Editor, TArray<FOverlayStatLine>& OutLines) const
 {
 	OutLines.clear();
@@ -307,6 +414,10 @@ void FOverlayStatSystem::BuildLines(const UEditorEngine& Editor, TArray<FOverlay
 	if (bShowSkinning)
 	{
 		EstimatedLineCount += 7;
+	}
+	if (bShowParticle)
+	{
+		EstimatedLineCount += 36;
 	}
 	OutLines.reserve(EstimatedLineCount);
 
@@ -350,6 +461,13 @@ void FOverlayStatSystem::BuildLines(const UEditorEngine& Editor, TArray<FOverlay
 	{
 		Lines.clear();
 		BuildSkinningLines(Lines);
+		AppendGroup(Lines);
+	}
+
+	if (bShowParticle)
+	{
+		Lines.clear();
+		BuildParticleLines(Lines);
 		AppendGroup(Lines);
 	}
 }
@@ -457,5 +575,12 @@ void FOverlayStatSystem::RenderImGui(const UEditorEngine& Editor, const FRect& V
 		Lines.clear();
 		BuildSkinningLines(Lines);
 		RenderWindow("##StatSkinningOverlay", "Stat Skinning", ImVec4(0.05f, 0.10f, 0.08f, 0.62f), Lines);
+	}
+
+	if (bShowParticle)
+	{
+		Lines.clear();
+		BuildParticleLines(Lines);
+		RenderWindow("##StatParticleOverlay", "Stat Particle", ImVec4(0.05f, 0.08f, 0.11f, 0.66f), Lines);
 	}
 }

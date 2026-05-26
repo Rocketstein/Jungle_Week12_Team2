@@ -533,6 +533,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Engine\Platform\Paths.cpp" />
     <ClCompile Include="Source\Engine\Profiling\GPUProfiler.cpp" />
     <ClCompile Include="Source\Engine\Profiling\MemoryStats.cpp" />
+    <ClCompile Include="Source\Engine\Profiling\ParticleStats.cpp" />
     <ClCompile Include="Source\Engine\Profiling\ShadowStats.cpp" />
     <ClCompile Include="Source\Engine\Profiling\SkinningStats.cpp" />
     <ClCompile Include="Source\Engine\Profiling\StartupProfiler.cpp" />
@@ -886,6 +887,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\Platform\Paths.h" />
     <ClInclude Include="Source\Engine\Profiling\GPUProfiler.h" />
     <ClInclude Include="Source\Engine\Profiling\MemoryStats.h" />
+    <ClInclude Include="Source\Engine\Profiling\ParticleStats.h" />
     <ClInclude Include="Source\Engine\Profiling\PlatformTime.h" />
     <ClInclude Include="Source\Engine\Profiling\ShadowStats.h" />
     <ClInclude Include="Source\Engine\Profiling\SkinningStats.h" />

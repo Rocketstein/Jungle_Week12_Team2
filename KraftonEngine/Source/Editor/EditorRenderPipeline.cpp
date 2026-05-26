@@ -12,6 +12,7 @@
 #include "GameFramework/PlayerController.h"
 #include "Profiling/Stats.h"
 #include "Profiling/GPUProfiler.h"
+#include "Profiling/ParticleStats.h"
 #include "Engine/Render/Types/ForwardLightData.h"
 #include "Engine/Render/Types/MinimalViewInfo.h"
 #include "Engine/Render/Types/RenderFeatureSettings.h"
@@ -117,6 +118,10 @@ void FEditorRenderPipeline::Execute(float DeltaTime, FRenderer& Renderer)
 			RenderPreviewViewport(PreviewVC, Renderer);
 		}
 	}
+
+#if STATS
+	FParticleStats::Get().TakeSnapshot();
+#endif
 
 	// 스왑체인 백버퍼 복귀 → ImGui 합성 → Present
 	Renderer.BeginFrame();
