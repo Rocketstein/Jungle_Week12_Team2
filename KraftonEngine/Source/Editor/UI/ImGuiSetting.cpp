@@ -18,7 +18,12 @@ namespace
 
 void ImGuiSetting::ShowSetting()
 {
-	if (!ImGui::Begin("ImGuiSetting"))
+	ShowSetting(nullptr);
+}
+
+void ImGuiSetting::ShowSetting(bool* bOpen)
+{
+	if (!ImGui::Begin("ImGuiSetting", bOpen))
 	{
 		ImGui::End();
 		return;

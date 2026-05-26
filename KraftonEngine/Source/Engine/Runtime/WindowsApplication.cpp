@@ -9,6 +9,48 @@
 // ImGui Win32 메시지 핸들러
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, unsigned int Msg, WPARAM wParam, LPARAM lParam);
 
+#ifndef DWMWA_BORDER_COLOR
+#define DWMWA_BORDER_COLOR 34
+#endif
+
+#ifndef DWMWA_CAPTION_COLOR
+#define DWMWA_CAPTION_COLOR 35
+#endif
+
+#ifndef DWMWA_TEXT_COLOR
+#define DWMWA_TEXT_COLOR 36
+#endif
+
+namespace
+{
+void ApplyNativeTitleBarTheme(HWND hWnd)
+{
+	HMODULE DwmApi = LoadLibraryW(L"dwmapi.dll");
+	if (!DwmApi)
+	{
+		return;
+	}
+
+	using FDwmSetWindowAttribute = HRESULT(WINAPI*)(HWND, DWORD, LPCVOID, DWORD);
+	auto DwmSetWindowAttributeFunc = reinterpret_cast<FDwmSetWindowAttribute>(
+		GetProcAddress(DwmApi, "DwmSetWindowAttribute"));
+	if (!DwmSetWindowAttributeFunc)
+	{
+		FreeLibrary(DwmApi);
+		return;
+	}
+
+	const COLORREF CaptionColor = RGB(20, 20, 20);
+	const COLORREF TextColor = RGB(235, 235, 235);
+	const COLORREF BorderColor = RGB(20, 20, 20);
+	DwmSetWindowAttributeFunc(hWnd, DWMWA_CAPTION_COLOR, &CaptionColor, sizeof(CaptionColor));
+	DwmSetWindowAttributeFunc(hWnd, DWMWA_TEXT_COLOR, &TextColor, sizeof(TextColor));
+	DwmSetWindowAttributeFunc(hWnd, DWMWA_BORDER_COLOR, &BorderColor, sizeof(BorderColor));
+
+	FreeLibrary(DwmApi);
+}
+}
+
 LRESULT CALLBACK FWindowsApplication::StaticWndProc(HWND hWnd, unsigned int Msg, WPARAM wParam, LPARAM lParam)
 {
 	FWindowsApplication* App = reinterpret_cast<FWindowsApplication*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
@@ -102,7 +144,7 @@ bool FWindowsApplication::Init(HINSTANCE InHInstance)
 	HInstance = InHInstance;
 
 	WCHAR WindowClass[] = L"JungleWindowClass";
-	WCHAR Title[] = L"Game Tech Lab";
+	WCHAR Title[] = L"Coconut Engine";
 	WNDCLASSEXW WndClass = {};
 	WndClass.cbSize = sizeof(WNDCLASSEXW);
 	WndClass.lpfnWndProc = StaticWndProc;
@@ -118,7 +160,7 @@ bool FWindowsApplication::Init(HINSTANCE InHInstance)
 		0,
 		WindowClass,
 		Title,
-		WS_POPUP | WS_VISIBLE | WS_OVERLAPPEDWINDOW,
+		WS_VISIBLE | WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT, CW_USEDEFAULT,
 		1920, 1080,
 		nullptr, nullptr, HInstance, this);
@@ -127,6 +169,8 @@ bool FWindowsApplication::Init(HINSTANCE InHInstance)
 	{
 		return false;
 	}
+
+	ApplyNativeTitleBarTheme(HWindow);
 
 	RAWINPUTDEVICE RawMouseDevice = {};
 	RawMouseDevice.usUsagePage = 0x01;

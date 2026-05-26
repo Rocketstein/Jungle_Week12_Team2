@@ -11,6 +11,7 @@ class FEditorPropertyWidget : public FEditorWidget
 {
 public:
 	virtual void Render(float DeltaTime) override;
+	void Render(float DeltaTime, bool* bOpen);
 	void SetShowEditorOnlyComponents(bool bEnable) { bShowEditorOnlyComponents = bEnable; }
 	bool IsShowingEditorOnlyComponents() const { return bShowEditorOnlyComponents; }
 

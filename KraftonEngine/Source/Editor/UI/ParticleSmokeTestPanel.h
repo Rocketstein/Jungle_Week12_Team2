@@ -27,4 +27,5 @@ namespace FParticleSmokeTestPanel
 	// Draws a small floating ImGui window with Sprite/Mesh/Beam inject buttons.
 	// Safe to call with a null Editor (no-ops).
 	void Render(UEditorEngine* Editor);
+	void Render(UEditorEngine* Editor, bool* bOpen);
 }

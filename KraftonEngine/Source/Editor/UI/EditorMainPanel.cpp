@@ -77,6 +77,9 @@ void FEditorMainPanel::Create(FWindowsWindow* InWindow, FRenderer& InRenderer, U
 	ImGui_ImplDX11_Init(InRenderer.GetFD3DDevice().GetDevice(), InRenderer.GetFD3DDevice().GetDeviceContext());
 
 	ImGuiStyle& Style = ImGui::GetStyle();
+	Style.DockingNodeHasCloseButton = false;
+	Style.TabCloseButtonMinWidthSelected = 10.0f;
+	Style.TabCloseButtonMinWidthUnselected = 0.0f;
 	if (IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 	{
 		Style.WindowRounding = 0.0f;
@@ -151,40 +154,40 @@ void FEditorMainPanel::Render(float DeltaTime)
 		}
 	}
 
-	const FEditorSettings& Settings = FEditorSettings::Get();
+	FEditorSettings& Settings = FEditorSettings::Get();
 
 	if (!bHideEditorWindows && Settings.UI.bImGUISettings)
 	{
-		ImGuiSetting::ShowSetting();
+		ImGuiSetting::ShowSetting(&Settings.UI.bImGUISettings);
 	}
 
 	if (!bHideEditorWindows && Settings.UI.bControl)
 	{
 		SCOPE_STAT_CAT("ControlWidget.Render", "5_UI");
-		ControlWidget.Render(DeltaTime);
+		ControlWidget.Render(DeltaTime, &Settings.UI.bControl);
 	}
 
 	if (!bHideEditorWindows && Settings.UI.bProperty)
 	{
 		SCOPE_STAT_CAT("PropertyWidget.Render", "5_UI");
-		PropertyWidget.Render(DeltaTime);
+		PropertyWidget.Render(DeltaTime, &Settings.UI.bProperty);
 	}
 
 	if (!bHideEditorWindows && Settings.UI.bScene)
 	{
 		SCOPE_STAT_CAT("SceneWidget.Render", "5_UI");
-		SceneWidget.Render(DeltaTime);
+		SceneWidget.Render(DeltaTime, &Settings.UI.bScene);
 	}
 
 	if (!bHideEditorWindows && Settings.UI.bStat)
 	{
 		SCOPE_STAT_CAT("StatWidget.Render", "5_UI");
-		StatWidget.Render(DeltaTime);
+		StatWidget.Render(DeltaTime, &Settings.UI.bStat);
 	}
 
 	if (!bHideEditorWindows && Settings.UI.bShadowMapDebug)
 	{
-		ShadowMapDebugWidget.Render(DeltaTime);
+		ShadowMapDebugWidget.Render(DeltaTime, &Settings.UI.bShadowMapDebug);
 	}
 
 	ProjectSettingsWidget.Render();

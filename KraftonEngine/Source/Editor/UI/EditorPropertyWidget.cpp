@@ -459,11 +459,16 @@ FString FEditorPropertyWidget::OpenFbxFileDialog()
 
 void FEditorPropertyWidget::Render(float DeltaTime)
 {
+	Render(DeltaTime, nullptr);
+}
+
+void FEditorPropertyWidget::Render(float DeltaTime, bool* bOpen)
+{
 	(void)DeltaTime;
 
 	ImGui::SetNextWindowSize(ImVec2(350.0f, 500.0f), ImGuiCond_Once);
 
-	ImGui::Begin("Property Window");
+	ImGui::Begin("Property Window", bOpen);
 
 	FSelectionManager& Selection = EditorEngine->GetSelectionManager();
 	AActor* PrimaryActor = Selection.GetPrimarySelection();
