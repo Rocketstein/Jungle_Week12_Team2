@@ -1,7 +1,21 @@
-#pragma once
+﻿#pragma once
 
 #include "Particle/ParticleModule.h"
 #include "ParticleModuleTypeDataBeam2.generated.h"
+
+struct FBeam2TypeDataPayload
+{
+	FVector SourcePoint;
+	FVector TargetPoint;
+	FVector SourceTangent;
+	FVector TargetTangent;
+	float SourceStrength;
+	float TargetStrength;
+	int32 LockSource;         // Used as a boolean (0 or 1)
+	int32 LockTarget;         // Used as a boolean (0 or 1)
+	int32 LockSourceTangent;  // Used as a boolean (0 or 1)
+	int32 LockTargetTangent;  // Used as a boolean (0 or 1)
+};
 
 UENUM()
 enum EBeam2Method : int
@@ -41,6 +55,9 @@ public:
 
 	bool IsABeamEmitter() const override { return true; }
 	bool SupportsSpecificScreenAlignmentFlags() const override { return true; }
+	uint32 RequiredBytes(UParticleModuleTypeDataBase* TypeData = nullptr) override { (void)TypeData; return sizeof(FBeam2TypeDataPayload); }
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
+	void Spawn(const FSpawnContext& Context) override;
 
 	// Distance emits along local +X. Target emits from SourcePoint to TargetPoint.
 	// Branch is kept for asset compatibility, but should be treated as Target until

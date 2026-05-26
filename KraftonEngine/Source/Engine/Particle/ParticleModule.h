@@ -107,7 +107,7 @@ public:
 	virtual void Spawn(const FSpawnContext& Context) { (void)Context; }
 	virtual void Update(const FUpdateContext& Context) { (void)Context; }
 	virtual void FinalUpdate(const FUpdateContext& Context) { (void)Context; }
-	virtual uint32 RequiredBytes(UParticleModuleTypeDataBase* TypeData) { (void)TypeData; return 0; }
+	virtual uint32 RequiredBytes(UParticleModuleTypeDataBase* TypeData = nullptr) { (void)TypeData; return 0; }
 	virtual uint32 RequiredBytesPerInstance() { return 0; }
 	virtual uint32 PrepPerInstanceBlock(FParticleEmitterInstance* Owner, void* InstData) { (void)Owner; (void)InstData; return 0; }
 	virtual void SetToSensibleDefaults(UParticleEmitter* Owner) { (void)Owner; }
@@ -130,6 +130,7 @@ public:
 
 	EModuleType GetModuleType() const override { return EPMT_Required; }
 	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
+	uint32 RequiredBytes(UParticleModuleTypeDataBase* TypeData = nullptr) override { (void)TypeData; return 0; }
 
 	UMaterialInterface* Material = nullptr;
 	FVector EmitterOrigin = FVector::ZeroVector;
@@ -189,6 +190,7 @@ public:
 	GENERATED_BODY(UParticleModuleSpawn)
 
 	UParticleModuleSpawn();
+	uint32 RequiredBytes(UParticleModuleTypeDataBase* TypeData = nullptr) override { (void)TypeData; return 0; }
 
 	UPROPERTY(Edit, Category="Spawn", DisplayName="Rate", Min=0.0f, Max=10000.0f, Speed=1.0f)
 	float Rate = 10.0f;
@@ -224,6 +226,7 @@ public:
 	GENERATED_BODY(UParticleModuleLifetime)
 
 	UParticleModuleLifetime();
+	uint32 RequiredBytes(UParticleModuleTypeDataBase* TypeData = nullptr) override { (void)TypeData; return 0; }
 
 	UPROPERTY(Edit, Category="Lifetime", DisplayName="Lifetime", Min=0.0f, Max=1000.0f, Speed=0.1f)
 	float Lifetime = 1.0f;
@@ -249,6 +252,7 @@ public:
 	GENERATED_BODY(UParticleModuleLocation)
 
 	UParticleModuleLocation();
+	uint32 RequiredBytes(UParticleModuleTypeDataBase* TypeData = nullptr) override { (void)TypeData; return 0; }
 
 	UPROPERTY(Edit, Category="Location", DisplayName="Start Location")
 	FVector StartLocation = FVector::ZeroVector;
@@ -276,6 +280,7 @@ public:
 	GENERATED_BODY(UParticleModuleVelocity)
 
 	UParticleModuleVelocity();
+	uint32 RequiredBytes(UParticleModuleTypeDataBase* TypeData = nullptr) override { (void)TypeData; return 0; }
 
 	UPROPERTY(Edit, Category="Velocity", DisplayName="Start Velocity")
 	FVector StartVelocity = FVector::UpVector;
@@ -348,7 +353,7 @@ public:
 
 	UParticleModuleCollision();
 
-	uint32 RequiredBytes(UParticleModuleTypeDataBase* TypeData) override;
+	uint32 RequiredBytes(UParticleModuleTypeDataBase* TypeData = nullptr) override;
 	void FinalUpdate(const FUpdateContext& Context) override;
 	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
 
@@ -382,6 +387,7 @@ public:
 	GENERATED_BODY(UParticleModuleColor)
 
 	UParticleModuleColor();
+	uint32 RequiredBytes(UParticleModuleTypeDataBase* TypeData = nullptr) override { (void)TypeData; return 0; }
 
 	UPROPERTY(Edit, Category="Color", DisplayName="Start Color")
 	FVector StartColor = FVector::OneVector;
@@ -404,6 +410,7 @@ public:
 	GENERATED_BODY(UParticleModuleColorOverLife)
 
 	UParticleModuleColorOverLife();
+	uint32 RequiredBytes(UParticleModuleTypeDataBase* TypeData = nullptr) override { (void)TypeData; return 0; }
 
 	UPROPERTY(Edit, Category="Color", DisplayName="Color Over Life")
 	FVector ColorOverLife = FVector::OneVector;
@@ -456,81 +463,7 @@ public:
 
 	void Spawn(const FSpawnContext& Context) override;
 	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
-};
-
-UCLASS()
-class UParticleModuleBeamBase : public UParticleModule
-{
-public:
-	GENERATED_BODY(UParticleModuleBeamBase)
-
-	EModuleType GetModuleType() const override { return EPMT_Beam; }
-};
-
-UCLASS()
-class UParticleModuleBeamSource : public UParticleModuleBeamBase
-{
-public:
-	GENERATED_BODY(UParticleModuleBeamSource)
-
-	UPROPERTY(Edit, Category="Beam Source", DisplayName="Source Point")
-	FVector SourcePoint = FVector::ZeroVector;
-
-	UPROPERTY(Edit, Category="Beam Source", DisplayName="Source Tangent Method")
-	EBeamTangentMethod SourceTangentMethod = PEBTANM_Direct;
-
-	UPROPERTY(Edit, Category="Beam Source", DisplayName="Source Tangent")
-	FVector SourceTangent = FVector(0.0f, 0.0f, 40.0f);
-
-	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
-};
-
-UCLASS()
-class UParticleModuleBeamTarget : public UParticleModuleBeamBase
-{
-public:
-	GENERATED_BODY(UParticleModuleBeamTarget)
-
-	UPROPERTY(Edit, Category="Beam Target", DisplayName="Target Point")
-	FVector TargetPoint = FVector(100.0f, 0.0f, 0.0f);
-
-	UPROPERTY(Edit, Category="Beam Target", DisplayName="Target Tangent Method")
-	EBeamTangentMethod TargetTangentMethod = PEBTANM_Direct;
-
-	UPROPERTY(Edit, Category="Beam Target", DisplayName="Target Tangent")
-	FVector TargetTangent = FVector(0.0f, 0.0f, -40.0f);
-
-	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
-};
-
-UCLASS()
-class UParticleModuleBeamNoise : public UParticleModuleBeamBase
-{
-public:
-	GENERATED_BODY(UParticleModuleBeamNoise)
-
-	UPROPERTY(Edit, Category="Beam Noise", Min=0.0f, Max=1000.0f, Speed=0.25f)
-	float NoiseAmplitude = 0.0f;
-
-	UPROPERTY(Edit, Category="Beam Noise", Min=0.0f, Max=128.0f, Speed=0.1f)
-	float NoiseFrequency = 3.0f;
-
-	UPROPERTY(Edit, Category="Beam Noise", Min=0.0f, Max=100.0f, Speed=0.05f)
-	float NoiseSpeed = 0.0f;
-
-	UPROPERTY(Edit, Category="Beam Noise", Min=0.0f, Max=10000.0f, Speed=1.0f)
-	float NoiseSeed = 0.0f;
-
-	UPROPERTY(Edit, Category="Beam Noise", DisplayName="Low Freq Enabled")
-	bool bLowFreqEnabled = false;
-
-	UPROPERTY(Edit, Category="Beam Noise", DisplayName="Noise Range Min")
-	FVector NoiseRangeMin = FVector(0.0f, -30.0f, -30.0f);
-
-	UPROPERTY(Edit, Category="Beam Noise", DisplayName="Noise Range Max")
-	FVector NoiseRangeMax = FVector(0.0f, 30.0f, 30.0f);
-
-	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
+	uint32 RequiredBytes(UParticleModuleTypeDataBase* TypeData = nullptr) override { (void)TypeData; return 0; }
 };
 
 UCLASS()
@@ -548,6 +481,28 @@ public:
 	virtual bool IsARibbonEmitter() const { return false; }
 };
 
+// This struct is used to store the 3D orientation of a mesh particle.
+// Standard sprite particles only store a single float for 2D rotation,
+// but meshes require Euler angles and their rates of change.
+struct FMeshRotationPayloadData
+{
+	FVector Rotation;
+	FVector RotationRate;
+};
+
+// This struct is utilized when motion blur or velocity alignment is enabled.
+// It allows the renderer to calculate the “stretch” or blur between the previous and current frame.
+struct FMeshMotionPayloadData
+{
+	FVector LastLocation;
+};
+
+// This is the base payload for any mesh emitter, used for internal synchronization and indexing.
+struct FMeshTypeDataPayload
+{
+	uint32 PayloadData;
+};
+
 UCLASS()
 class UParticleModuleTypeDataMesh : public UParticleModuleTypeDataBase
 {
@@ -561,6 +516,11 @@ public:
 
 	bool IsAMeshEmitter() const override { return true; }
 	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
+	uint32 RequiredBytes(UParticleModuleTypeDataBase* TypeData = nullptr) override
+	{
+		(void)TypeData;
+		return sizeof(FMeshRotationPayloadData) + sizeof(FMeshMotionPayloadData) + sizeof(FMeshTypeDataPayload);
+	}
 };
 
 
