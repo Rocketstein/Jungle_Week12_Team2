@@ -2,6 +2,7 @@
 
 #include "Component/ParticleSystemComponent.h"
 #include "GameFramework/World.h"
+#include "Math/MathUtils.h"
 #include "Particle/ParticleEmitterInstances.h"
 #include "Particle/ParticleLODLevel.h"
 #include "Particle/TypeData/ParticleModuleTypeDataRibbon.h"
@@ -198,6 +199,96 @@ UParticleModule* UParticleModuleVelocity::CloneForLOD(UParticleLODLevel* NewOute
 	return Copy;
 }
 
+UParticleModuleInitialRotation::UParticleModuleInitialRotation()
+{
+	bSpawnModule = true;
+}
+
+void UParticleModuleInitialRotation::Spawn(const FSpawnContext& Context)
+{
+	if (!Context.ParticleBase)
+	{
+		return;
+	}
+
+	const FVector SpawnRotationDegrees = RandomRange(StartRotationDegreesMin, StartRotationDegreesMax);
+	Context.ParticleBase->Rotation = SpawnRotationDegrees * FMath::DegToRad;
+}
+
+UParticleModule* UParticleModuleInitialRotation::CloneForLOD(UParticleLODLevel* NewOuter) const
+{
+	UParticleModuleInitialRotation* Copy = GUObjectArray.CreateObject<UParticleModuleInitialRotation>(NewOuter);
+	CopyModuleBaseTo(Copy);
+	Copy->StartRotationDegrees = StartRotationDegrees;
+	Copy->StartRotationDegreesMin = StartRotationDegreesMin;
+	Copy->StartRotationDegreesMax = StartRotationDegreesMax;
+	return Copy;
+}
+
+UParticleModuleInitialRotationRate::UParticleModuleInitialRotationRate()
+{
+	bSpawnModule = true;
+}
+
+void UParticleModuleInitialRotationRate::Spawn(const FSpawnContext& Context)
+{
+	if (!Context.ParticleBase)
+	{
+		return;
+	}
+
+	const FVector SpawnRotationRateDegrees = RandomRange(StartRotationRateDegreesMin, StartRotationRateDegreesMax);
+	const FVector SpawnRotationRate = SpawnRotationRateDegrees * FMath::DegToRad;
+	Context.ParticleBase->BaseRotationRate = SpawnRotationRate;
+	Context.ParticleBase->RotationRate = SpawnRotationRate;
+}
+
+UParticleModule* UParticleModuleInitialRotationRate::CloneForLOD(UParticleLODLevel* NewOuter) const
+{
+	UParticleModuleInitialRotationRate* Copy = GUObjectArray.CreateObject<UParticleModuleInitialRotationRate>(NewOuter);
+	CopyModuleBaseTo(Copy);
+	Copy->StartRotationRateDegrees = StartRotationRateDegrees;
+	Copy->StartRotationRateDegreesMin = StartRotationRateDegreesMin;
+	Copy->StartRotationRateDegreesMax = StartRotationRateDegreesMax;
+	return Copy;
+}
+
+UParticleModuleAcceleration::UParticleModuleAcceleration()
+{
+	bUpdateModule = true;
+}
+
+void UParticleModuleAcceleration::Update(const FUpdateContext& Context)
+{
+	FParticleEmitterInstance& Owner = Context.Owner;
+	if (!Owner.ParticleData || !Owner.ParticleIndices)
+	{
+		return;
+	}
+
+	const FVector VelocityDelta = Acceleration * Context.DeltaTime;
+	for (int32 ParticleIndex = 0; ParticleIndex < Owner.ActiveParticles; ++ParticleIndex)
+	{
+		FBaseParticle* Particle = reinterpret_cast<FBaseParticle*>(
+			Owner.ParticleData + Owner.ParticleStride * Owner.ParticleIndices[ParticleIndex]);
+		if (!Particle)
+		{
+			continue;
+		}
+
+		Particle->BaseVelocity = Particle->BaseVelocity + VelocityDelta;
+		Particle->Velocity = Particle->BaseVelocity;
+	}
+}
+
+UParticleModule* UParticleModuleAcceleration::CloneForLOD(UParticleLODLevel* NewOuter) const
+{
+	UParticleModuleAcceleration* Copy = GUObjectArray.CreateObject<UParticleModuleAcceleration>(NewOuter);
+	CopyModuleBaseTo(Copy);
+	Copy->Acceleration = Acceleration;
+	return Copy;
+}
+
 UParticleModuleCollision::UParticleModuleCollision()
 {
 	bFinalUpdateModule = true;
@@ -334,7 +425,8 @@ void UParticleModuleColor::Spawn(const FSpawnContext& Context)
 	}
 
 	const float Alpha = std::max(0.0f, std::min(RandomRange(StartAlphaMin, StartAlphaMax), 1.0f));
-	Context.ParticleBase->BaseColor = FLinearColor(StartColor.X, StartColor.Y, StartColor.Z, Alpha);
+	const FVector SpawnColor = RandomRange(StartColorMin, StartColorMax);
+	Context.ParticleBase->BaseColor = FLinearColor(SpawnColor.X, SpawnColor.Y, SpawnColor.Z, Alpha);
 	Context.ParticleBase->Color = Context.ParticleBase->BaseColor;
 }
 
@@ -343,6 +435,8 @@ UParticleModule* UParticleModuleColor::CloneForLOD(UParticleLODLevel* NewOuter) 
 	UParticleModuleColor* Copy = GUObjectArray.CreateObject<UParticleModuleColor>(NewOuter);
 	CopyModuleBaseTo(Copy);
 	Copy->StartColor = StartColor;
+	Copy->StartColorMin = StartColorMin;
+	Copy->StartColorMax = StartColorMax;
 	Copy->StartAlpha = StartAlpha;
 	Copy->StartAlphaMin = StartAlphaMin;
 	Copy->StartAlphaMax = StartAlphaMax;
@@ -400,6 +494,58 @@ UParticleModule* UParticleModuleColorOverLife::CloneForLOD(UParticleLODLevel* Ne
 	CopyModuleBaseTo(Copy);
 	Copy->ColorOverLife = ColorOverLife;
 	Copy->AlphaOverLife = AlphaOverLife;
+	return Copy;
+}
+
+UParticleModuleColorScaleOverLife::UParticleModuleColorScaleOverLife()
+{
+	bUpdateModule = true;
+}
+
+void UParticleModuleColorScaleOverLife::Update(const FUpdateContext& Context)
+{
+	FParticleEmitterInstance& Owner = Context.Owner;
+	if (!Owner.ParticleData || !Owner.ParticleIndices)
+	{
+		return;
+	}
+
+	const FVector ClampedColorScale(
+		(std::max)(0.0f, ColorScaleOverLife.X),
+		(std::max)(0.0f, ColorScaleOverLife.Y),
+		(std::max)(0.0f, ColorScaleOverLife.Z));
+	const float ClampedAlphaScale = (std::max)(0.0f, AlphaScaleOverLife);
+
+	for (int32 ParticleIndex = 0; ParticleIndex < Owner.ActiveParticles; ++ParticleIndex)
+	{
+		FBaseParticle* Particle = reinterpret_cast<FBaseParticle*>(
+			Owner.ParticleData + Owner.ParticleStride * Owner.ParticleIndices[ParticleIndex]);
+		if (!Particle)
+		{
+			continue;
+		}
+
+		const float T = std::clamp(Particle->RelativeTime, 0.0f, 1.0f);
+		const FVector Scale(
+			1.0f + (ClampedColorScale.X - 1.0f) * T,
+			1.0f + (ClampedColorScale.Y - 1.0f) * T,
+			1.0f + (ClampedColorScale.Z - 1.0f) * T);
+		const float AlphaScale = 1.0f + (ClampedAlphaScale - 1.0f) * T;
+
+		Particle->Color = FLinearColor(
+			Particle->Color.R * Scale.X,
+			Particle->Color.G * Scale.Y,
+			Particle->Color.B * Scale.Z,
+			Particle->Color.A * AlphaScale);
+	}
+}
+
+UParticleModule* UParticleModuleColorScaleOverLife::CloneForLOD(UParticleLODLevel* NewOuter) const
+{
+	UParticleModuleColorScaleOverLife* Copy = GUObjectArray.CreateObject<UParticleModuleColorScaleOverLife>(NewOuter);
+	CopyModuleBaseTo(Copy);
+	Copy->ColorScaleOverLife = ColorScaleOverLife;
+	Copy->AlphaScaleOverLife = AlphaScaleOverLife;
 	return Copy;
 }
 

@@ -63,9 +63,9 @@ namespace
 			P->BaseSize           = P->Size;
 			// Cycle Z rotation around the ring — verifies PackMeshEmitter's
 			// Scale × RotationZ × Translation composition is being honored.
-			P->Rotation           = t;
-			P->BaseRotationRate   = 0.0f;
-			P->RotationRate       = 0.0f;
+			P->Rotation           = FVector(0.0f, 0.0f, t);
+			P->BaseRotationRate   = FVector::ZeroVector;
+			P->RotationRate       = FVector::ZeroVector;
 			// Hue cycle around the ring (also catches a stuck instanceColor path).
 			P->Color              = FLinearColor(1.0f,
 			                                     0.5f + 0.5f * std::cos(t),
