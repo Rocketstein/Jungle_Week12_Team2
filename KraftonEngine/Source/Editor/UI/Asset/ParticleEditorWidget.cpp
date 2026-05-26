@@ -1366,17 +1366,17 @@ FString FParticleEditorWidget::GetModuleDisplayName(UParticleModule* Module) con
 	{
 		return "Mesh";
 	}
-	if (Module->IsA<UParticleModuleTypeDataBase>())
-	{
-		return "TypeData";
-	}
 	if (Module->IsA<UParticleModuleCollision>())
 	{
 		return "Collision";
 	}
 	if (Module->IsA<UParticleModuleTypeDataRibbon>())
 	{
-		return "TypeData Ribbon";
+		return "Ribbon";
+	}
+	if (Module->IsA<UParticleModuleTypeDataBase>())
+	{
+		return "TypeData";
 	}
 	return Module->GetClass()->GetName();
 }
@@ -1385,7 +1385,7 @@ FString FParticleEditorWidget::GetTypeDataDisplayName(UParticleLODLevel* LOD) co
 {
 	if (!LOD || !LOD->TypeDataModule)
 	{
-		return "GPU Sprites";
+		return "Sprite";
 	}
 	if (LOD->TypeDataModule->IsA<UParticleModuleTypeDataBeam2>())
 	{
@@ -1394,6 +1394,10 @@ FString FParticleEditorWidget::GetTypeDataDisplayName(UParticleLODLevel* LOD) co
 	if (LOD->TypeDataModule->IsA<UParticleModuleTypeDataMesh>())
 	{
 		return "Mesh";
+	}
+	if (LOD->TypeDataModule->IsA<UParticleModuleTypeDataRibbon>())
+	{
+		return "Ribbon";
 	}
 	return GetModuleDisplayName(LOD->TypeDataModule);
 }
