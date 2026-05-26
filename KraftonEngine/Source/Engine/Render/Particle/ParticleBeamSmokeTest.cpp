@@ -83,9 +83,9 @@ namespace
 		P->BaseVelocity       = FVector::ZeroVector;
 		P->Size               = FVector(4.0f, 4.0f, 0.0f);
 		P->BaseSize           = P->Size;
-		P->Rotation           = 0.0f;
-		P->BaseRotationRate   = 0.0f;
-		P->RotationRate       = 0.0f;
+		P->Rotation           = FVector::ZeroVector;
+		P->BaseRotationRate   = FVector::ZeroVector;
+		P->RotationRate       = FVector::ZeroVector;
 		P->Color              = FLinearColor(1.0f, 1.0f, 1.0f, 1.0f);
 		P->BaseColor          = P->Color;
 		P->RelativeTime       = 0.0f;

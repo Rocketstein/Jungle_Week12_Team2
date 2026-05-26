@@ -515,7 +515,7 @@ void FParticleEmitterInstance::UpdateParticles(float DeltaTime)
 		}
 		if ((Particle->Flags & STATE_Particle_FreezeRotation) == 0)
 		{
-			Particle->Rotation += Particle->RotationRate * DeltaTime;
+			Particle->Rotation = Particle->Rotation + Particle->RotationRate * DeltaTime;
 		}
 	}
 }
@@ -685,6 +685,9 @@ void FParticleEmitterInstance::PreSpawn(FBaseParticle* Particle, const FVector& 
 	Particle->Location = InitialLocation;
 	Particle->BaseVelocity = InitialVelocity;
 	Particle->Velocity = InitialVelocity;
+	Particle->Rotation = FVector::ZeroVector;
+	Particle->BaseRotationRate = FVector::ZeroVector;
+	Particle->RotationRate = FVector::ZeroVector;
 	Particle->BaseSize = FVector::OneVector;
 	Particle->Size = FVector::OneVector;
 	Particle->Color = FLinearColor(1.0f, 1.0f, 1.0f, 1.0f);

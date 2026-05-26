@@ -285,6 +285,55 @@ public:
 	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
 };
 
+UCLASS()
+class UParticleModuleInitialRotation : public UParticleModule
+{
+public:
+	GENERATED_BODY(UParticleModuleInitialRotation)
+
+	UParticleModuleInitialRotation();
+
+	UPROPERTY(Edit, Category="Rotation", DisplayName="Start Rotation")
+	FVector StartRotationDegrees = FVector::ZeroVector;
+	FVector StartRotationDegreesMin = FVector::ZeroVector;
+	FVector StartRotationDegreesMax = FVector::ZeroVector;
+
+	void Spawn(const FSpawnContext& Context) override;
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
+};
+
+UCLASS()
+class UParticleModuleInitialRotationRate : public UParticleModule
+{
+public:
+	GENERATED_BODY(UParticleModuleInitialRotationRate)
+
+	UParticleModuleInitialRotationRate();
+
+	UPROPERTY(Edit, Category="Rotation", DisplayName="Start Rotation Rate")
+	FVector StartRotationRateDegrees = FVector::ZeroVector;
+	FVector StartRotationRateDegreesMin = FVector::ZeroVector;
+	FVector StartRotationRateDegreesMax = FVector::ZeroVector;
+
+	void Spawn(const FSpawnContext& Context) override;
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
+};
+
+UCLASS()
+class UParticleModuleAcceleration : public UParticleModule
+{
+public:
+	GENERATED_BODY(UParticleModuleAcceleration)
+
+	UParticleModuleAcceleration();
+
+	UPROPERTY(Edit, Category="Acceleration", DisplayName="Acceleration")
+	FVector Acceleration = FVector::ZeroVector;
+
+	void Update(const FUpdateContext& Context) override;
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
+};
+
 struct FParticleCollisionPayload
 {
 	int32 CollisionCount = 0;
@@ -335,6 +384,8 @@ public:
 
 	UPROPERTY(Edit, Category="Color", DisplayName="Start Color")
 	FVector StartColor = FVector::OneVector;
+	FVector StartColorMin = FVector::OneVector;
+	FVector StartColorMax = FVector::OneVector;
 
 	UPROPERTY(Edit, Category="Color", DisplayName="Start Alpha", Min=0.0f, Max=1.0f, Speed=0.01f)
 	float StartAlpha = 1.0f;
@@ -360,6 +411,24 @@ public:
 	float AlphaOverLife = 0.0f;
 
 	void Spawn(const FSpawnContext& Context) override;
+	void Update(const FUpdateContext& Context) override;
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
+};
+
+UCLASS()
+class UParticleModuleColorScaleOverLife : public UParticleModuleColorBase
+{
+public:
+	GENERATED_BODY(UParticleModuleColorScaleOverLife)
+
+	UParticleModuleColorScaleOverLife();
+
+	UPROPERTY(Edit, Category="Color", DisplayName="Color Scale Over Life")
+	FVector ColorScaleOverLife = FVector::OneVector;
+
+	UPROPERTY(Edit, Category="Color", DisplayName="Alpha Scale Over Life", Min=0.0f, Max=1.0f, Speed=0.01f)
+	float AlphaScaleOverLife = 1.0f;
+
 	void Update(const FUpdateContext& Context) override;
 	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
 };
