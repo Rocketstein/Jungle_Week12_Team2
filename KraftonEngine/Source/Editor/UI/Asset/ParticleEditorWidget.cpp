@@ -298,17 +298,45 @@ namespace
 
 	bool DrawParticleToolbarButton(const char* Id, const wchar_t* IconFileName, const char* Label, bool bDisabled)
 	{
-		bool bClicked = false;
 		ID3D11ShaderResourceView* Icon = FEditorTextureManager::Get().GetOrLoadIcon(GetParticleEditorIconPath(IconFileName));
+
+		const ImGuiStyle& Style = ImGui::GetStyle();
+		constexpr float IconSize = 18.0f;
+		const float IconTextSpacing = Icon ? 5.0f : 0.0f;
+		const ImVec2 TextSize = ImGui::CalcTextSize(Label);
+		const ImVec2 ButtonSize(
+			Style.FramePadding.x * 2.0f + (Icon ? IconSize : 0.0f) + IconTextSpacing + TextSize.x,
+			Style.FramePadding.y * 2.0f + (std::max)(IconSize, TextSize.y));
 
 		ImGui::PushID(Id);
 		ImGui::BeginDisabled(bDisabled);
+		const bool bClicked = ImGui::Button("##Button", ButtonSize);
+
+		const ImVec2 ButtonMin = ImGui::GetItemRectMin();
+		const ImVec2 ButtonMax = ImGui::GetItemRectMax();
+		const float ContentWidth = (Icon ? IconSize : 0.0f) + IconTextSpacing + TextSize.x;
+		float CursorX = ButtonMin.x + (ButtonMax.x - ButtonMin.x - ContentWidth) * 0.5f;
+		const float CenterY = ButtonMin.y + (ButtonMax.y - ButtonMin.y) * 0.5f;
+
+		ImDrawList* DrawList = ImGui::GetWindowDrawList();
 		if (Icon)
 		{
-			bClicked |= ImGui::ImageButton("##Icon", reinterpret_cast<ImTextureID>(Icon), ImVec2(18.0f, 18.0f));
-			ImGui::SameLine(0.0f, 4.0f);
+			const ImVec2 IconMin(CursorX, CenterY - IconSize * 0.5f);
+			const ImVec2 IconMax(IconMin.x + IconSize, IconMin.y + IconSize);
+			DrawList->AddImage(
+				reinterpret_cast<ImTextureID>(Icon),
+				IconMin,
+				IconMax,
+				ImVec2(0.0f, 0.0f),
+				ImVec2(1.0f, 1.0f),
+				ImGui::GetColorU32(ImVec4(1.0f, 1.0f, 1.0f, bDisabled ? Style.DisabledAlpha : 1.0f)));
+			CursorX += IconSize + IconTextSpacing;
 		}
-		bClicked |= ImGui::Button(Label);
+
+		DrawList->AddText(
+			ImVec2(CursorX, CenterY - TextSize.y * 0.5f),
+			ImGui::GetColorU32(ImGuiCol_Text),
+			Label);
 		ImGui::EndDisabled();
 
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
@@ -1667,6 +1695,32 @@ void FParticleEditorWidget::RenderToolbar()
 	ImGui::SameLine();
 
 	const int32 LODCount = GetLODCount();
+	if (DrawParticleToolbarButton("BackgroundColor", L"icon_Cascade_Color_40x.png", "Background Color", false))
+	{
+		ImGui::OpenPopup("##ParticleBackgroundColorPopup");
+	}
+	if (ImGui::BeginPopup("##ParticleBackgroundColorPopup"))
+	{
+		const float* CurrentClearColor = ViewportClient.GetClearColor();
+		float EditableClearColor[4] =
+		{
+			CurrentClearColor[0],
+			CurrentClearColor[1],
+			CurrentClearColor[2],
+			CurrentClearColor[3]
+		};
+
+		if (ImGui::ColorEdit4("Color", EditableClearColor, ImGuiColorEditFlags_AlphaBar))
+		{
+			ViewportClient.SetClearColor(
+				EditableClearColor[0],
+				EditableClearColor[1],
+				EditableClearColor[2],
+				EditableClearColor[3]);
+		}
+		ImGui::EndPopup();
+	}
+	ImGui::SameLine();
 	if (DrawParticleToolbarButton("LowerLOD", L"Cascade_LowerLOD_512x.png", "Lower LOD", SelectedLODIndex <= 0))
 	{
 		SetSelectedLODIndex(SelectedLODIndex - 1);
