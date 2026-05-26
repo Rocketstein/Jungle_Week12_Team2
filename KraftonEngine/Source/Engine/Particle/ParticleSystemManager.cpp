@@ -3,6 +3,7 @@
 #include "Asset/AssetPackage.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialManager.h"
+#include "Mesh/MeshManager.h"
 #include "Object/ObjectFactory.h"
 #include "Particle/ParticleEmitter.h"
 #include "Particle/ParticleLODLevel.h"
@@ -12,9 +13,11 @@
 #include "Particle/TypeData/ParticleModuleTypeDataBeam2.h"
 #include "Particle/TypeData/ParticleModuleTypeDataRibbon.h"
 #include "Platform/Paths.h"
+#include "Runtime/Engine.h"
 #include "SimpleJSON/json.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <filesystem>
 
 namespace
@@ -120,6 +123,8 @@ namespace ParticleKeys
 	static constexpr const char* bLowFreqEnabled = "bLowFreqEnabled";
 	static constexpr const char* NoiseRangeMin = "NoiseRangeMin";
 	static constexpr const char* NoiseRangeMax = "NoiseRangeMax";
+	static constexpr const char* Mesh = "Mesh";
+	static constexpr const char* MeshPath = "MeshPath";
 	static constexpr const char* Ribbon = "Ribbon";
 	static constexpr const char* MaxTessellationBetweenParticles = "MaxTessellationBetweenParticles";
 	static constexpr const char* SheetsPerTrail = "SheetsPerTrail";
@@ -169,6 +174,61 @@ FString GetParticleMaterialPath(UMaterialInterface* MaterialInterface)
 {
 	UMaterial* Material = MaterialInterface ? MaterialInterface->GetMaterial() : nullptr;
 	return Material ? FPaths::MakeProjectRelative(Material->GetAssetPathFileName()) : FString();
+}
+
+UStaticMesh* LoadParticleStaticMesh(const FString& MeshPath)
+{
+	if (MeshPath.empty())
+	{
+		return nullptr;
+	}
+
+	if (UStaticMesh* CachedMesh = FMeshManager::FindStaticMesh(MeshPath))
+	{
+		return CachedMesh;
+	}
+
+	ID3D11Device* Device = GEngine ? GEngine->GetRenderer().GetFD3DDevice().GetDevice() : nullptr;
+	return Device ? FMeshManager::LoadStaticMesh(MeshPath, Device) : nullptr;
+}
+
+bool ExpandSpriteSizeToMeshVolume(UParticleModuleSize* Size)
+{
+	if (!Size)
+	{
+		return false;
+	}
+
+	auto ExpandIfSpriteDefault = [](FVector& Value) -> bool
+	{
+		const float TargetUniformSize = (std::max)(Value.X, Value.Y);
+		if (TargetUniformSize <= 1.0f || std::abs(Value.Z - 1.0f) > 0.001f)
+		{
+			return false;
+		}
+
+		Value.Z = TargetUniformSize;
+		return true;
+	};
+
+	bool bChanged = false;
+	bChanged |= ExpandIfSpriteDefault(Size->StartSize);
+	bChanged |= ExpandIfSpriteDefault(Size->StartSizeMin);
+	bChanged |= ExpandIfSpriteDefault(Size->StartSizeMax);
+	return bChanged;
+}
+
+void RestoreMeshEmitterSizeDefaults(UParticleLODLevel* LOD)
+{
+	if (!LOD || !LOD->TypeDataModule || !LOD->TypeDataModule->IsAMeshEmitter())
+	{
+		return;
+	}
+
+	for (UParticleModule* Module : LOD->Modules)
+	{
+		ExpandSpriteSizeToMeshVolume(Cast<UParticleModuleSize>(Module));
+	}
 }
 
 UParticleModuleTypeDataBase* FindLODTypeDataModule(UParticleLODLevel* LOD)
@@ -249,7 +309,12 @@ json::JSON SerializeTypeDataModule(UParticleModuleTypeDataBase* TypeData)
 		return Object;
 	}
 
-	if (UParticleModuleTypeDataBeam2* Beam = Cast<UParticleModuleTypeDataBeam2>(TypeData))
+	if (UParticleModuleTypeDataMesh* Mesh = Cast<UParticleModuleTypeDataMesh>(TypeData))
+	{
+		Object[ParticleKeys::Type] = ParticleKeys::Mesh;
+		Object[ParticleKeys::MeshPath] = FPaths::MakeProjectRelative(Mesh->MeshPath);
+	}
+	else if (UParticleModuleTypeDataBeam2* Beam = Cast<UParticleModuleTypeDataBeam2>(TypeData))
 	{
 		Object[ParticleKeys::Type] = ParticleKeys::Beam2;
 		Object[ParticleKeys::BeamMethod] = static_cast<int32>(Beam->BeamMethod);
@@ -589,6 +654,18 @@ UParticleModuleTypeDataBase* DeserializeTypeDataModule(json::JSON& Object, UPart
 	}
 
 	const FString Type = Object[ParticleKeys::Type].ToString();
+	if (Type == ParticleKeys::Mesh)
+	{
+		UParticleModuleTypeDataMesh* Mesh = GUObjectArray.CreateObject<UParticleModuleTypeDataMesh>(Outer);
+		Mesh->bEnabled = true;
+		if (Object.hasKey(ParticleKeys::MeshPath))
+		{
+			Mesh->MeshPath = FPaths::MakeProjectRelative(Object[ParticleKeys::MeshPath].ToString());
+			Mesh->Mesh = LoadParticleStaticMesh(Mesh->MeshPath);
+		}
+		return Mesh;
+	}
+
 	if (Type == ParticleKeys::Beam2)
 	{
 		UParticleModuleTypeDataBeam2* Beam = GUObjectArray.CreateObject<UParticleModuleTypeDataBeam2>(Outer);
@@ -901,6 +978,7 @@ UParticleLODLevel* DeserializeLODLevel(json::JSON& Object, UParticleEmitter* Out
 	}
 
 	RestoreLegacyDisabledModules(LOD, bAllowLegacyRestore);
+	RestoreMeshEmitterSizeDefaults(LOD);
 	LOD->ClassifyModulesByRole();
 	return LOD;
 }

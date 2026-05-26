@@ -485,6 +485,9 @@ class UParticleModuleTypeDataMesh : public UParticleModuleTypeDataBase
 public:
 	GENERATED_BODY(UParticleModuleTypeDataMesh)
 
+	UPROPERTY(Edit, Category="Mesh", DisplayName="Mesh Path")
+	FString MeshPath;
+	
 	UStaticMesh* Mesh = nullptr;
 
 	bool IsAMeshEmitter() const override { return true; }

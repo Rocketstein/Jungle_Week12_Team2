@@ -6,6 +6,7 @@
 #include "Component/ParticleSystemComponent.h"
 #include "Materials/Material.h"
 #include "Mesh/StaticMesh.h"
+#include "Render/Shader/ShaderManager.h"
 
 #include <algorithm>
 #include <cmath>
@@ -487,6 +488,8 @@ bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevic
 
 	if (Hit.Type == DET_Mesh && Hit.MeshGeom && Hit.InstanceCount > 0)
 	{
+		Cmd.Shader = FShaderManager::Get().GetOrCreate(EShaderPath::ParticleMesh);
+
 		if (Hit.bInstanceVBDirty && !Hit.PackedInstances.empty())
 		{
 			const uint32 Count = static_cast<uint32>(Hit.PackedInstances.size());
