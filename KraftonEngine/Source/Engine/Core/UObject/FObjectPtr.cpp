@@ -8,19 +8,21 @@ FObjectPtr::FObjectPtr(UObject* InObject)
 FObjectPtr::FObjectPtr(int32 Index)
 {
 	const auto& Items = GUObjectArray.GetItems();
-	if (Index < Items.size()) Handle = Items[Index].Object;
+	if (Index < Items.size() && Index >= 0) Handle = Items[Index].Object;
 	else Handle = nullptr;
 }
 
 FObjectPtr& FObjectPtr::operator=(UObject* Other)
 {
 	Handle = Other;
+	return *this;
 }
 
 FObjectPtr& FObjectPtr::operator=(std::nullptr_t)
 {
 	Handle   = nullptr;
 	DebugPtr = nullptr;
+	return *this;
 }
 
 UObject* FObjectPtr::Get() const
@@ -43,13 +45,13 @@ UClass* FObjectPtr::GetClass() const
 
 FName FObjectPtr::GetFName() const
 {
-	if (!Handle) return nullptr;
+	if (!Handle) return FName();
 	return Handle->GetFName();
 }
 
 FString FObjectPtr::GetName() const 
 {
-	if (!Handle) return "";
+	if (!Handle) return FString();
 	return Handle->GetName();
 }
 
@@ -78,4 +80,9 @@ bool FObjectPtr::IsA(const UClass* SomeBase) const
 {
 	if (!Handle || !SomeBase) return false;
 	return Handle->GetClass()->IsChildOf(SomeBase);
+}
+
+uint32 GetTypeHash(const FObjectPtr& P) 
+{ 
+	return ::GetTypeHash(P.Handle);
 }
