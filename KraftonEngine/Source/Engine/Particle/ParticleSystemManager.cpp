@@ -19,7 +19,7 @@
 
 namespace
 {
-constexpr int32 ParticleSystemVersion = 2;
+constexpr int32 ParticleSystemVersion = 3;
 
 namespace ParticleKeys
 {
@@ -93,6 +93,10 @@ namespace ParticleKeys
 	static constexpr const char* Distance = "Distance";
 	static constexpr const char* SourcePoint = "SourcePoint";
 	static constexpr const char* TargetPoint = "TargetPoint";
+	static constexpr const char* SourceTangentMethod = "SourceTangentMethod";
+	static constexpr const char* SourceTangent = "SourceTangent";
+	static constexpr const char* TargetTangentMethod = "TargetTangentMethod";
+	static constexpr const char* TargetTangent = "TargetTangent";
 	static constexpr const char* Width = "Width";
 	static constexpr const char* TextureTile = "TextureTile";
 	static constexpr const char* TextureTileDistance = "TextureTileDistance";
@@ -109,6 +113,13 @@ namespace ParticleKeys
 	static constexpr const char* TargetData = "TargetData";
 	static constexpr const char* TargetName = "TargetName";
 	static constexpr const char* TargetPercentage = "TargetPercentage";
+	static constexpr const char* NoiseAmplitude = "NoiseAmplitude";
+	static constexpr const char* NoiseFrequency = "NoiseFrequency";
+	static constexpr const char* NoiseSpeed = "NoiseSpeed";
+	static constexpr const char* NoiseSeed = "NoiseSeed";
+	static constexpr const char* bLowFreqEnabled = "bLowFreqEnabled";
+	static constexpr const char* NoiseRangeMin = "NoiseRangeMin";
+	static constexpr const char* NoiseRangeMax = "NoiseRangeMax";
 	static constexpr const char* Ribbon = "Ribbon";
 	static constexpr const char* MaxTessellationBetweenParticles = "MaxTessellationBetweenParticles";
 	static constexpr const char* SheetsPerTrail = "SheetsPerTrail";
@@ -314,6 +325,9 @@ const char* GetSerializableModuleType(UParticleModule* Module)
 	if (Module->IsA<UParticleModuleColor>()) return "InitialColor";
 	if (Module->IsA<UParticleModuleColorOverLife>()) return "ColorOverLife";
 	if (Module->IsA<UParticleModuleSize>()) return "InitialSize";
+	if (Module->IsA<UParticleModuleBeamSource>()) return "BeamSource";
+	if (Module->IsA<UParticleModuleBeamTarget>()) return "BeamTarget";
+	if (Module->IsA<UParticleModuleBeamNoise>()) return "BeamNoise";
 	if (Module->IsA<UParticleModuleCollision>()) return ParticleKeys::Collision;
 	return nullptr;
 }
@@ -370,6 +384,28 @@ json::JSON SerializeModule(UParticleModule* Module)
 		Object[ParticleKeys::StartSize] = MakeVectorJSON(Size->StartSize);
 		Object[ParticleKeys::StartSizeMin] = MakeVectorJSON(Size->StartSizeMin);
 		Object[ParticleKeys::StartSizeMax] = MakeVectorJSON(Size->StartSizeMax);
+	}
+	else if (UParticleModuleBeamSource* Source = Cast<UParticleModuleBeamSource>(Module))
+	{
+		Object[ParticleKeys::SourcePoint] = MakeVectorJSON(Source->SourcePoint);
+		Object[ParticleKeys::SourceTangentMethod] = static_cast<int32>(Source->SourceTangentMethod);
+		Object[ParticleKeys::SourceTangent] = MakeVectorJSON(Source->SourceTangent);
+	}
+	else if (UParticleModuleBeamTarget* Target = Cast<UParticleModuleBeamTarget>(Module))
+	{
+		Object[ParticleKeys::TargetPoint] = MakeVectorJSON(Target->TargetPoint);
+		Object[ParticleKeys::TargetTangentMethod] = static_cast<int32>(Target->TargetTangentMethod);
+		Object[ParticleKeys::TargetTangent] = MakeVectorJSON(Target->TargetTangent);
+	}
+	else if (UParticleModuleBeamNoise* Noise = Cast<UParticleModuleBeamNoise>(Module))
+	{
+		Object[ParticleKeys::NoiseAmplitude] = Noise->NoiseAmplitude;
+		Object[ParticleKeys::NoiseFrequency] = Noise->NoiseFrequency;
+		Object[ParticleKeys::NoiseSpeed] = Noise->NoiseSpeed;
+		Object[ParticleKeys::NoiseSeed] = Noise->NoiseSeed;
+		Object[ParticleKeys::bLowFreqEnabled] = Noise->bLowFreqEnabled;
+		Object[ParticleKeys::NoiseRangeMin] = MakeVectorJSON(Noise->NoiseRangeMin);
+		Object[ParticleKeys::NoiseRangeMax] = MakeVectorJSON(Noise->NoiseRangeMax);
 	}
 	else if (UParticleModuleCollision* Collision = Cast<UParticleModuleCollision>(Module))
 	{
@@ -442,6 +478,7 @@ json::JSON SerializeParticleSystem(UParticleSystem* ParticleSystem)
 
 	if (ParticleSystem)
 	{
+		Root[ParticleKeys::Name] = ParticleSystem->GetName();
 		ParticleSystem->NormalizeLODData();
 	}
 
@@ -714,6 +751,42 @@ UParticleModule* DeserializeModule(json::JSON& Object, UParticleLODLevel* Outer)
 		Size->StartSizeMax = ReadVectorJSON(Object, ParticleKeys::StartSizeMax, Size->StartSize);
 		Module = Size;
 	}
+	else if (Type == "BeamSource")
+	{
+		UParticleModuleBeamSource* Source = GUObjectArray.CreateObject<UParticleModuleBeamSource>(Outer);
+		Source->SourcePoint = ReadVectorJSON(Object, ParticleKeys::SourcePoint, Source->SourcePoint);
+		if (Object.hasKey(ParticleKeys::SourceTangentMethod))
+		{
+			const int32 Value = static_cast<int32>(Object[ParticleKeys::SourceTangentMethod].ToInt());
+			Source->SourceTangentMethod = static_cast<EBeamTangentMethod>(std::clamp(Value, 0, static_cast<int32>(PEBTANM_MAX) - 1));
+		}
+		Source->SourceTangent = ReadVectorJSON(Object, ParticleKeys::SourceTangent, Source->SourceTangent);
+		Module = Source;
+	}
+	else if (Type == "BeamTarget")
+	{
+		UParticleModuleBeamTarget* Target = GUObjectArray.CreateObject<UParticleModuleBeamTarget>(Outer);
+		Target->TargetPoint = ReadVectorJSON(Object, ParticleKeys::TargetPoint, Target->TargetPoint);
+		if (Object.hasKey(ParticleKeys::TargetTangentMethod))
+		{
+			const int32 Value = static_cast<int32>(Object[ParticleKeys::TargetTangentMethod].ToInt());
+			Target->TargetTangentMethod = static_cast<EBeamTangentMethod>(std::clamp(Value, 0, static_cast<int32>(PEBTANM_MAX) - 1));
+		}
+		Target->TargetTangent = ReadVectorJSON(Object, ParticleKeys::TargetTangent, Target->TargetTangent);
+		Module = Target;
+	}
+	else if (Type == "BeamNoise")
+	{
+		UParticleModuleBeamNoise* Noise = GUObjectArray.CreateObject<UParticleModuleBeamNoise>(Outer);
+		if (Object.hasKey(ParticleKeys::NoiseAmplitude)) Noise->NoiseAmplitude = std::max(0.0f, static_cast<float>(Object[ParticleKeys::NoiseAmplitude].ToFloat()));
+		if (Object.hasKey(ParticleKeys::NoiseFrequency)) Noise->NoiseFrequency = std::max(0.0f, static_cast<float>(Object[ParticleKeys::NoiseFrequency].ToFloat()));
+		if (Object.hasKey(ParticleKeys::NoiseSpeed)) Noise->NoiseSpeed = std::max(0.0f, static_cast<float>(Object[ParticleKeys::NoiseSpeed].ToFloat()));
+		if (Object.hasKey(ParticleKeys::NoiseSeed)) Noise->NoiseSeed = static_cast<float>(Object[ParticleKeys::NoiseSeed].ToFloat());
+		if (Object.hasKey(ParticleKeys::bLowFreqEnabled)) Noise->bLowFreqEnabled = Object[ParticleKeys::bLowFreqEnabled].ToBool();
+		Noise->NoiseRangeMin = ReadVectorJSON(Object, ParticleKeys::NoiseRangeMin, Noise->NoiseRangeMin);
+		Noise->NoiseRangeMax = ReadVectorJSON(Object, ParticleKeys::NoiseRangeMax, Noise->NoiseRangeMax);
+		Module = Noise;
+	}
 	else if (Type == ParticleKeys::Collision)
 	{
 		UParticleModuleCollision* Collision = GUObjectArray.CreateObject<UParticleModuleCollision>(Outer);
@@ -878,6 +951,14 @@ void DeserializeParticleSystem(UParticleSystem* ParticleSystem, const FString& P
 
 	const int32 Version = Root.hasKey(ParticleKeys::Version) ? static_cast<int32>(Root[ParticleKeys::Version].ToInt()) : 1;
 	const bool bAllowLegacyRestore = Version < ParticleSystemVersion;
+	if (Root.hasKey(ParticleKeys::Name))
+	{
+		const FString AssetName = Root[ParticleKeys::Name].ToString();
+		if (!AssetName.empty())
+		{
+			ParticleSystem->SetFName(FName(AssetName));
+		}
+	}
 
 	if (Root.hasKey(ParticleKeys::LODDistances))
 	{
@@ -981,4 +1062,57 @@ bool FParticleSystemManager::Save(UParticleSystem* ParticleSystem)
 	FAssetImportMetadata Metadata;
 	json::JSON Root = SerializeParticleSystem(ParticleSystem);
 	return FAssetPackage::SaveStringPayload(Path, EAssetPackageType::ParticleSystem, Metadata, Root.dump());
+}
+
+bool FParticleSystemManager::Rename(UParticleSystem* ParticleSystem, const FString& NewName)
+{
+	if (!ParticleSystem || NewName.empty())
+	{
+		return false;
+	}
+
+	const FString OldPathString = FPaths::MakeProjectRelative(ParticleSystem->GetAssetPathFileName());
+	if (OldPathString.empty())
+	{
+		return false;
+	}
+
+	std::filesystem::path OldPath(FPaths::ToWide(OldPathString));
+	if (!OldPath.is_absolute())
+	{
+		OldPath = std::filesystem::path(FPaths::RootDir()) / OldPath;
+	}
+	OldPath = OldPath.lexically_normal();
+
+	std::filesystem::path NewPath = OldPath.parent_path() / (FPaths::ToWide(NewName) + L".uasset");
+	NewPath = NewPath.lexically_normal();
+
+	if (OldPath == NewPath)
+	{
+		ParticleSystem->SetFName(FName(NewName));
+		return Save(ParticleSystem);
+	}
+
+	if (std::filesystem::exists(NewPath))
+	{
+		return false;
+	}
+
+	std::error_code Error;
+	if (std::filesystem::exists(OldPath))
+	{
+		std::filesystem::rename(OldPath, NewPath, Error);
+		if (Error)
+		{
+			return false;
+		}
+	}
+
+	const FString NewPathString = FPaths::MakeProjectRelative(FPaths::ToUtf8(NewPath.generic_wstring()));
+	LoadedParticleSystems.erase(OldPathString);
+	ParticleSystem->SetAssetPathFileName(NewPathString);
+	ParticleSystem->SetFName(FName(NewName));
+	LoadedParticleSystems[NewPathString] = ParticleSystem;
+
+	return Save(ParticleSystem);
 }

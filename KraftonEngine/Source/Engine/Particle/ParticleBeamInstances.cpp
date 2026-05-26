@@ -9,6 +9,28 @@
 
 #include <algorithm>
 
+namespace
+{
+	template <typename TModule>
+	TModule* FindEnabledBeamModule(UParticleLODLevel* LOD)
+	{
+		if (!LOD)
+		{
+			return nullptr;
+		}
+
+		for (UParticleModule* Module : LOD->Modules)
+		{
+			TModule* TypedModule = Cast<TModule>(Module);
+			if (TypedModule && TypedModule->bEnabled)
+			{
+				return TypedModule;
+			}
+		}
+		return nullptr;
+	}
+}
+
 void FBeam2EmitterInstance::Tick(float DeltaTime, int32 LODLevel, bool bSuppressSpawning)
 {
 	FParticleEmitterInstance::Tick(DeltaTime, LODLevel, bSuppressSpawning);
@@ -30,11 +52,23 @@ FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
 
 	FVector LocalSource = BeamModule->SourcePoint;
 	FVector LocalTarget = BeamModule->TargetPoint;
+	FVector LocalSourceTangent = FVector::ZeroVector;
+	FVector LocalTargetTangent = FVector::ZeroVector;
+	bool bUseTangents = false;
+	if (UParticleModuleBeamSource* SourceModule = FindEnabledBeamModule<UParticleModuleBeamSource>(CurrentLODLevel))
+	{
+		LocalSource = SourceModule->SourcePoint;
+		if (SourceModule->SourceTangentMethod == PEBTANM_UserSet)
+		{
+			LocalSourceTangent = SourceModule->SourceTangent;
+			bUseTangents = true;
+		}
+	}
 
 	switch (BeamModule->BeamMethod)
 	{
 	case PEB2M_Distance:
-		LocalTarget = BeamModule->SourcePoint + FVector(BeamModule->Distance, 0.0f, 0.0f);
+		LocalTarget = LocalSource + FVector(BeamModule->Distance, 0.0f, 0.0f);
 		break;
 	case PEB2M_Target:
 		break;
@@ -45,12 +79,21 @@ FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
 	default:
 		return nullptr;
 	}
+	if (UParticleModuleBeamTarget* TargetModule = FindEnabledBeamModule<UParticleModuleBeamTarget>(CurrentLODLevel))
+	{
+		LocalTarget = TargetModule->TargetPoint;
+		if (TargetModule->TargetTangentMethod == PEBTANM_UserSet)
+		{
+			LocalTargetTangent = TargetModule->TargetTangent;
+			bUseTangents = true;
+		}
+	}
 
 	const FMatrix& ComponentToWorld = Component->GetWorldMatrix();
 	const int32 SheetCount = std::max(1, BeamModule->Sheets);
 	const int32 MaxBeamCount = std::max(1, BeamModule->MaxBeamCount);
 	const int32 LogicalBeamCount = BeamModule->bAlwaysOn
-		? std::clamp(std::max(1, ActiveParticles), 1, MaxBeamCount)
+		? MaxBeamCount
 		: std::clamp(ActiveParticles, 0, MaxBeamCount);
 	const float FullBeamLength = (ComponentToWorld.TransformPositionWithW(LocalTarget)
 		- ComponentToWorld.TransformPositionWithW(LocalSource)).Length();
@@ -68,6 +111,18 @@ FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
 	NewEmitterReplayData->UpVectorStepSize = std::max(0, BeamModule->UpVectorStepSize);
 	NewEmitterReplayData->TextureTile = std::max(1, BeamModule->TextureTile);
 	NewEmitterReplayData->TextureTileDistance = std::max(0.0f, BeamModule->TextureTileDistance);
+	if (UParticleModuleBeamNoise* NoiseModule = FindEnabledBeamModule<UParticleModuleBeamNoise>(CurrentLODLevel))
+	{
+		NewEmitterReplayData->NoiseAmplitude = std::max(0.0f, NoiseModule->NoiseAmplitude);
+		NewEmitterReplayData->NoiseFrequency = std::max(0.0f, NoiseModule->NoiseFrequency);
+		NewEmitterReplayData->NoisePhase = SecondsSinceCreation * std::max(0.0f, NoiseModule->NoiseSpeed);
+		NewEmitterReplayData->NoiseSeed = NoiseModule->NoiseSeed;
+		if (NoiseModule->bLowFreqEnabled)
+		{
+			NewEmitterReplayData->NoiseRangeMin = NoiseModule->NoiseRangeMin;
+			NewEmitterReplayData->NoiseRangeMax = NoiseModule->NoiseRangeMax;
+		}
+	}
 	NewEmitterReplayData->bRenderDirectLine = BeamModule->bRenderDirectLine;
 	NewEmitterReplayData->bRenderGeometry = BeamModule->bRenderGeometry;
 	NewEmitterReplayData->bRenderLines = BeamModule->bRenderLines;
@@ -79,10 +134,13 @@ FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
 	const FVector WorldSource = ComponentToWorld.TransformPositionWithW(LocalSource);
 	const FVector WorldTarget = ComponentToWorld.TransformPositionWithW(LocalTarget);
 	const FVector WorldBeamDelta = WorldTarget - WorldSource;
+	const FVector WorldSourceTangent = ComponentToWorld.TransformVector(LocalSourceTangent);
+	const FVector WorldTargetTangent = ComponentToWorld.TransformVector(LocalTargetTangent);
+	const bool bUseParticleInstanceData = !BeamModule->bAlwaysOn;
 	NewEmitterReplayData->Beams.reserve(LogicalBeamCount);
 	for (int32 i = 0; i < LogicalBeamCount; ++i)
 	{
-		const FBaseParticle* Particle = (i < ActiveParticles && ParticleIndices)
+		const FBaseParticle* Particle = (bUseParticleInstanceData && i < ActiveParticles && ParticleIndices)
 			? GetParticleDirect(ParticleIndices[i])
 			: nullptr;
 		const FVector BeamOffset = Particle ? (Particle->Location - Location) : FVector::ZeroVector;
@@ -99,6 +157,9 @@ FDynamicEmitterReplayDataBase* FBeam2EmitterInstance::GetReplayData()
 		FBeamInstanceData Beam;
 		Beam.Source       = WorldSource + BeamOffset;
 		Beam.Target       = Beam.Source + WorldBeamDelta;
+		Beam.SourceTangent = WorldSourceTangent;
+		Beam.TargetTangent = WorldTargetTangent;
+		Beam.bUseTangents = bUseTangents;
 		Beam.Color        = BeamColor;
 		Beam.Alpha        = std::clamp(BeamAlpha, 0.0f, 1.0f);
 		Beam.Width        = BeamModule->Width * WidthScale;

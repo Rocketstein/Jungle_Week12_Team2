@@ -154,6 +154,7 @@ bool FAssetFactory::CreateParticleSystem(const FString& DirectoryPath, const FSt
 
 	UParticleSystem* NewAsset = GUObjectArray.CreateObject<UParticleSystem>();
 	NewAsset->SetAssetPathFileName(FPaths::ToUtf8(AssetPath.wstring()));
+	NewAsset->SetFName(FName(FPaths::ToUtf8(AssetPath.stem().wstring())));
 
 	bool bSaved = FParticleSystemManager::Get().Save(NewAsset);
 	GUObjectArray.DestroyObject(NewAsset);

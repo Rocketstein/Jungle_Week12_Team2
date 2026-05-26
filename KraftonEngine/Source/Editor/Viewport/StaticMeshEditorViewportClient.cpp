@@ -37,7 +37,9 @@ void FStaticMeshEditorViewportClient::Release()
 
 void FStaticMeshEditorViewportClient::ResetCameraToPreviewBounds()
 {
-	FBoundingBox Bounds = PreviewMeshComponent
+	FBoundingBox Bounds = bHasPreviewBoundsOverride
+		? PreviewBoundsOverride
+		: PreviewMeshComponent
 		? PreviewMeshComponent->GetWorldBoundingBox()
 		: FBoundingBox(FVector(-0.5f, -0.5f, -0.5f), FVector(0.5f, 0.5f, 0.5f));
 

@@ -4,6 +4,7 @@
 #include "Viewport/ViewportClient.h"
 #include "Editor/Viewport/ViewportCameraTransform.h"
 #include "Editor/Slate/SWindow.h"
+#include "Core/EngineTypes.h"
 
 #include <d3d11.h>
 
@@ -23,6 +24,8 @@ public:
 	void SetPreviewWorld(UWorld* InWorld) { PreviewWorld = InWorld; }
 	void SetPreviewActor(AActor* InActor) { PreviewActor = InActor; }
 	void SetPreviewMeshComponent(UStaticMeshComponent* InComp) { PreviewMeshComponent = InComp; }
+	void SetPreviewBoundsOverride(const FBoundingBox& InBounds) { PreviewBoundsOverride = InBounds; bHasPreviewBoundsOverride = InBounds.IsValid(); }
+	void ClearPreviewBoundsOverride() { bHasPreviewBoundsOverride = false; }
 	void SetViewportRect(float X, float Y, float Width, float Height) { ViewportScreenRect = { X, Y, Width, Height }; }
 	void SetClearColor(float R, float G, float B, float A = 1.0f)
 	{
@@ -63,6 +66,8 @@ private:
 	UWorld* PreviewWorld = nullptr;
 	AActor* PreviewActor = nullptr;
 	UStaticMeshComponent* PreviewMeshComponent = nullptr;
+	FBoundingBox PreviewBoundsOverride;
+	bool bHasPreviewBoundsOverride = false;
 
 	bool bIsRenderable = false;
 

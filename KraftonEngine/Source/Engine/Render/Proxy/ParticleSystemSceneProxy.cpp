@@ -41,6 +41,67 @@ namespace {
 			+ UnitAxis * (UnitAxis.Dot(Value) * (1.0f - C));
 	}
 
+	FVector EvaluateBeamCenter(const FBeamInstanceData& Beam, float Alpha)
+	{
+		Alpha = std::clamp(Alpha, 0.0f, 1.0f);
+		if (!Beam.bUseTangents)
+		{
+			return Beam.Source + (Beam.Target - Beam.Source) * Alpha;
+		}
+
+		const float A2 = Alpha * Alpha;
+		const float A3 = A2 * Alpha;
+		const float H00 = 2.0f * A3 - 3.0f * A2 + 1.0f;
+		const float H10 = A3 - 2.0f * A2 + Alpha;
+		const float H01 = -2.0f * A3 + 3.0f * A2;
+		const float H11 = A3 - A2;
+		return Beam.Source * H00
+			+ Beam.SourceTangent * H10
+			+ Beam.Target * H01
+			+ Beam.TargetTangent * H11;
+	}
+
+	float BeamNoise01(float Seed)
+	{
+		const float Value = std::sin(Seed) * 43758.5453123f;
+		return Value - std::floor(Value);
+	}
+
+	FVector BeamNoiseSample(const FDynamicBeamEmitterReplayData& Source, float SampleIndex, float BeamIndex)
+	{
+		const float Seed = Source.NoiseSeed + BeamIndex * 101.73f + SampleIndex * 17.137f;
+		const FVector Noise(
+			BeamNoise01(Seed + 11.0f),
+			BeamNoise01(Seed + 29.0f),
+			BeamNoise01(Seed + 47.0f));
+		const FVector Range = Source.NoiseRangeMax - Source.NoiseRangeMin;
+		return Source.NoiseRangeMin + FVector(Range.X * Noise.X, Range.Y * Noise.Y, Range.Z * Noise.Z);
+	}
+
+	FVector ApplyBeamNoise(const FDynamicBeamEmitterReplayData& Source, const FVector& Center, const FVector& BeamDir, float Alpha, float BeamIndex)
+	{
+		if (Source.NoiseFrequency <= 0.0f)
+		{
+			return Center;
+		}
+
+		constexpr float Pi = 3.14159265358979323846f;
+		const FVector AxisA = SafeNormalizeBeam(BeamDir.Cross(FVector::UpVector), FVector::RightVector);
+		const FVector AxisB = SafeNormalizeBeam(BeamDir.Cross(AxisA), FVector::UpVector);
+		const float EndpointFade = std::sin(std::clamp(Alpha, 0.0f, 1.0f) * Pi);
+		const float Phase = Source.NoisePhase + (Source.NoiseSeed + BeamIndex * 0.61803398875f) * 2.0f * Pi;
+		const float WaveA = std::sin((Alpha * Source.NoiseFrequency) * 2.0f * Pi + Phase);
+		const float WaveB = std::cos((Alpha * Source.NoiseFrequency * 1.37f) * 2.0f * Pi - Phase);
+		const float NoiseCoord = std::clamp(Alpha, 0.0f, 1.0f) * Source.NoiseFrequency;
+		const float NoiseIndex = std::floor(NoiseCoord);
+		const float NoiseAlpha = NoiseCoord - NoiseIndex;
+		const FVector NoiseA = BeamNoiseSample(Source, NoiseIndex, BeamIndex);
+		const FVector NoiseB = BeamNoiseSample(Source, NoiseIndex + 1.0f, BeamIndex);
+		const FVector UniformRange = NoiseA + (NoiseB - NoiseA) * NoiseAlpha;
+		const FVector AxisNoise = (AxisA * WaveA + AxisB * WaveB) * Source.NoiseAmplitude;
+		return Center + (UniformRange + AxisNoise) * EndpointFade;
+	}
+
 	float ApplyBeamTaper(EBeamTaperMethod TaperMethod, float TaperFactor, float TaperScale, float Alpha)
 	{
 		Alpha = std::clamp(Alpha, 0.0f, 1.0f);
@@ -695,7 +756,6 @@ void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(const FFrameCon
 	const int32 PointCount = SegmentCount + 1;
 	const int32 SheetCount = std::clamp(Source.Sheets,
 		1, static_cast<int32>(MaxSheetsPerBeam));
-
 	const uint32 VertsPerBeam   = static_cast<uint32>(PointCount) * 2u * static_cast<uint32>(SheetCount);
 	const uint32 IndicesPerBeam = static_cast<uint32>(SegmentCount) * 6u * static_cast<uint32>(SheetCount);
 	PackedVertices.reserve(PackedVertices.size() + VertsPerBeam   * Source.Beams.size());
@@ -704,8 +764,9 @@ void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(const FFrameCon
 	constexpr float Pi = 3.14159265358979323846f;
 	uint32 IndicesEmitted = 0;
 
-	for (const FBeamInstanceData& Beam : Source.Beams)
+	for (size_t BeamIndex = 0; BeamIndex < Source.Beams.size(); ++BeamIndex)
 	{
+		const FBeamInstanceData& Beam = Source.Beams[BeamIndex];
 		const FVector BeamDelta = Beam.Target - Beam.Source;
 		const float BeamLen = BeamDelta.Length();
 		if (BeamLen <= 1e-6f)
@@ -713,8 +774,6 @@ void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(const FFrameCon
 
 		const float   Progress     = std::clamp(Beam.BeamProgress, 0.0f, 1.0f);
 		const float   VisibleLen   = BeamLen * Progress;
-		const FVector VisibleDelta = BeamDelta * Progress;
-		const FVector BeamDir      = BeamDelta * (1.0f / BeamLen);
 		const FVector4 PackedColor(Beam.Color.X, Beam.Color.Y, Beam.Color.Z,
 			std::clamp(Beam.Alpha, 0.0f, 1.0f));
 
@@ -724,7 +783,12 @@ void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(const FFrameCon
 			for (int32 PointIdx = 0; PointIdx < PointCount; ++PointIdx)
 			{
 				const float T = static_cast<float>(PointIdx) / static_cast<float>(std::max(PointCount - 1, 1));
-				const FVector Center = Beam.Source + VisibleDelta * T;
+				const float BeamAlpha = T * Progress;
+				const float DirectionStep = 1.0f / static_cast<float>(std::max(PointCount - 1, 1));
+				const FVector PrevCenter = EvaluateBeamCenter(Beam, std::clamp(BeamAlpha - DirectionStep, 0.0f, Progress));
+				const FVector NextCenter = EvaluateBeamCenter(Beam, std::clamp(BeamAlpha + DirectionStep, 0.0f, Progress));
+				const FVector BeamDir = SafeNormalizeBeam(NextCenter - PrevCenter, BeamDelta * (1.0f / BeamLen));
+				const FVector Center = ApplyBeamNoise(Source, EvaluateBeamCenter(Beam, BeamAlpha), BeamDir, BeamAlpha, static_cast<float>(BeamIndex));
 				const float Taper = ApplyBeamTaper(Beam.TaperMethod, Beam.TaperFactor, Beam.TaperScale, T);
 				const float HalfWidth = std::max(0.0f, Beam.Width * Taper) * 0.5f;
 
