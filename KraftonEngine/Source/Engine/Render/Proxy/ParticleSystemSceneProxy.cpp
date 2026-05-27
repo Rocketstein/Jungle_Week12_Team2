@@ -519,6 +519,42 @@ bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevic
 	}
 	Cmd.Bindings.PerShaderCB[0] = &Hit.ParticleParamCB;
 
+	FVector4 MaterialColor(1.0f, 1.0f, 1.0f, 1.0f);
+	if (Hit.Material)
+	{
+		Hit.Material->GetVector4Parameter("SectionColor", MaterialColor);
+	}
+	const uint32 HasDiffuseTexture = Hit.Material && Hit.Material->GetCachedSRVs()[(int)EMaterialTextureSlot::Diffuse] ? 1u : 0u;
+	if (Hit.ParticleMaterialParams.MaterialColor.X != MaterialColor.X
+		|| Hit.ParticleMaterialParams.MaterialColor.Y != MaterialColor.Y
+		|| Hit.ParticleMaterialParams.MaterialColor.Z != MaterialColor.Z
+		|| Hit.ParticleMaterialParams.MaterialColor.W != MaterialColor.W
+		|| Hit.ParticleMaterialParams.HasDiffuseTexture != HasDiffuseTexture)
+	{
+		Hit.ParticleMaterialParams.MaterialColor = MaterialColor;
+		Hit.ParticleMaterialParams.HasDiffuseTexture = HasDiffuseTexture;
+		Hit.bParticleMaterialCBDirty = true;
+	}
+
+	if (Hit.bParticleMaterialCBDirty)
+	{
+		if (!Hit.ParticleMaterialCB.GetBuffer())
+		{
+			Hit.ParticleMaterialCB.Create(
+				InDevice,
+				sizeof(FParticleMaterialConstants),
+				"ParticleMaterialCB");
+		}
+
+		Hit.ParticleMaterialCB.Update(
+			InDeviceContext,
+			&Hit.ParticleMaterialParams,
+			sizeof(FParticleMaterialConstants));
+
+		Hit.bParticleMaterialCBDirty = false;
+	}
+	Cmd.Bindings.PerShaderCB[1] = &Hit.ParticleMaterialCB;
+
 	if (Hit.Type == DET_Mesh && Hit.MeshGeom && Hit.InstanceCount > 0)
 	{
 		Cmd.Shader = FShaderManager::Get().GetOrCreate(EShaderPath::ParticleMesh);

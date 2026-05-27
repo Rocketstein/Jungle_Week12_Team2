@@ -1902,7 +1902,7 @@
               },
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Simulate Physics" : false,
-              "Template" : "Asset/Particle/NewParticleSystem_2.uasset",
+              "Template" : "Asset/Particle/P_RibbonTest.uasset",
               "bEditorOnly" : false,
               "bHiddenInComponentTree" : false,
               "bIsActive" : true,
@@ -2034,7 +2034,7 @@
     "FarClip" : 1000.000000,
     "Location" : [-28.615389, 5.824405, 23.136967],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, 20.922432, -368.688049]
+    "Rotation" : [0.000000, 23.772429, -414.288025]
   },
   "Version" : 2,
   "WorldSettings" : {
