@@ -7,7 +7,7 @@ public:
 	explicit FLinker(FArchive* InInner) : Inner(InInner) {}
 
 protected:
-	FArchive* Inner;          // real byte stream underneath
+	FArchive* Inner;				 // real byte stream underneath
 	TArray<UObject*> ObjectTable;    // 1-based; index 0 reserved for null
 };
 
@@ -16,7 +16,8 @@ class FLinkerSave final : public FLinker
 public:
 	explicit FLinkerSave(FArchive* InInner) : FLinker(InInner) { bIsSaving = true; }
 
-	int32 IndexForObject(UObject* Obj);        // 0 = null; adds on first sight
+	// TODO: Promote to MapObject when UPackage is a thing
+	int32 IndexForObject(UObject* Obj);         // 0 = null; adds on first sight
 	void  Finalize();                           // writes [Count][Path*Count][Buffer] to Inner
 
 	void      Serialize(void* Data, size_t Num) override;     // appends to SaveBuffer
