@@ -1,0 +1,18 @@
+{
+  "BlendState" : "",
+  "DepthStencilState" : "",
+  "Origin" : "FbxImport",
+  "Parameters" : {
+    "HasNormalMap" : 1.000000,
+    "SectionColor" : [1.000000, 1.000000, 1.000000, 1.000000],
+    "_pad" : [0.000000, 0.000000, 0.000000]
+  },
+  "PathFileName" : "Asset/Mesh/JapaneseLantern/JapaneseLantern_Material.001.mat",
+  "RasterizerState" : "",
+  "RenderPass" : "Opaque",
+  "ShaderPath" : "Shaders/Geometry/UberLit.hlsl",
+  "Textures" : {
+    "DiffuseTexture" : "Asset/Mesh/JapaneseLantern/JapaneseLantern.fbm/Image_0",
+    "NormalTexture" : "Asset/Mesh/JapaneseLantern/JapaneseLantern.fbm/Image_3"
+  }
+}

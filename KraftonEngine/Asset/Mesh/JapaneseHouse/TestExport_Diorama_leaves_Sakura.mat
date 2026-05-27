@@ -8,8 +8,8 @@
     "_pad" : [0.000000, 0.000000, 0.000000]
   },
   "PathFileName" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_leaves_Sakura.mat",
-  "RasterizerState" : "",
-  "RenderPass" : "Opaque",
+  "RasterizerState" : "AlphaBlend",
+  "RenderPass" : "Translucent",
   "ShaderPath" : "Shaders/Geometry/UberLit.hlsl",
   "Textures" : {
     "DiffuseTexture" : "Asset/Mesh/JapaneseHouse/T_Tree02_BC.png"
