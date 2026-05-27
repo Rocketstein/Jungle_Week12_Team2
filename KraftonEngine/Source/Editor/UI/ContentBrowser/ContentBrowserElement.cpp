@@ -13,6 +13,7 @@
 #include "FloatCurve/FloatCurveManager.h"
 #include "CameraShake/CameraShakeAsset.h"
 #include "CameraShake/CameraShakeManager.h"
+#include "Core/Log.h"
 #include "Platform/Paths.h"
 #include "Serialization/SceneSaveManager.h"
 #include "Materials/MaterialManager.h"
@@ -26,6 +27,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
+#include <cstring>
 #include <filesystem>
 
 static FString FormatBytes(uint64 Bytes)
@@ -227,6 +229,20 @@ void ContentBrowserElement::Render(ContentBrowserContext& Context)
 		ImGui::EndPopup();
 	}
 
+	if (bPendingOpenDeletePopup)
+	{
+		ImGui::OpenPopup(GetDeletePopupId().c_str());
+		bPendingOpenDeletePopup = false;
+	}
+	RenderDeleteConfirmation(Context);
+
+	if (bPendingOpenRenamePopup)
+	{
+		ImGui::OpenPopup(GetRenamePopupId().c_str());
+		bPendingOpenRenamePopup = false;
+	}
+	RenderRenamePopup(Context);
+
 	bool bDoubleClicked = ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
 	if (bDoubleClicked)
 	{
@@ -305,6 +321,171 @@ void ContentBrowserElement::RenderDetail()
 	}
 }
 
+void ContentBrowserElement::RenderContextMenu(ContentBrowserContext& Context)
+{
+	if (ImGui::MenuItem("Open"))
+	{
+		OnDoubleLeftClicked(Context);
+	}
+
+	if (ImGui::MenuItem("Rename"))
+	{
+		PrepareRenamePopup();
+		bPendingOpenRenamePopup = true;
+	}
+
+	if (ImGui::MenuItem("Show in Explorer"))
+	{
+		const std::wstring Args = L"/select,\"" + ContentItem.Path.wstring() + L"\"";
+		ShellExecuteW(nullptr, L"open", L"explorer.exe", Args.c_str(), nullptr, SW_SHOWNORMAL);
+	}
+
+	ImGui::Separator();
+	if (ImGui::MenuItem("Delete"))
+	{
+		bPendingOpenDeletePopup = true;
+	}
+}
+
+FString ContentBrowserElement::GetDeletePopupId() const
+{
+	return "Delete Asset?##" + FPaths::ToUtf8(ContentItem.Path.generic_wstring());
+}
+
+FString ContentBrowserElement::GetRenamePopupId() const
+{
+	return "Rename Asset##" + FPaths::ToUtf8(ContentItem.Path.generic_wstring());
+}
+
+void ContentBrowserElement::RenderDeleteConfirmation(ContentBrowserContext& Context)
+{
+	const FString PopupId = GetDeletePopupId();
+	if (!ImGui::BeginPopupModal(PopupId.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		return;
+	}
+
+	const FString DisplayName = GetDisplayName();
+	ImGui::Text("Delete '%s'?", DisplayName.c_str());
+	ImGui::TextDisabled("This removes the file from disk.");
+	ImGui::Spacing();
+
+	if (ImGui::Button("Delete", ImVec2(96.0f, 0.0f)))
+	{
+		if (DeleteFromDisk())
+		{
+			if (Context.SelectedElement.get() == this)
+			{
+				Context.SelectedElement.reset();
+			}
+			Context.bPendingContentRefresh = true;
+		}
+		ImGui::CloseCurrentPopup();
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Cancel", ImVec2(96.0f, 0.0f)))
+	{
+		ImGui::CloseCurrentPopup();
+	}
+
+	ImGui::EndPopup();
+}
+
+void ContentBrowserElement::RenderRenamePopup(ContentBrowserContext& Context)
+{
+	const FString PopupId = GetRenamePopupId();
+	if (!ImGui::BeginPopupModal(PopupId.c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		return;
+	}
+
+	ImGui::TextUnformatted("Rename");
+	ImGui::SetNextItemWidth(280.0f);
+	const bool bSubmitted = ImGui::InputText("##Rename", RenameBuffer, sizeof(RenameBuffer), ImGuiInputTextFlags_EnterReturnsTrue);
+	ImGui::Spacing();
+
+	if (ImGui::Button("Rename", ImVec2(96.0f, 0.0f)) || bSubmitted)
+	{
+		if (RenameOnDisk(RenameBuffer))
+		{
+			Context.SelectedElement.reset();
+			Context.bPendingContentRefresh = true;
+		}
+		ImGui::CloseCurrentPopup();
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Cancel", ImVec2(96.0f, 0.0f)))
+	{
+		ImGui::CloseCurrentPopup();
+	}
+
+	ImGui::EndPopup();
+}
+
+void ContentBrowserElement::PrepareRenamePopup()
+{
+	const FString DisplayName = GetDisplayName();
+	std::snprintf(RenameBuffer, sizeof(RenameBuffer), "%s", DisplayName.c_str());
+}
+
+bool ContentBrowserElement::DeleteFromDisk()
+{
+	std::error_code Error;
+	if (std::filesystem::is_directory(ContentItem.Path, Error))
+	{
+		std::filesystem::remove_all(ContentItem.Path, Error);
+	}
+	else
+	{
+		std::filesystem::remove(ContentItem.Path, Error);
+	}
+
+	if (Error)
+	{
+		UE_LOG("Content Browser delete failed: %s", Error.message().c_str());
+		return false;
+	}
+
+	return true;
+}
+
+bool ContentBrowserElement::RenameOnDisk(const FString& NewName)
+{
+	if (NewName.empty() || NewName.find_first_of("<>:\"/\\|?*") != FString::npos)
+	{
+		UE_LOG("Content Browser rename failed: invalid name '%s'", NewName.c_str());
+		return false;
+	}
+
+	std::filesystem::path TargetPath = ContentItem.Path.parent_path() / FPaths::ToWide(NewName);
+	std::error_code Error;
+	const bool bIsDirectory = std::filesystem::is_directory(ContentItem.Path, Error);
+	if (!bIsDirectory && TargetPath.extension().empty())
+	{
+		TargetPath.replace_extension(ContentItem.Path.extension());
+	}
+
+	if (TargetPath == ContentItem.Path)
+	{
+		return true;
+	}
+
+	if (std::filesystem::exists(TargetPath, Error))
+	{
+		UE_LOG("Content Browser rename failed: target already exists. Path=%s", FPaths::ToUtf8(TargetPath.generic_wstring()).c_str());
+		return false;
+	}
+
+	std::filesystem::rename(ContentItem.Path, TargetPath, Error);
+	if (Error)
+	{
+		UE_LOG("Content Browser rename failed: %s", Error.message().c_str());
+		return false;
+	}
+
+	return true;
+}
+
 FString ContentBrowserElement::EllipsisText(const FString& text, float maxWidth)
 {
 	ImFont* font = ImGui::GetFont();
@@ -377,6 +558,9 @@ void SceneElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
 
 void ObjectElement::RenderContextMenu(ContentBrowserContext& Context)
 {
+	ContentBrowserElement::RenderContextMenu(Context);
+	ImGui::Separator();
+
 	FString Extension = FPaths::ToUtf8(ContentItem.Path.extension());
 	std::transform(Extension.begin(), Extension.end(), Extension.begin(), ::tolower);
 
@@ -465,6 +649,9 @@ void CameraShakeElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
 
 void MeshElement::RenderContextMenu(ContentBrowserContext& Context)
 {
+	ContentBrowserElement::RenderContextMenu(Context);
+	ImGui::Separator();
+
 	FString Extension = FPaths::ToUtf8(ContentItem.Path.extension());
 	std::transform(Extension.begin(), Extension.end(), Extension.begin(), ::tolower);
 
@@ -525,7 +712,8 @@ void AnimSequenceElement::OnDoubleLeftClicked(ContentBrowserContext& Context)
 
 void AnimSequenceElement::RenderContextMenu(ContentBrowserContext& Context)
 {
-	(void)Context;
+	ContentBrowserElement::RenderContextMenu(Context);
+	ImGui::Separator();
 
 	FString Extension = FPaths::ToUtf8(ContentItem.Path.extension());
 	std::transform(Extension.begin(), Extension.end(), Extension.begin(), ::tolower);

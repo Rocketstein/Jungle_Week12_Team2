@@ -538,7 +538,7 @@ void FEditorContentBrowserWidget::DrawContents()
 					}
 				}
 			}
-			if (ImGui::MenuItem("Particle"))
+			if (ImGui::MenuItem("Particle System"))
 			{
 				FString CreatedPath;
 				if (FAssetFactory::CreateParticleSystem(FPaths::ToUtf8(BrowserContext.CurrentPath), "NewParticleSystem", CreatedPath))

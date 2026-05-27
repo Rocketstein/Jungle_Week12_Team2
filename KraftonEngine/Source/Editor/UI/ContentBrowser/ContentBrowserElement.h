@@ -14,7 +14,7 @@ public:
 	virtual void Render(ContentBrowserContext& Context);
 	virtual void RenderDetail();
 
-	virtual void RenderContextMenu(ContentBrowserContext& Context) {}
+	virtual void RenderContextMenu(ContentBrowserContext& Context);
 
 	void SetIcon(ID3D11ShaderResourceView* InIcon) { Icon = InIcon; }
 	void SetContent(FContentItem InContent) { ContentItem = InContent; }
@@ -23,6 +23,13 @@ public:
 
 protected:
 	FString EllipsisText(const FString& text, float maxWidth);
+	FString GetDeletePopupId() const;
+	FString GetRenamePopupId() const;
+	void RenderDeleteConfirmation(ContentBrowserContext& Context);
+	void RenderRenamePopup(ContentBrowserContext& Context);
+	void PrepareRenamePopup();
+	bool DeleteFromDisk();
+	bool RenameOnDisk(const FString& NewName);
 
 	virtual FString GetDisplayName() const;
 	virtual const char* GetTypeLabel() const { return ""; }
@@ -38,6 +45,9 @@ protected:
 	ID3D11ShaderResourceView* Icon = nullptr;
 	FContentItem ContentItem;
 	bool bIsSelected = false;
+	bool bPendingOpenDeletePopup = false;
+	bool bPendingOpenRenamePopup = false;
+	char RenameBuffer[260] = {};
 };
 
 class DirectoryElement final : public ContentBrowserElement
@@ -168,6 +178,6 @@ public:
 	void OnDoubleLeftClicked(ContentBrowserContext& Context) override;
 
 protected:
-	const char* GetTypeLabel() const override { return "Particle"; }
+	const char* GetTypeLabel() const override { return "Particle System"; }
 	uint32 GetAccentColor() const override { return IM_COL32(255, 105, 45, 255); }
 };
