@@ -84,6 +84,7 @@ void MoveRibbonReplayData(FDynamicRibbonEmitterReplayData& Dest, FDynamicRibbonE
 	Dest.Trails = std::move(Source.Trails);
 	Dest.SheetsPerTrail = Source.SheetsPerTrail;
 	Dest.MaxTessellationBetweenParticles = Source.MaxTessellationBetweenParticles;
+	Dest.RenderAxisOption = Source.RenderAxisOption;
 	Dest.TilingDistance = Source.TilingDistance;
 	Dest.DistanceTessellationStepSize = Source.DistanceTessellationStepSize;
 	Dest.bRenderGeometry = Source.bRenderGeometry;

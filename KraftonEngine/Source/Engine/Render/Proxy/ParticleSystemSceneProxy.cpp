@@ -43,6 +43,19 @@ namespace {
 			+ UnitAxis * (UnitAxis.Dot(Value) * (1.0f - C));
 	}
 
+	FVector BuildRibbonSideAxis(const FFrameContext& Frame, ETrailsRenderAxisOption RenderAxis,
+		const FVector& Position, const FVector& Tangent, const FVector& Fallback)
+	{
+		if (RenderAxis == Trails_WorldUp || RenderAxis == Trails_SourceUp)
+		{
+			return SafeNormalizeBeam(FVector::UpVector, Fallback);
+		}
+
+		const FVector ToCamera = SafeNormalizeBeam(Frame.CameraPosition - Position, Frame.CameraForward * -1.0f);
+		const FVector CameraUp = SafeNormalizeBeam(Frame.CameraUp, FVector::UpVector);
+		return SafeNormalizeBeam(ToCamera.Cross(Tangent), CameraUp);
+	}
+
 	float ApplyBeamTaper(EBeamTaperMethod TaperMethod, float TaperFactor, float TaperScale, float Alpha)
 	{
 		Alpha = std::clamp(Alpha, 0.0f, 1.0f);
@@ -1070,6 +1083,7 @@ void FParticleSystemSceneProxy::FRibbonParticlePacker::PackEmitter(const FFrameC
 		{
 			const uint32 SheetVertexBase = static_cast<uint32>(PackedVertices.size());
 			FVector PreviousTangent = FVector::ForwardVector;
+			FVector PreviousSideAxis = FVector::RightVector;
 
 			for (int32 PointIdx = 0; PointIdx < Trail.PointCount; ++PointIdx)
 			{
@@ -1081,13 +1095,17 @@ void FParticleSystemSceneProxy::FRibbonParticlePacker::PackEmitter(const FFrameC
 				FVector Tangent = SafeNormalizeBeam(NextPoint.Position - PrevPoint.Position, PreviousTangent);
 				PreviousTangent = Tangent;
 
-				const FVector ToCamera = SafeNormalizeBeam(Frame.CameraPosition - Point.Position, FVector::UpVector);
-				FVector SideAxis = SafeNormalizeBeam(ToCamera.Cross(Tangent), FVector::RightVector);
+				FVector SideAxis = BuildRibbonSideAxis(Frame, Source.RenderAxisOption, Point.Position, Tangent, PreviousSideAxis);
 				if (SheetIdx > 0)
 				{
 					const float SheetAngle = Pi * static_cast<float>(SheetIdx) / static_cast<float>(SheetCount);
 					SideAxis = SafeNormalizeBeam(RotateAroundAxis(SideAxis, Tangent, SheetAngle), SideAxis);
 				}
+				if (SideAxis.Dot(PreviousSideAxis) < 0.0f)
+				{
+					SideAxis = SideAxis * -1.0f;
+				}
+				PreviousSideAxis = SideAxis;
 
 				const float HalfWidth = std::max(0.0f, Point.Width) * 0.5f;
 				const float U = (Source.TilingDistance > 0.0f)
