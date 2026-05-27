@@ -83,6 +83,10 @@ public:
 	UPROPERTY(Edit, Category="Particles", DisplayName="Particle System Priority", Min=0, Max=65535, Speed=1.0f)
 	int32 SortPriority = 0;
 
+	UPROPERTY(Edit, Category="Particles", DisplayName="Show Particles")
+	bool bShowParticles = true;
+
+	TArray<FParticleEventCollideData> ParticleEventCollideDatas;
 	TArray<FParticleEventSpawnData> SpawnEvents;
 	TArray<FParticleEventDeathData> DeathEvents;
 	TArray<FParticleEventCollideData> CollisionEvents;

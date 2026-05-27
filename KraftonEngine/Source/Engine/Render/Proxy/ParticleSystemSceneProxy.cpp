@@ -340,6 +340,8 @@ void FParticleSystemSceneProxy::UpdatePerViewport(const FFrameContext& Frame)
 	BeamPacker.ResetFrame();
 	RibbonPacker.ResetFrame();
 
+	if (!bIsOwnerVisible) return;
+
 	if (DynamicData.empty())
 	{
 		bVisible = false;
@@ -558,7 +560,7 @@ bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevic
 	ID3D11DeviceContext* InDeviceContext,
 	const FPrimitiveDrawOptions&, FDrawCommand& Cmd, int32 SectionIndex) const
 {
-	if (SectionIndex < 0 || SectionIndex >= static_cast<int32>(SectionToEmitterDrawIndex.size()))
+	if (!bIsOwnerVisible || SectionIndex < 0 || SectionIndex >= static_cast<int32>(SectionToEmitterDrawIndex.size()))
 	{
 		return false;
 	}

@@ -11,6 +11,8 @@ public:
 	FParticleSystemSceneProxy(UParticleSystemComponent* InComponent);
 	~FParticleSystemSceneProxy() override;
 
+	void SetVisibility(bool Visibility) { bIsOwnerVisible = Visibility; }
+
 	// Called by Component each frame after CPU sim. Proxy takes ownership.
 	void UpdateDynamicData(TArray<FDynamicEmitterDataBase*>&& NewData);
 
@@ -162,6 +164,7 @@ private:
 	FBeamParticlePacker BeamPacker;
 	FRibbonParticlePacker RibbonPacker;
 
+	bool bIsOwnerVisible	  = true;
 	bool bInstancePacked	  = false;
 
 	// Set to true when EmitterDraws.size() changes, or is signaled that one of its elements changed its sort priority.

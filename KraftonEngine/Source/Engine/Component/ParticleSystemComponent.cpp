@@ -217,6 +217,14 @@ void UParticleSystemComponent::PostEditProperty(const char* PropertyName)
 		ResolveTemplate();
 		InitializeSystem();
 	}
+	else if (std::strcmp(PropertyName, "Show Particles") == 0 || std::strcmp(PropertyName, "bShowParticles") == 0)
+	{
+		if (SceneProxy)
+		{
+			FParticleSystemSceneProxy* ParticleProxy = static_cast<FParticleSystemSceneProxy*>(SceneProxy);
+			ParticleProxy->SetVisibility(bShowParticles);
+		}
+	}
 }
 
 void UParticleSystemComponent::EndPlay()
@@ -266,6 +274,7 @@ void UParticleSystemComponent::SetTemplate(UParticleSystem* NewTemplate)
 FPrimitiveSceneProxy* UParticleSystemComponent::CreateSceneProxy()
 {
 	FParticleSystemSceneProxy* ParticleSceneProxy = new FParticleSystemSceneProxy(this);
+	ParticleSceneProxy->SetVisibility(bShowParticles);
 	ParticleSceneProxy->SetTranslucencySortPriority(ToTranslucencySortPriority(SortPriority));
 	return ParticleSceneProxy;
 }
