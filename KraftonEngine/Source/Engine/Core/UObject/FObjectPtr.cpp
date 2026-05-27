@@ -8,8 +8,7 @@ FObjectPtr::FObjectPtr(UObject* InObject)
 FObjectPtr::FObjectPtr(int32 Index)
 {
 	const auto& Items = GUObjectArray.GetItems();
-	if (Index < Items.size() && Index >= 0) Handle = Items[Index].Object;
-	else Handle = nullptr;
+	Handle = (Index >= 0 && Index < (int32)Items.size()) ? Items[Index].Object : nullptr;
 }
 
 FObjectPtr& FObjectPtr::operator=(UObject* Other)
@@ -21,7 +20,6 @@ FObjectPtr& FObjectPtr::operator=(UObject* Other)
 FObjectPtr& FObjectPtr::operator=(std::nullptr_t)
 {
 	Handle   = nullptr;
-	DebugPtr = nullptr;
 	return *this;
 }
 
@@ -32,9 +30,7 @@ UObject* FObjectPtr::Get() const
 
 bool FObjectPtr::IsValid() const 
 {
-	if (Handle) return true;
-
-	return false;
+	return ::IsValid(Handle);
 }
 
 UClass* FObjectPtr::GetClass() const 
@@ -57,23 +53,45 @@ FString FObjectPtr::GetName() const
 
 FString FObjectPtr::GetPathName() const
 {
-
+	if (!Handle) return FString();
+	FString Path = Handle->GetName();
+	for (UObject* O = Handle->GetOuter(); ::IsValid(O); O = O->GetOuter())
+	{
+		Path = O->GetName() + "." + Path;
+	}
+	return Path;
 }
 
 FObjectPtr FObjectPtr::GetOuter() const
 {
-	if (!Handle) return nullptr;
-	return FObjectPtr(Handle->GetOuter());
+	return Handle ? FObjectPtr(Handle->GetOuter()) : FObjectPtr(nullptr);
 }
 
 FObjectPtr FObjectPtr::GetPackage() const
 {
+	// No UPackage in this codebase — "package" == topmost outer (the root).
+	// If Handle has no outer, Handle itself is the root.
+	if (!Handle) return FObjectPtr(nullptr);
 
+	UObject* Root = Handle;
+	while (UObject* Next = Root->GetOuter())
+	{
+		if (!::IsValid(Next)) break;
+		Root = Next;
+	}
+	return FObjectPtr(Root);
 }
 
 bool FObjectPtr::IsIn(FObjectPtr SomeOuter) const
 {
+	UObject* Target = SomeOuter.Get();
+	if (!Handle || !Target) return false;
 
+	for (UObject* O = Handle->GetOuter(); ::IsValid(O); O = O->GetOuter())
+	{
+		if (O == Target) return true;
+	}
+	return false;
 }
 
 bool FObjectPtr::IsA(const UClass* SomeBase) const
