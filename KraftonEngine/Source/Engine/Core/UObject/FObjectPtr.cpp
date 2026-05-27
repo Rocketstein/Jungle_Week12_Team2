@@ -41,7 +41,7 @@ UClass* FObjectPtr::GetClass() const
 
 FName FObjectPtr::GetFName() const
 {
-	if (!Handle) return FName();
+	if (!Handle) return FName::None;
 	return Handle->GetFName();
 }
 
@@ -102,5 +102,5 @@ bool FObjectPtr::IsA(const UClass* SomeBase) const
 
 uint32 GetTypeHash(const FObjectPtr& P) 
 { 
-	return ::GetTypeHash(P.Handle);
+	return static_cast<uint32>(reinterpret_cast<uintptr_t>(P.Handle));
 }
