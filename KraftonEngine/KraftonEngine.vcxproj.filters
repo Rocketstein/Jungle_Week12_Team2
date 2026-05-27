@@ -1088,6 +1088,9 @@
     <ClCompile Include="Source\Engine\Particle\ParticleModules.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleEventManager.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleSpriteEmitter.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
@@ -2139,6 +2142,9 @@
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleModule.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleEventManager.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleSpriteEmitter.h">

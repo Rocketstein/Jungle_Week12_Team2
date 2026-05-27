@@ -368,12 +368,19 @@ float FParticleEmitterInstance::Spawn(float DeltaTime)
 
 	if (Number > 0 || BurstCount > 0)
 	{
+		FParticleEventInstancePayload* EventPayload = nullptr;
+		if (CurrentLODLevel && CurrentLODLevel->EventGenerator)
+		{
+			EventPayload = reinterpret_cast<FParticleEventInstancePayload*>(
+				GetModuleInstanceData(CurrentLODLevel->EventGenerator));
+		}
+
 		// If there is a spawn rate, spawn those particles evenly throughout the tick. 
-		SpawnParticles(Number, StartTime, Increment, Location, FVector::ZeroVector, nullptr);
+		SpawnParticles(Number, StartTime, Increment, Location, FVector::ZeroVector, EventPayload);
 
 		// If there are also bursts, the spawn rate-based spawns will come before them.
 		SpawnParticles(BurstCount, 0.0f, BurstCount > 0 ? DeltaTime / static_cast<float>(BurstCount) : 0.0f,
-			Location, FVector::ZeroVector, nullptr);
+			Location, FVector::ZeroVector, EventPayload);
 	}
 
 	return NewLeftover;
@@ -429,8 +436,6 @@ int32 FParticleEmitterInstance::GetCurrentBurstCount(float DeltaTime)
 void FParticleEmitterInstance::SpawnParticles(int32 Count, float StartTime, float Increment, const FVector& InitialLocation,
 	const FVector& InitialVelocity, FParticleEventInstancePayload* EventPayload)
 {
-	(void)EventPayload;
-
 	if (Count <= 0)
 	{
 		return;
@@ -446,6 +451,11 @@ void FParticleEmitterInstance::SpawnParticles(int32 Count, float StartTime, floa
 	}
 
 	float SpawnTime = StartTime;
+	if (CurrentLODLevel && CurrentLODLevel->EventGenerator && EventPayload)
+	{
+		CurrentLODLevel->EventGenerator->HandleParticleBurst(this, EventPayload, Count);
+	}
+
 	for (int32 Index = 0; Index < Count; ++Index)
 	{
 		const int32 DirectIndex = ParticleIndices ? ParticleIndices[ActiveParticles] : ActiveParticles;
@@ -485,6 +495,11 @@ void FParticleEmitterInstance::SpawnParticles(int32 Count, float StartTime, floa
 
 		PostSpawn(&Particle, 0.0f, SpawnTime);
 
+		if (CurrentLODLevel && CurrentLODLevel->EventGenerator && EventPayload)
+		{
+			CurrentLODLevel->EventGenerator->HandleParticleSpawned(this, EventPayload, &Particle);
+		}
+
 		++ActiveParticles;
 		SpawnTime += Increment;
 	}
@@ -499,6 +514,14 @@ void FParticleEmitterInstance::KillParticle(int32 Index)
 
 	const int32 LastActiveIndex = ActiveParticles - 1;
 	const uint16 RemovedDirectIndex = ParticleIndices[Index];
+	FBaseParticle* RemovedParticle = GetParticleDirect(RemovedDirectIndex);
+	if (RemovedParticle && CurrentLODLevel && CurrentLODLevel->EventGenerator)
+	{
+		FParticleEventInstancePayload* EventPayload = reinterpret_cast<FParticleEventInstancePayload*>(
+			GetModuleInstanceData(CurrentLODLevel->EventGenerator));
+		CurrentLODLevel->EventGenerator->HandleParticleKilled(this, EventPayload, RemovedParticle);
+	}
+
 	if (Index != LastActiveIndex)
 	{
 		ParticleIndices[Index] = ParticleIndices[LastActiveIndex];
@@ -765,11 +788,22 @@ void FParticleEmitterInstance::AddCollisionEvent(const FBaseParticle& Particle, 
 	EventData.Location = HitLocation;
 	EventData.OldLocation = Particle.OldLocation;
 	EventData.Velocity = Particle.Velocity;
+	EventData.Direction = Particle.Velocity;
+	EventData.Direction.Normalize();
 	EventData.Normal = HitNormal;
 	EventData.EmitterTime = EmitterTime;
 	EventData.ParticleRelativeTime = Particle.RelativeTime;
+	EventData.ParticleTime = Particle.RelativeTime;
 	EventData.HitTime = HitTime;
 	EventData.bParticleWasKilled = bParticleWasKilled;
+
+	if (CurrentLODLevel && CurrentLODLevel->EventGenerator)
+	{
+		FParticleEventInstancePayload* EventPayload = reinterpret_cast<FParticleEventInstancePayload*>(
+			GetModuleInstanceData(CurrentLODLevel->EventGenerator));
+		CurrentLODLevel->EventGenerator->HandleParticleCollision(this, EventPayload,
+			const_cast<FBaseParticle*>(&Particle), HitLocation, HitNormal, HitTime);
+	}
 
 	Component->QueueParticleCollisionEvent(EventData);
 }
