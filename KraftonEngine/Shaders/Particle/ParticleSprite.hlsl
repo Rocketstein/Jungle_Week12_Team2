@@ -71,20 +71,13 @@ float2 ComputeSubUVTexcoord(float2 LocalUV, float SubImage)
     uint FrameIndex = (uint)clamp(floor(SubImage), 0.0f, (float)(FrameCount - 1));
     
     uint FrameCol = FrameIndex % ActualCols;
-    uint FrameRow = FrameIndex / ActualRows; // 행 계산 방식 수정
+    uint FrameRow = FrameIndex / ActualCols; // 행 계산 방식 (Cols로 나누어야 함)
     
     float2 CellSize = 1.0f / float2((float)ActualCols, (float)ActualRows);
     float2 Offset = float2((float)FrameCol, (float)FrameRow) * CellSize;
     
     float2 UVInCell = LocalUV * CellSize + Offset;
     return lerp(AtlasMin, AtlasMax, UVInCell);
-}
-
-float Hash31(float3 p)
-{
-    p = frac(p * float3(0.1031, 0.1030, 0.0973));
-    p += dot(p, p.yzx + 33.33);
-    return frac((p.x + p.y) * p.z);
 }
 
 PS_Input_Particle VS(VS_Input_ParticleSprite Input)
@@ -134,11 +127,9 @@ PS_Input_Particle VS(VS_Input_ParticleSprite Input)
         Out.position = mul(mul(WorldPos, View), Projection);
     }
 
-    // 위치와 속도를 섞어서 파티클마다 고유한 랜덤 인덱스를 생성
-    float SubImageCount = 12.0; // 4x3 강제 고정
-    float RandomSubImage = Hash31(Input.position + Input.velocity * 137.45) * SubImageCount;
-    
-    Out.texcoord = ComputeSubUVTexcoord(float2(Input.uv.x, 1.0f - Input.uv.y), RandomSubImage);
+    // 셰이더 내부의 불안정한 랜덤 해시를 제거하고, 
+    // C++(CPU)에서 이미 계산되어 넘어온 고정된 Input.subImage 값을 그대로 사용합니다.
+    Out.texcoord = ComputeSubUVTexcoord(float2(Input.uv.x, 1.0f - Input.uv.y), Input.subImage);
     Out.color    = Input.color;
     return Out;
 }
