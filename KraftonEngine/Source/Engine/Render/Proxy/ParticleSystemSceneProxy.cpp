@@ -550,6 +550,9 @@ bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevic
 	}
 	else if (Hit.Type == DET_Ribbon && Hit.IndexCount > 0)
 	{
+		// TODO: Remove once material domain compatibility is enforced by the editor/material system.
+		Cmd.Shader = FShaderManager::Get().GetOrCreate(EShaderPath::ParticleRibbon);
+
 		Cmd.Buffer.VB         = RibbonPacker.GetVertexBuffer();
 		Cmd.Buffer.VBStride   = sizeof(FRibbonParticleInstanceVertex);
 		Cmd.Buffer.IB         = RibbonPacker.GetIndexBuffer();

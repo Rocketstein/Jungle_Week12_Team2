@@ -4,11 +4,14 @@
 #include "GameFramework/World.h"
 #include "Math/MathUtils.h"
 #include "Math/Quat.h"
+#include "Mesh/StaticMesh.h"
+#include "Mesh/StaticMeshAsset.h"
 #include "Particle/ParticleEmitterInstances.h"
 #include "Particle/ParticleLODLevel.h"
 #include "Particle/TypeData/ParticleModuleTypeDataRibbon.h"
 
 #include <algorithm>
+#include <cmath>
 #include <random>
 
 namespace
@@ -530,6 +533,7 @@ void UParticleModuleCollision::FinalUpdate(const FUpdateContext& Context)
 
 	const float ClampedDamping = std::clamp(DampingFactor, 0.0f, 1.0f);
 	const float ClampedOffset = std::max(CollisionOffset, 0.0f);
+	const float ClampedRadiusScale = std::max(CollisionRadiusScale, 0.0f);
 
 	for (int32 ParticleIndex = Owner.ActiveParticles - 1; ParticleIndex >= 0; --ParticleIndex)
 	{
@@ -555,7 +559,38 @@ void UParticleModuleCollision::FinalUpdate(const FUpdateContext& Context)
 
 		FVector Direction = Segment / SegmentLength;
 		FHitResult Hit;
-		if (!World->PhysicsRaycast(Particle->OldLocation, Direction, SegmentLength, Hit, TraceChannel, Owner.Component->GetOwner()))
+		const float ParticleScale = std::max({
+			std::abs(Particle->Size.X),
+			std::abs(Particle->Size.Y),
+			std::abs(Particle->Size.Z)
+		});
+		float CollisionRadius = ParticleScale;
+		if (Owner.CurrentLODLevel && Owner.CurrentLODLevel->TypeDataModule && Owner.CurrentLODLevel->TypeDataModule->IsAMeshEmitter())
+		{
+			if (UParticleModuleTypeDataMesh* MeshTypeData = Cast<UParticleModuleTypeDataMesh>(Owner.CurrentLODLevel->TypeDataModule))
+			{
+				if (MeshTypeData->Mesh)
+				{
+					if (FStaticMesh* MeshAsset = MeshTypeData->Mesh->GetStaticMeshAsset())
+					{
+						if (!MeshAsset->bBoundsValid)
+						{
+							MeshAsset->CacheBounds();
+						}
+						CollisionRadius = std::max({
+							std::abs(MeshAsset->BoundsExtent.X),
+							std::abs(MeshAsset->BoundsExtent.Y),
+							std::abs(MeshAsset->BoundsExtent.Z)
+						}) * ParticleScale;
+					}
+				}
+			}
+		}
+		CollisionRadius *= ClampedRadiusScale;
+		const bool bHit = CollisionRadius > 0.0001f
+			? World->PhysicsSphereSweep(Particle->OldLocation, Direction, SegmentLength, CollisionRadius, Hit, TraceChannel, Owner.Component->GetOwner())
+			: World->PhysicsRaycast(Particle->OldLocation, Direction, SegmentLength, Hit, TraceChannel, Owner.Component->GetOwner());
+		if (!bHit)
 		{
 			continue;
 		}
@@ -580,7 +615,7 @@ void UParticleModuleCollision::FinalUpdate(const FUpdateContext& Context)
 
 		++Payload->CollisionCount;
 		Particle->Flags |= STATE_Particle_CollisionHasOccurred;
-		Particle->Location = Hit.WorldHitLocation + Normal * ClampedOffset;
+		Particle->Location = Hit.WorldHitLocation + Normal * (CollisionRadius + ClampedOffset);
 
 		if (ResponseMode == EParticleCollisionResponseMode::Kill)
 		{
@@ -622,6 +657,7 @@ UParticleModule* UParticleModuleCollision::CloneForLOD(UParticleLODLevel* NewOut
 	Copy->ResponseMode = ResponseMode;
 	Copy->DampingFactor = DampingFactor;
 	Copy->CollisionOffset = CollisionOffset;
+	Copy->CollisionRadiusScale = CollisionRadiusScale;
 	Copy->MaxCollisions = MaxCollisions;
 	return Copy;
 }

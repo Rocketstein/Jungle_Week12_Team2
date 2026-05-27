@@ -4056,6 +4056,13 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 			bChanged = true;
 		}
 
+		float CollisionRadiusScale = Collision->CollisionRadiusScale;
+		if (ImGui::DragFloat("Collision Radius Scale", &CollisionRadiusScale, 0.05f, 0.0f, 10.0f))
+		{
+			Collision->CollisionRadiusScale = (std::max)(0.0f, CollisionRadiusScale);
+			bChanged = true;
+		}
+
 		int MaxCollisions = Collision->MaxCollisions;
 		if (ImGui::DragInt("Max Collisions", &MaxCollisions, 1.0f, 0, 128))
 		{

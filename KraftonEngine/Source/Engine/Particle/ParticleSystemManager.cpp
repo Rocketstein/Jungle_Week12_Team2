@@ -132,6 +132,7 @@ namespace ParticleKeys
 	static constexpr const char* ResponseMode = "ResponseMode";
 	static constexpr const char* DampingFactor = "DampingFactor";
 	static constexpr const char* CollisionOffset = "CollisionOffset";
+	static constexpr const char* CollisionRadiusScale = "CollisionRadiusScale";
 	static constexpr const char* MaxCollisions = "MaxCollisions";
 	static constexpr const char* Beam2 = "Beam2";
 	static constexpr const char* BeamMethod = "BeamMethod";
@@ -755,6 +756,7 @@ json::JSON SerializeModule(UParticleModule* Module)
 		Object[ParticleKeys::ResponseMode] = static_cast<int32>(Collision->ResponseMode);
 		Object[ParticleKeys::DampingFactor] = Collision->DampingFactor;
 		Object[ParticleKeys::CollisionOffset] = Collision->CollisionOffset;
+		Object[ParticleKeys::CollisionRadiusScale] = Collision->CollisionRadiusScale;
 		Object[ParticleKeys::MaxCollisions] = Collision->MaxCollisions;
 	}
 
@@ -1300,6 +1302,10 @@ UParticleModule* DeserializeModule(json::JSON& Object, UParticleLODLevel* Outer)
 		if (Object.hasKey(ParticleKeys::CollisionOffset))
 		{
 			Collision->CollisionOffset = std::max(0.0f, static_cast<float>(Object[ParticleKeys::CollisionOffset].ToFloat()));
+		}
+		if (Object.hasKey(ParticleKeys::CollisionRadiusScale))
+		{
+			Collision->CollisionRadiusScale = std::max(0.0f, static_cast<float>(Object[ParticleKeys::CollisionRadiusScale].ToFloat()));
 		}
 		if (Object.hasKey(ParticleKeys::MaxCollisions))
 		{

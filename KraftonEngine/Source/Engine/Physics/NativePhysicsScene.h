@@ -42,6 +42,9 @@ public:
 	bool Raycast(const FVector& Start, const FVector& Dir, float MaxDist, FHitResult& OutHit,
 		ECollisionChannel TraceChannel = ECollisionChannel::WorldStatic,
 		const AActor* IgnoreActor = nullptr) const override;
+	bool SphereSweep(const FVector& Start, const FVector& Dir, float MaxDist, float Radius, FHitResult& OutHit,
+		ECollisionChannel TraceChannel = ECollisionChannel::WorldStatic,
+		const AActor* IgnoreActor = nullptr) const override;
 
 private:
 	UWorld* World = nullptr;

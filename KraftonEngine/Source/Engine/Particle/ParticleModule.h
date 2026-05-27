@@ -425,6 +425,9 @@ public:
 	UPROPERTY(Edit, Category="Collision", DisplayName="Collision Offset", Min=0.0f, Max=100.0f, Speed=0.1f)
 	float CollisionOffset = 0.1f;
 
+	UPROPERTY(Edit, Category="Collision", DisplayName="Collision Radius Scale", Min=0.0f, Max=10.0f, Speed=0.05f)
+	float CollisionRadiusScale = 1.0f;
+
 	UPROPERTY(Edit, Category="Collision", DisplayName="Max Collisions", Min=0, Max=128, Speed=1.0f)
 	int32 MaxCollisions = 1;
 };
