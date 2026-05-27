@@ -797,13 +797,17 @@ void FParticleEmitterInstance::AddCollisionEvent(const FBaseParticle& Particle, 
 	EventData.HitTime = HitTime;
 	EventData.bParticleWasKilled = bParticleWasKilled;
 
+	bool bEventGenerated = false;
 	if (CurrentLODLevel && CurrentLODLevel->EventGenerator)
 	{
 		FParticleEventInstancePayload* EventPayload = reinterpret_cast<FParticleEventInstancePayload*>(
 			GetModuleInstanceData(CurrentLODLevel->EventGenerator));
-		CurrentLODLevel->EventGenerator->HandleParticleCollision(this, EventPayload,
+		bEventGenerated = CurrentLODLevel->EventGenerator->HandleParticleCollision(this, EventPayload,
 			const_cast<FBaseParticle*>(&Particle), HitLocation, HitNormal, HitTime);
 	}
 
-	Component->QueueParticleCollisionEvent(EventData);
+	if (!bEventGenerated)
+	{
+		Component->QueueParticleCollisionEvent(EventData);
+	}
 }

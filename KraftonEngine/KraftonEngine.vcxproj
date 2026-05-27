@@ -483,6 +483,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Engine\GameFramework\SkeletalMeshActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\SphereActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\StaticMeshActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\Emitter.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\TriggerVolumeBase.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\WaveOscillatorCameraShake.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\World.cpp" />
@@ -830,6 +831,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\GameFramework\SkeletalMeshActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\SphereActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\StaticMeshActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\Emitter.h" />
     <ClInclude Include="Source\Engine\GameFramework\TriggerVolumeBase.h" />
     <ClInclude Include="Source\Engine\GameFramework\WaveOscillatorCameraShake.h" />
     <ClInclude Include="Source\Engine\GameFramework\World.h" />
