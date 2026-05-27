@@ -1,21 +1,23 @@
 {
-    "PathFileName": "Asset/Materials/CherryBlossom.mat",
-    "ShaderPath": "Shaders/Particle/ParticleDefault.hlsl",
-    "RenderPass": "Translucent",
-    "BlendState": "AlphaBlend",
-    "RasterizerState": "SolidNone",
-    "Parameters": {
-        "BaseTexture": {
-            "Type": "Texture2D",
-            "Value": "Asset/Textures/4_Base_Color.png"
-        },
-        "OpacityTexture": {
-            "Type": "Texture2D",
-            "Value": "Asset/Textures/4_Opacity.png"
-        },
-        "TintColor": {
-            "Type": "Vector4",
-            "Value": [1.0, 1.0, 1.0, 1.0]
-        }
-    }
+  "BlendState" : "AlphaBlend",
+  "DepthStencilState" : "",
+  "Parameters" : {
+    "AlphaPower" : 1.000000,
+    "AlphaSource" : 0.000000,
+    "AlphaThreshold" : 0.000000,
+    "ColorIntensity" : 1.000000,
+    "EmitterOrigin" : [0.000000, 0.000000, 0.000000],
+    "ScreenAlignment" : 0.000000,
+    "SubUVCols" : 4,
+    "SubUVRows" : 3,
+    "_Pad" : 0.000000,
+    "_Pad1" : 0.000000
+  },
+  "PathFileName" : "Asset/Materials/CherryBlossom.mat",
+  "RasterizerState" : "SolidNone",
+  "RenderPass" : "Translucent",
+  "ShaderPath" : "Shaders/Particle/ParticleSprite.hlsl",
+  "Textures" : {
+    "DiffuseTexture" : "Asset/Textures/CherryBlossom_Atlas.png"
+  }
 }
