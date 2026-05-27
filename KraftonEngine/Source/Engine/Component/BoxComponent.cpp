@@ -33,7 +33,7 @@ void UBoxComponent::ContributeSelectedVisuals(FScene& Scene) const
 	const FColor Color = GetShapeColor();
 	// World rotation을 local 코너 오프셋에 적용 — 그러지 않으면 박스가 항상
 	// 월드 축 정렬로 그려져 컴포넌트가 회전된 경우 자식들과 시각상 어긋난다.
-	const FQuat WorldRot = GetWorldMatrix().ToQuat();
+	const FQuat WorldRot = GetWorldRotation().ToQuaternion();
 
 	// 8 corners (회전 반영)
 	FVector Corners[8];

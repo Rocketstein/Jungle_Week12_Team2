@@ -249,8 +249,9 @@ void USceneComponent::SetRelativeRotation(const FRotator& NewRotation)
 
 void USceneComponent::SetRelativeRotation(const FQuat& NewRotation)
 {
-	bCachedEulerDirty = true;
 	RelativeTransform.SetRotation(NewRotation);
+	CachedEditRotator = RelativeTransform.GetRotator();
+	bCachedEulerDirty = false;
 	MarkTransformDirty();
 	NotifyOctreeTransformChanged(this);
 }
@@ -271,7 +272,8 @@ void USceneComponent::AddLocalRotation(const FQuat& DeltaQuat)
 	// Quat 합성으로 누적 — Euler 라운드트립이 없어 짐벌락에 안전.
 	// 곱 순서: 로컬 축 기준 회전이므로 Current * Delta.
 	RelativeTransform.SetRotation(RelativeTransform.Rotation * DeltaQuat);
-	bCachedEulerDirty = true;
+	CachedEditRotator = RelativeTransform.GetRotator();
+	bCachedEulerDirty = false;
 	MarkTransformDirty();
 	NotifyOctreeTransformChanged(this);
 }
@@ -291,6 +293,8 @@ void USceneComponent::SetRelativeScale(const FVector& NewScale)
 void USceneComponent::SetRelativeTransform(const FTransform& NewTransform)
 {
 	RelativeTransform = NewTransform;
+	CachedEditRotator = RelativeTransform.GetRotator();
+	bCachedEulerDirty = false;
 	MarkTransformDirty();
 	NotifyOctreeTransformChanged(this);
 }

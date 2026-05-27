@@ -182,6 +182,45 @@ void FSelectionManager::ClearSelection()
 	SyncGizmo();
 }
 
+int32 FSelectionManager::DeleteSelection()
+{
+	USceneComponent* ComponentToDelete = SelectedComponent;
+	AActor* Owner = ComponentToDelete ? ComponentToDelete->GetOwner() : nullptr;
+	const bool bCanDeleteComponentOnly =
+		Owner &&
+		ComponentToDelete &&
+		ComponentToDelete != Owner->GetRootComponent() &&
+		!ComponentToDelete->IsEditorOnlyComponent();
+
+	if (!bCanDeleteComponentOnly)
+	{
+		return DeleteSelectedActors();
+	}
+
+	USceneComponent* Parent = ComponentToDelete->GetParent();
+
+	// 컴포넌트 제거 전에 선택/기즈모 참조를 끊어 dangling target을 방지한다.
+	SelectedComponent = nullptr;
+	if (Gizmo)
+	{
+		Gizmo->Deactivate();
+	}
+
+	Owner->RemoveComponent(ComponentToDelete);
+
+	if (Parent && IsSelected(Owner))
+	{
+		SelectedComponent = Parent;
+	}
+	else if (IsSelected(Owner))
+	{
+		SelectedComponent = Owner->GetRootComponent();
+	}
+
+	SyncGizmo();
+	return 1;
+}
+
 int32 FSelectionManager::DeleteSelectedActors()
 {
 	if (!World || SelectedActors.empty())
@@ -278,6 +317,7 @@ void FSelectionManager::SelectComponent(USceneComponent* Component)
 		if (Owner && !IsSelected(Owner))
 		{
 			Select(Owner);
+			SelectedComponent = Target;
 		}
 	}
 

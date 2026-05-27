@@ -169,7 +169,7 @@ void FShapeSceneProxy::RebuildLines()
 	UPrimitiveComponent* OwnerComp = GetOwner();
 	if (!OwnerComp) return;
 
-	const FQuat WorldRot = OwnerComp->GetWorldMatrix().ToQuat();
+	const FQuat WorldRot = OwnerComp->GetWorldRotation().ToQuaternion();
 
 	if (const UBoxComponent* Box = Cast<UBoxComponent>(OwnerComp))
 	{

@@ -290,7 +290,7 @@ static FQuat ToFQuat(const PxQuat& Q)
 static PxTransform GetPxTransform(UPrimitiveComponent* Comp)
 {
 	FVector Pos = Comp->GetWorldLocation();
-	FQuat Rot = Comp->GetWorldMatrix().ToQuat();
+	FQuat Rot = Comp->GetWorldRotation().ToQuaternion();
 	return PxTransform(ToPxVec3(Pos), ToPxQuat(Rot));
 }
 
@@ -724,9 +724,9 @@ PxShape* FPhysXPhysicsScene::AddShapeForComponent(FBodyMapping& Mapping, UPrimit
 	if (Comp != Mapping.RootComp && Mapping.RootComp)
 	{
 		FVector RootPos = Mapping.RootComp->GetWorldLocation();
-		FQuat RootRot = Mapping.RootComp->GetWorldMatrix().ToQuat();
+		FQuat RootRot = Mapping.RootComp->GetWorldRotation().ToQuaternion();
 		FVector CompPos = Comp->GetWorldLocation();
-		FQuat CompRot = Comp->GetWorldMatrix().ToQuat();
+		FQuat CompRot = Comp->GetWorldRotation().ToQuaternion();
 
 		FQuat InvRootRot = RootRot.Inverse();
 		FVector LocalPos = InvRootRot.RotateVector(CompPos - RootPos);

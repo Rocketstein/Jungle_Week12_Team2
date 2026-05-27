@@ -30,6 +30,40 @@ UWorld* FEditorViewportClient::GetWorld() const
 #include "ImGui/imgui.h"
 #include "Component/Light/LightComponentBase.h"
 
+namespace
+{
+	USceneComponent* DuplicateSceneComponentSubtree(
+		const USceneComponent* Src,
+		AActor* Owner,
+		USceneComponent* Parent)
+	{
+		if (!Src || !Owner)
+		{
+			return nullptr;
+		}
+
+		USceneComponent* Dup = Cast<USceneComponent>(Src->Duplicate(Owner));
+		if (!Dup)
+		{
+			return nullptr;
+		}
+
+		Dup->SetOwner(Owner);
+		if (Parent)
+		{
+			Dup->AttachToComponent(Parent);
+		}
+		Owner->RegisterComponent(Dup);
+
+		for (USceneComponent* Child : Src->GetChildren())
+		{
+			DuplicateSceneComponentSubtree(Child, Owner, Dup);
+		}
+
+		return Dup;
+	}
+}
+
 void FEditorViewportClient::Initialize(FWindowsWindow* InWindow)
 {
 	Window = InWindow;
@@ -278,7 +312,7 @@ void FEditorViewportClient::TickEditorShortcuts()
 
 	if (SelectionManager && InputSystem::Get().GetKeyDown(VK_DELETE))
 	{
-		SelectionManager->DeleteSelectedActors();
+		SelectionManager->DeleteSelection();
 		return;
 	}
 
@@ -325,6 +359,32 @@ void FEditorViewportClient::TickEditorShortcuts()
 
 	if (SelectionManager && InputSystem::Get().GetKey(VK_CONTROL) && InputSystem::Get().GetKeyDown('D'))
 	{
+		if (USceneComponent* SelectedComponent = SelectionManager->GetSelectedComponent())
+		{
+			AActor* Owner = SelectedComponent->GetOwner();
+			USceneComponent* Parent = SelectedComponent->GetParent();
+			const bool bCanDuplicateComponentOnly =
+				Owner &&
+				Parent &&
+				SelectedComponent != Owner->GetRootComponent() &&
+				!SelectedComponent->IsEditorOnlyComponent();
+
+			if (bCanDuplicateComponentOnly)
+			{
+				USceneComponent* DupComponent = DuplicateSceneComponentSubtree(SelectedComponent, Owner, Parent);
+				if (DupComponent)
+				{
+					DupComponent->SetRelativeLocation(DupComponent->GetRelativeLocation() + FVector(0.1f, 0.1f, 0.1f));
+					SelectionManager->SelectComponent(DupComponent);
+					if (EditorEngine->GetGizmo())
+					{
+						EditorEngine->GetGizmo()->UpdateGizmoTransform();
+					}
+					return;
+				}
+			}
+		}
+
 		const TArray<AActor*> ToDuplicate = SelectionManager->GetSelectedActors();
 		if (!ToDuplicate.empty())
 		{

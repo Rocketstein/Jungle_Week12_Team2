@@ -2480,7 +2480,7 @@ void FEditorFbxImporter::TriangulateScene(FbxScene* Scene)
 			FbxNodeAttribute* Attribute = Node->GetNodeAttributeByIndex(AttributeIndex);
 			if (!Attribute || Attribute->GetAttributeType() != FbxNodeAttribute::eMesh)
 			{
-				continue;
+				continue;   
 			}
 
 			if (std::find(MeshAttributes.begin(), MeshAttributes.end(), Attribute) == MeshAttributes.end())
