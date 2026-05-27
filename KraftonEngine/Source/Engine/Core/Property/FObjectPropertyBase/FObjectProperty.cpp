@@ -1,5 +1,6 @@
 ﻿#include "FObjectProperty.h"
 #include "Core/UObject/FObjectPtr.h"
+#include "SimpleJSON/json.hpp"
 
 UObject* FObjectProperty::GetObjectPropertyValue(void* Addr) const
 {
@@ -15,4 +16,20 @@ void FObjectProperty::SetObjectPropertyValue(void* Addr, UObject* Value) const
 		return;
 	}
 	*Ptr = Value;
+}
+
+json::JSON FObjectProperty::Serialize(const void* Instance) const
+{
+	return json::JSON(
+		static_cast<const FObjectPtr*>(ContainerPtrToValuePtr(Instance))->GetPathName());
+}
+
+void FObjectProperty::Deserialize(void* Instance, const json::JSON& Value) const
+{
+	static_cast<FObjectPtr*>(ContainerPtrToValuePtr(Instance))->SetPath(Value.ToString());
+}
+
+void FObjectProperty::SerializeItem(FArchive& Ar, void* Value, const void* Defaults) const
+{
+	Ar << *static_cast<FObjectPtr*>(Value);
 }
