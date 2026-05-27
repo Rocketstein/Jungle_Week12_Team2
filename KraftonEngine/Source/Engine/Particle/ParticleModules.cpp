@@ -33,6 +33,194 @@ namespace
 	}
 }
 
+void FParticleDistributionFloat::SetConstant(float Value)
+{
+	Mode = EParticleDistributionMode::Constant;
+	Constant = Value;
+	Min = Value;
+	Max = Value;
+	ConstantCurve.DefaultValue = Value;
+	MinCurve.DefaultValue = Value;
+	MaxCurve.DefaultValue = Value;
+}
+
+void FParticleDistributionFloat::SetUniform(float InMin, float InMax)
+{
+	Mode = EParticleDistributionMode::Uniform;
+	Min = InMin;
+	Max = InMax;
+	Constant = InMax;
+	MinCurve.DefaultValue = InMin;
+	MaxCurve.DefaultValue = InMax;
+	ConstantCurve.DefaultValue = InMax;
+}
+
+void FParticleDistributionFloat::SetConstantCurve(float Time0, float Value0, float Time1, float Value1)
+{
+	Mode = EParticleDistributionMode::ConstantCurve;
+	Constant = Value1;
+	Min = Value0;
+	Max = Value1;
+	ConstantCurve.Reset();
+	ConstantCurve.DefaultValue = Value1;
+	ConstantCurve.AddKey(Time0, Value0);
+	ConstantCurve.AddKey(Time1, Value1);
+	ConstantCurve.SortKeys();
+	ConstantCurve.AutoSetTangents();
+}
+
+void FParticleDistributionFloat::SetUniformCurve(float Time0, float Min0, float Max0, float Time1, float Min1, float Max1)
+{
+	Mode = EParticleDistributionMode::UniformCurve;
+	Constant = Max1;
+	Min = Min0;
+	Max = Max1;
+	MinCurve.Reset();
+	MinCurve.DefaultValue = Min0;
+	MinCurve.AddKey(Time0, Min0);
+	MinCurve.AddKey(Time1, Min1);
+	MinCurve.SortKeys();
+	MinCurve.AutoSetTangents();
+
+	MaxCurve.Reset();
+	MaxCurve.DefaultValue = Max0;
+	MaxCurve.AddKey(Time0, Max0);
+	MaxCurve.AddKey(Time1, Max1);
+	MaxCurve.SortKeys();
+	MaxCurve.AutoSetTangents();
+}
+
+float FParticleDistributionFloat::Evaluate(float Time) const
+{
+	switch (Mode)
+	{
+	case EParticleDistributionMode::ConstantCurve:
+		return ConstantCurve.Evaluate(Time);
+	case EParticleDistributionMode::UniformCurve:
+		return MaxCurve.Evaluate(Time);
+	case EParticleDistributionMode::Uniform:
+		return Max;
+	case EParticleDistributionMode::Constant:
+	default:
+		return Constant;
+	}
+}
+
+float FParticleDistributionFloat::EvaluateRandom(float Time) const
+{
+	if (Mode == EParticleDistributionMode::UniformCurve)
+	{
+		return RandomRange(MinCurve.Evaluate(Time), MaxCurve.Evaluate(Time));
+	}
+	if (Mode == EParticleDistributionMode::Uniform)
+	{
+		return RandomRange(Min, Max);
+	}
+	return Evaluate(Time);
+}
+
+float FParticleDistributionFloat::GetMaxValue() const
+{
+	float Result = (std::max)(Constant, Max);
+	auto IncludeCurve = [&Result](const FFloatCurve& Curve)
+	{
+		for (const FCurveKey& Key : Curve.Keys)
+		{
+			Result = (std::max)(Result, Key.Value);
+		}
+	};
+
+	IncludeCurve(ConstantCurve);
+	IncludeCurve(MinCurve);
+	IncludeCurve(MaxCurve);
+	return Result;
+}
+
+bool FParticleDistributionFloat::UsesCurve() const
+{
+	return Mode == EParticleDistributionMode::ConstantCurve || Mode == EParticleDistributionMode::UniformCurve;
+}
+
+FFloatCurve* FParticleDistributionFloat::GetCurve(bool bMaxCurve)
+{
+	if (Mode == EParticleDistributionMode::UniformCurve)
+	{
+		return bMaxCurve ? &MaxCurve : &MinCurve;
+	}
+	return &ConstantCurve;
+}
+
+const FFloatCurve* FParticleDistributionFloat::GetCurve(bool bMaxCurve) const
+{
+	if (Mode == EParticleDistributionMode::UniformCurve)
+	{
+		return bMaxCurve ? &MaxCurve : &MinCurve;
+	}
+	return &ConstantCurve;
+}
+
+void FParticleDistributionVector::SetConstant(const FVector& Value)
+{
+	X.SetConstant(Value.X);
+	Y.SetConstant(Value.Y);
+	Z.SetConstant(Value.Z);
+}
+
+void FParticleDistributionVector::SetUniform(const FVector& MinValue, const FVector& MaxValue)
+{
+	X.SetUniform(MinValue.X, MaxValue.X);
+	Y.SetUniform(MinValue.Y, MaxValue.Y);
+	Z.SetUniform(MinValue.Z, MaxValue.Z);
+}
+
+void FParticleDistributionVector::SetConstantCurve(float Time0, const FVector& Value0, float Time1, const FVector& Value1)
+{
+	X.SetConstantCurve(Time0, Value0.X, Time1, Value1.X);
+	Y.SetConstantCurve(Time0, Value0.Y, Time1, Value1.Y);
+	Z.SetConstantCurve(Time0, Value0.Z, Time1, Value1.Z);
+}
+
+void FParticleDistributionVector::SetUniformCurve(float Time0, const FVector& Min0, const FVector& Max0, float Time1, const FVector& Min1, const FVector& Max1)
+{
+	X.SetUniformCurve(Time0, Min0.X, Max0.X, Time1, Min1.X, Max1.X);
+	Y.SetUniformCurve(Time0, Min0.Y, Max0.Y, Time1, Min1.Y, Max1.Y);
+	Z.SetUniformCurve(Time0, Min0.Z, Max0.Z, Time1, Min1.Z, Max1.Z);
+}
+
+FVector FParticleDistributionVector::Evaluate(float Time) const
+{
+	return FVector(X.Evaluate(Time), Y.Evaluate(Time), Z.Evaluate(Time));
+}
+
+FVector FParticleDistributionVector::EvaluateRandom(float Time) const
+{
+	return FVector(X.EvaluateRandom(Time), Y.EvaluateRandom(Time), Z.EvaluateRandom(Time));
+}
+
+FVector FParticleDistributionVector::GetMaxValue() const
+{
+	return FVector(X.GetMaxValue(), Y.GetMaxValue(), Z.GetMaxValue());
+}
+
+bool FParticleDistributionVector::UsesCurve() const
+{
+	return X.UsesCurve() || Y.UsesCurve() || Z.UsesCurve();
+}
+
+FParticleDistributionFloat* FParticleDistributionVector::GetChannel(int32 ChannelIndex)
+{
+	if (ChannelIndex == 0) return &X;
+	if (ChannelIndex == 1) return &Y;
+	return &Z;
+}
+
+const FParticleDistributionFloat* FParticleDistributionVector::GetChannel(int32 ChannelIndex) const
+{
+	if (ChannelIndex == 0) return &X;
+	if (ChannelIndex == 1) return &Y;
+	return &Z;
+}
+
 void UParticleModule::CopyModuleBaseTo(UParticleModule* Copy) const
 {
 	if (!Copy)
@@ -84,6 +272,7 @@ UParticleModuleSpawn::UParticleModuleSpawn()
 	bEnabled = true;
 	bProcessSpawnRate = true;
 	bProcessBurstList = true;
+	RateDistribution.SetConstant(Rate);
 }
 
 bool UParticleModuleSpawn::GetSpawnAmount(const FContext& Context, int32 Offset, float OldLeftover, float DeltaTime,
@@ -94,7 +283,7 @@ bool UParticleModuleSpawn::GetSpawnAmount(const FContext& Context, int32 Offset,
 	(void)OldLeftover;
 	(void)DeltaTime;
 	Number = 0;
-	OutRate = std::max(0.0f, Rate);
+	OutRate = std::max(0.0f, RateDistribution.Evaluate(Context.Owner.EmitterTime));
 	return true;
 }
 
@@ -113,6 +302,7 @@ UParticleModule* UParticleModuleSpawn::CloneForLOD(UParticleLODLevel* NewOuter) 
 	UParticleModuleSpawn* Copy = GUObjectArray.CreateObject<UParticleModuleSpawn>(NewOuter);
 	CopyModuleBaseTo(Copy);
 	Copy->Rate = Rate;
+	Copy->RateDistribution = RateDistribution;
 	Copy->BurstList = BurstList;
 	Copy->ParticleBurstMethod = ParticleBurstMethod;
 	return Copy;
@@ -121,6 +311,7 @@ UParticleModule* UParticleModuleSpawn::CloneForLOD(UParticleLODLevel* NewOuter) 
 UParticleModuleLifetime::UParticleModuleLifetime()
 {
 	bSpawnModule = true;
+	LifetimeDistribution.SetUniform(LifetimeMin, LifetimeMax);
 }
 
 void UParticleModuleLifetime::Spawn(const FSpawnContext& Context)
@@ -130,7 +321,7 @@ void UParticleModuleLifetime::Spawn(const FSpawnContext& Context)
 		return;
 	}
 
-	const float SpawnLifetime = std::max(RandomRange(LifetimeMin, LifetimeMax), 0.0001f);
+	const float SpawnLifetime = std::max(LifetimeDistribution.EvaluateRandom(Context.SpawnTime), 0.0001f);
 	Context.ParticleBase->OneOverMaxLifetime = 1.0f / SpawnLifetime;
 }
 
@@ -141,12 +332,14 @@ UParticleModule* UParticleModuleLifetime::CloneForLOD(UParticleLODLevel* NewOute
 	Copy->Lifetime = Lifetime;
 	Copy->LifetimeMin = LifetimeMin;
 	Copy->LifetimeMax = LifetimeMax;
+	Copy->LifetimeDistribution = LifetimeDistribution;
 	return Copy;
 }
 
 UParticleModuleLocation::UParticleModuleLocation()
 {
 	bSpawnModule = true;
+	StartLocationDistribution.SetUniform(StartLocationMin, StartLocationMax);
 }
 
 void UParticleModuleLocation::Spawn(const FSpawnContext& Context)
@@ -156,7 +349,7 @@ void UParticleModuleLocation::Spawn(const FSpawnContext& Context)
 		return;
 	}
 
-	Context.ParticleBase->Location = Context.ParticleBase->Location + RandomRange(StartLocationMin, StartLocationMax);
+	Context.ParticleBase->Location = Context.ParticleBase->Location + StartLocationDistribution.EvaluateRandom(Context.SpawnTime);
 	Context.ParticleBase->OldLocation = Context.ParticleBase->Location;
 }
 
@@ -167,12 +360,14 @@ UParticleModule* UParticleModuleLocation::CloneForLOD(UParticleLODLevel* NewOute
 	Copy->StartLocation = StartLocation;
 	Copy->StartLocationMin = StartLocationMin;
 	Copy->StartLocationMax = StartLocationMax;
+	Copy->StartLocationDistribution = StartLocationDistribution;
 	return Copy;
 }
 
 UParticleModuleVelocity::UParticleModuleVelocity()
 {
 	bSpawnModule = true;
+	StartVelocityDistribution.SetUniform(StartVelocityMin, StartVelocityMax);
 }
 
 void UParticleModuleVelocity::Spawn(const FSpawnContext& Context)
@@ -182,7 +377,7 @@ void UParticleModuleVelocity::Spawn(const FSpawnContext& Context)
 		return;
 	}
 
-	const FVector SpawnVelocity = RandomRange(StartVelocityMin, StartVelocityMax);
+	const FVector SpawnVelocity = StartVelocityDistribution.EvaluateRandom(Context.SpawnTime);
 	Context.ParticleBase->BaseVelocity = SpawnVelocity;
 	Context.ParticleBase->Velocity = SpawnVelocity;
 }
@@ -194,6 +389,7 @@ UParticleModule* UParticleModuleVelocity::CloneForLOD(UParticleLODLevel* NewOute
 	Copy->StartVelocity = StartVelocity;
 	Copy->StartVelocityMin = StartVelocityMin;
 	Copy->StartVelocityMax = StartVelocityMax;
+	Copy->StartVelocityDistribution = StartVelocityDistribution;
 	Copy->bInWorldSpace = bInWorldSpace;
 	Copy->bApplyOwnerScale = bApplyOwnerScale;
 	return Copy;
@@ -202,6 +398,7 @@ UParticleModule* UParticleModuleVelocity::CloneForLOD(UParticleLODLevel* NewOute
 UParticleModuleInitialRotation::UParticleModuleInitialRotation()
 {
 	bSpawnModule = true;
+	StartRotationDistribution.SetUniform(StartRotationDegreesMin, StartRotationDegreesMax);
 }
 
 void UParticleModuleInitialRotation::Spawn(const FSpawnContext& Context)
@@ -211,7 +408,7 @@ void UParticleModuleInitialRotation::Spawn(const FSpawnContext& Context)
 		return;
 	}
 
-	const FVector SpawnRotationDegrees = RandomRange(StartRotationDegreesMin, StartRotationDegreesMax);
+	const FVector SpawnRotationDegrees = StartRotationDistribution.EvaluateRandom(Context.SpawnTime);
 	Context.ParticleBase->Rotation = SpawnRotationDegrees * FMath::DegToRad;
 }
 
@@ -222,12 +419,14 @@ UParticleModule* UParticleModuleInitialRotation::CloneForLOD(UParticleLODLevel* 
 	Copy->StartRotationDegrees = StartRotationDegrees;
 	Copy->StartRotationDegreesMin = StartRotationDegreesMin;
 	Copy->StartRotationDegreesMax = StartRotationDegreesMax;
+	Copy->StartRotationDistribution = StartRotationDistribution;
 	return Copy;
 }
 
 UParticleModuleInitialRotationRate::UParticleModuleInitialRotationRate()
 {
 	bSpawnModule = true;
+	StartRotationRateDistribution.SetUniform(StartRotationRateDegreesMin, StartRotationRateDegreesMax);
 }
 
 void UParticleModuleInitialRotationRate::Spawn(const FSpawnContext& Context)
@@ -237,7 +436,7 @@ void UParticleModuleInitialRotationRate::Spawn(const FSpawnContext& Context)
 		return;
 	}
 
-	const FVector SpawnRotationRateDegrees = RandomRange(StartRotationRateDegreesMin, StartRotationRateDegreesMax);
+	const FVector SpawnRotationRateDegrees = StartRotationRateDistribution.EvaluateRandom(Context.SpawnTime);
 	const FVector SpawnRotationRate = SpawnRotationRateDegrees * FMath::DegToRad;
 	Context.ParticleBase->BaseRotationRate = SpawnRotationRate;
 	Context.ParticleBase->RotationRate = SpawnRotationRate;
@@ -250,12 +449,14 @@ UParticleModule* UParticleModuleInitialRotationRate::CloneForLOD(UParticleLODLev
 	Copy->StartRotationRateDegrees = StartRotationRateDegrees;
 	Copy->StartRotationRateDegreesMin = StartRotationRateDegreesMin;
 	Copy->StartRotationRateDegreesMax = StartRotationRateDegreesMax;
+	Copy->StartRotationRateDistribution = StartRotationRateDistribution;
 	return Copy;
 }
 
 UParticleModuleAcceleration::UParticleModuleAcceleration()
 {
 	bUpdateModule = true;
+	AccelerationDistribution.SetConstant(Acceleration);
 }
 
 void UParticleModuleAcceleration::Update(const FUpdateContext& Context)
@@ -266,7 +467,6 @@ void UParticleModuleAcceleration::Update(const FUpdateContext& Context)
 		return;
 	}
 
-	const FVector VelocityDelta = Acceleration * Context.DeltaTime;
 	for (int32 ParticleIndex = 0; ParticleIndex < Owner.ActiveParticles; ++ParticleIndex)
 	{
 		FBaseParticle* Particle = reinterpret_cast<FBaseParticle*>(
@@ -276,6 +476,8 @@ void UParticleModuleAcceleration::Update(const FUpdateContext& Context)
 			continue;
 		}
 
+		const FVector CurrentAcceleration = AccelerationDistribution.Evaluate(std::clamp(Particle->RelativeTime, 0.0f, 1.0f));
+		const FVector VelocityDelta = CurrentAcceleration * Context.DeltaTime;
 		Particle->BaseVelocity = Particle->BaseVelocity + VelocityDelta;
 		Particle->Velocity = Particle->BaseVelocity;
 	}
@@ -286,6 +488,7 @@ UParticleModule* UParticleModuleAcceleration::CloneForLOD(UParticleLODLevel* New
 	UParticleModuleAcceleration* Copy = GUObjectArray.CreateObject<UParticleModuleAcceleration>(NewOuter);
 	CopyModuleBaseTo(Copy);
 	Copy->Acceleration = Acceleration;
+	Copy->AccelerationDistribution = AccelerationDistribution;
 	return Copy;
 }
 
@@ -415,6 +618,8 @@ UParticleModule* UParticleModuleCollision::CloneForLOD(UParticleLODLevel* NewOut
 UParticleModuleColor::UParticleModuleColor()
 {
 	bSpawnModule = true;
+	StartColorDistribution.SetUniform(StartColorMin, StartColorMax);
+	StartAlphaDistribution.SetUniform(StartAlphaMin, StartAlphaMax);
 }
 
 void UParticleModuleColor::Spawn(const FSpawnContext& Context)
@@ -424,8 +629,8 @@ void UParticleModuleColor::Spawn(const FSpawnContext& Context)
 		return;
 	}
 
-	const float Alpha = std::max(0.0f, std::min(RandomRange(StartAlphaMin, StartAlphaMax), 1.0f));
-	const FVector SpawnColor = RandomRange(StartColorMin, StartColorMax);
+	const float Alpha = std::clamp(StartAlphaDistribution.EvaluateRandom(Context.SpawnTime), 0.0f, 1.0f);
+	const FVector SpawnColor = StartColorDistribution.EvaluateRandom(Context.SpawnTime);
 	Context.ParticleBase->BaseColor = FLinearColor(SpawnColor.X, SpawnColor.Y, SpawnColor.Z, Alpha);
 	Context.ParticleBase->Color = Context.ParticleBase->BaseColor;
 }
@@ -437,9 +642,11 @@ UParticleModule* UParticleModuleColor::CloneForLOD(UParticleLODLevel* NewOuter) 
 	Copy->StartColor = StartColor;
 	Copy->StartColorMin = StartColorMin;
 	Copy->StartColorMax = StartColorMax;
+	Copy->StartColorDistribution = StartColorDistribution;
 	Copy->StartAlpha = StartAlpha;
 	Copy->StartAlphaMin = StartAlphaMin;
 	Copy->StartAlphaMax = StartAlphaMax;
+	Copy->StartAlphaDistribution = StartAlphaDistribution;
 	return Copy;
 }
 
@@ -447,6 +654,8 @@ UParticleModuleColorOverLife::UParticleModuleColorOverLife()
 {
 	bSpawnModule = true;
 	bUpdateModule = true;
+	ColorOverLifeDistribution.SetConstant(ColorOverLife);
+	AlphaOverLifeDistribution.SetConstant(AlphaOverLife);
 }
 
 void UParticleModuleColorOverLife::Spawn(const FSpawnContext& Context)
@@ -467,8 +676,6 @@ void UParticleModuleColorOverLife::Update(const FUpdateContext& Context)
 		return;
 	}
 
-	const float ClampedAlphaOverLife = std::clamp(AlphaOverLife, 0.0f, 1.0f);
-
 	for (int32 ParticleIndex = 0; ParticleIndex < Owner.ActiveParticles; ++ParticleIndex)
 	{
 		FBaseParticle* Particle = reinterpret_cast<FBaseParticle*>(
@@ -480,11 +687,21 @@ void UParticleModuleColorOverLife::Update(const FUpdateContext& Context)
 
 		const float T = std::clamp(Particle->RelativeTime, 0.0f, 1.0f);
 		const FLinearColor& Base = Particle->BaseColor;
-		Particle->Color = FLinearColor(
-			Base.R + (ColorOverLife.X - Base.R) * T,
-			Base.G + (ColorOverLife.Y - Base.G) * T,
-			Base.B + (ColorOverLife.Z - Base.B) * T,
-			Base.A + (ClampedAlphaOverLife - Base.A) * T);
+		if (ColorOverLifeDistribution.UsesCurve() || AlphaOverLifeDistribution.UsesCurve())
+		{
+			const FVector CurveColor = ColorOverLifeDistribution.Evaluate(T);
+			const float CurveAlpha = std::clamp(AlphaOverLifeDistribution.Evaluate(T), 0.0f, 1.0f);
+			Particle->Color = FLinearColor(CurveColor.X, CurveColor.Y, CurveColor.Z, CurveAlpha);
+		}
+		else
+		{
+			const float ClampedAlphaOverLife = std::clamp(AlphaOverLife, 0.0f, 1.0f);
+			Particle->Color = FLinearColor(
+				Base.R + (ColorOverLife.X - Base.R) * T,
+				Base.G + (ColorOverLife.Y - Base.G) * T,
+				Base.B + (ColorOverLife.Z - Base.B) * T,
+				Base.A + (ClampedAlphaOverLife - Base.A) * T);
+		}
 	}
 }
 
@@ -493,13 +710,17 @@ UParticleModule* UParticleModuleColorOverLife::CloneForLOD(UParticleLODLevel* Ne
 	UParticleModuleColorOverLife* Copy = GUObjectArray.CreateObject<UParticleModuleColorOverLife>(NewOuter);
 	CopyModuleBaseTo(Copy);
 	Copy->ColorOverLife = ColorOverLife;
+	Copy->ColorOverLifeDistribution = ColorOverLifeDistribution;
 	Copy->AlphaOverLife = AlphaOverLife;
+	Copy->AlphaOverLifeDistribution = AlphaOverLifeDistribution;
 	return Copy;
 }
 
 UParticleModuleColorScaleOverLife::UParticleModuleColorScaleOverLife()
 {
 	bUpdateModule = true;
+	ColorScaleOverLifeDistribution.SetConstant(ColorScaleOverLife);
+	AlphaScaleOverLifeDistribution.SetConstant(AlphaScaleOverLife);
 }
 
 void UParticleModuleColorScaleOverLife::Update(const FUpdateContext& Context)
@@ -509,12 +730,6 @@ void UParticleModuleColorScaleOverLife::Update(const FUpdateContext& Context)
 	{
 		return;
 	}
-
-	const FVector ClampedColorScale(
-		(std::max)(0.0f, ColorScaleOverLife.X),
-		(std::max)(0.0f, ColorScaleOverLife.Y),
-		(std::max)(0.0f, ColorScaleOverLife.Z));
-	const float ClampedAlphaScale = (std::max)(0.0f, AlphaScaleOverLife);
 
 	for (int32 ParticleIndex = 0; ParticleIndex < Owner.ActiveParticles; ++ParticleIndex)
 	{
@@ -526,11 +741,29 @@ void UParticleModuleColorScaleOverLife::Update(const FUpdateContext& Context)
 		}
 
 		const float T = std::clamp(Particle->RelativeTime, 0.0f, 1.0f);
-		const FVector Scale(
-			1.0f + (ClampedColorScale.X - 1.0f) * T,
-			1.0f + (ClampedColorScale.Y - 1.0f) * T,
-			1.0f + (ClampedColorScale.Z - 1.0f) * T);
-		const float AlphaScale = 1.0f + (ClampedAlphaScale - 1.0f) * T;
+		FVector Scale;
+		float AlphaScale = 1.0f;
+		if (ColorScaleOverLifeDistribution.UsesCurve() || AlphaScaleOverLifeDistribution.UsesCurve())
+		{
+			Scale = ColorScaleOverLifeDistribution.Evaluate(T);
+			Scale.X = (std::max)(0.0f, Scale.X);
+			Scale.Y = (std::max)(0.0f, Scale.Y);
+			Scale.Z = (std::max)(0.0f, Scale.Z);
+			AlphaScale = (std::max)(0.0f, AlphaScaleOverLifeDistribution.Evaluate(T));
+		}
+		else
+		{
+			const FVector ClampedColorScale(
+				(std::max)(0.0f, ColorScaleOverLife.X),
+				(std::max)(0.0f, ColorScaleOverLife.Y),
+				(std::max)(0.0f, ColorScaleOverLife.Z));
+			const float ClampedAlphaScale = (std::max)(0.0f, AlphaScaleOverLife);
+			Scale = FVector(
+				1.0f + (ClampedColorScale.X - 1.0f) * T,
+				1.0f + (ClampedColorScale.Y - 1.0f) * T,
+				1.0f + (ClampedColorScale.Z - 1.0f) * T);
+			AlphaScale = 1.0f + (ClampedAlphaScale - 1.0f) * T;
+		}
 
 		Particle->Color = FLinearColor(
 			Particle->Color.R * Scale.X,
@@ -545,13 +778,16 @@ UParticleModule* UParticleModuleColorScaleOverLife::CloneForLOD(UParticleLODLeve
 	UParticleModuleColorScaleOverLife* Copy = GUObjectArray.CreateObject<UParticleModuleColorScaleOverLife>(NewOuter);
 	CopyModuleBaseTo(Copy);
 	Copy->ColorScaleOverLife = ColorScaleOverLife;
+	Copy->ColorScaleOverLifeDistribution = ColorScaleOverLifeDistribution;
 	Copy->AlphaScaleOverLife = AlphaScaleOverLife;
+	Copy->AlphaScaleOverLifeDistribution = AlphaScaleOverLifeDistribution;
 	return Copy;
 }
 
 UParticleModuleSize::UParticleModuleSize()
 {
 	bSpawnModule = true;
+	StartSizeDistribution.SetUniform(StartSizeMin, StartSizeMax);
 }
 
 void UParticleModuleSize::Spawn(const FSpawnContext& Context)
@@ -561,7 +797,7 @@ void UParticleModuleSize::Spawn(const FSpawnContext& Context)
 		return;
 	}
 
-	const FVector SpawnSize = RandomRange(StartSizeMin, StartSizeMax);
+	const FVector SpawnSize = StartSizeDistribution.EvaluateRandom(Context.SpawnTime);
 	Context.ParticleBase->BaseSize = SpawnSize;
 	Context.ParticleBase->Size = SpawnSize;
 }
@@ -573,6 +809,7 @@ UParticleModule* UParticleModuleSize::CloneForLOD(UParticleLODLevel* NewOuter) c
 	Copy->StartSize = StartSize;
 	Copy->StartSizeMin = StartSizeMin;
 	Copy->StartSizeMax = StartSizeMax;
+	Copy->StartSizeDistribution = StartSizeDistribution;
 	return Copy;
 }
 

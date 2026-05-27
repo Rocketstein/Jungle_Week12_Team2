@@ -55,7 +55,7 @@ void UParticleModuleTypeDataBeam2::Spawn(const FSpawnContext& Context)
 
 	const FVector BeamDelta = Payload->TargetPoint - Payload->SourcePoint;
 	Payload->SourceTangent      = BeamDelta;
-	Payload->TargetTangent      = BeamDelta * -1;
+	Payload->TargetTangent      = BeamDelta;
 	Payload->SourceStrength     = 1.0f;
 	Payload->TargetStrength     = 1.0f;
 	Payload->LockSource         = 0;

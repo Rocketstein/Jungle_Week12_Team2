@@ -2,6 +2,8 @@
 #include "ParticleModuleBeamBase.h"
 #include "ParticleModuleBeamNoise.generated.h"
 
+struct FBeam2TypeDataPayload;
+
 struct FBeamNoisePayloadData {
 	FVector* NoisePoints;
 	float* NoiseTimes;
@@ -15,9 +17,6 @@ class UParticleModuleBeamNoise : public UParticleModuleBeamBase
 public:
 	GENERATED_BODY(UParticleModuleBeamNoise)
 
-	UPROPERTY(Edit, Category = "LowFreq")
-	bool bLowFreq_Enabled = false;
-
 	UPROPERTY(Edit, Category = "LowFreq", Min = 0, Max = 64)
 	int32 Frequency = 0;
 
@@ -28,19 +27,20 @@ public:
 	FVector NoiseRange = FVector::ZeroVector;
 
 	UPROPERTY(Edit, Category = "LowFreq", Min = 0.0f)
+	float NoiseSpeed = 0.0f;
+
+	UPROPERTY(Edit, Category = "LowFreq", Min = 0.0f)
 	float NoiseLockTime = 0.0f;
 
 	UPROPERTY(Edit, Category = "LowFreq")
 	bool bTargetNoise = false;
 
-	// Fill OutPoints[0..NumPoints) with perturbed midpoints between Source and
-	// Target (in payload/local space). Caller owns the buffer.
-	void BuildNoisePoints(FVector* OutPoints, int32 NumPoints,
-		const FVector& SourceLocal, const FVector& TargetLocal) const;
 	void BuildNoiseOffsets(FVector* OutOffsets, float* OutTimes,
 		int32 NumPoints, float CurrentTime) const;
+	// Place NumPoints along the beam's Hermite curve (payload tangents/strengths)
+	// and add the per-point random offset. Caller owns OutPoints.
 	void ApplyNoiseOffsets(FVector* OutPoints, const FVector* Offsets,
-		int32 NumPoints, const FVector& SourceLocal, const FVector& TargetLocal) const;
+		int32 NumPoints, const FBeam2TypeDataPayload& BeamPayload) const;
 
 	void Update(const FUpdateContext& UpdateContext) override;
 	void Spawn(const FSpawnContext& Context) override;

@@ -63,10 +63,14 @@ float NoisePointAlpha(int32 PointIndex, int32 NumPoints, float BeamLength, float
 	return static_cast<float>(PointIndex + 1) / static_cast<float>(NumPoints + 1);
 }
 
-float NextRollTime(float CurrentTime, float LockTime)
+float NextRollTime(float CurrentTime, float LockTime, float NoiseSpeed)
 {
-	return LockTime > 0.0f
-		? CurrentTime + LockTime
+	if (LockTime > 0.0f)
+	{
+		return CurrentTime + LockTime;
+	}
+	return NoiseSpeed > 1e-6f
+		? CurrentTime + (1.0f / NoiseSpeed)
 		: std::numeric_limits<float>::max();
 }
 }
@@ -75,37 +79,13 @@ UParticleModule* UParticleModuleBeamNoise::CloneForLOD(UParticleLODLevel* NewOut
 {
 	UParticleModuleBeamNoise* Copy = GUObjectArray.CreateObject<UParticleModuleBeamNoise>(NewOuter);
 	CopyModuleBaseTo(Copy);
-	Copy->bLowFreq_Enabled  = bLowFreq_Enabled;
 	Copy->Frequency         = Frequency;
 	Copy->FrequencyDistance = FrequencyDistance;
 	Copy->NoiseRange        = NoiseRange;
+	Copy->NoiseSpeed        = NoiseSpeed;
 	Copy->NoiseLockTime     = NoiseLockTime;
 	Copy->bTargetNoise      = bTargetNoise;
 	return Copy;
-}
-
-void UParticleModuleBeamNoise::BuildNoisePoints(FVector* OutPoints, int32 NumPoints,
-	const FVector& SourceLocal, const FVector& TargetLocal) const
-{
-	if (!OutPoints || NumPoints <= 0)
-	{
-		return;
-	}
-
-	const FVector Delta = TargetLocal - SourceLocal;
-	const float BeamLength = Delta.Length();
-
-	for (int32 i = 0; i < NumPoints; ++i)
-	{
-		const float T = NoisePointAlpha(i, NumPoints, BeamLength, FrequencyDistance);
-		const FVector Center = SourceLocal + Delta * T;
-		const float TargetScale = bTargetNoise ? 1.0f : (1.0f - T);
-		const FVector Perturb(
-			RandomUnitSigned() * NoiseRange.X * TargetScale,
-			RandomUnitSigned() * NoiseRange.Y * TargetScale,
-			RandomUnitSigned() * NoiseRange.Z * TargetScale);
-		OutPoints[i] = Center + Perturb;
-	}
 }
 
 void UParticleModuleBeamNoise::BuildNoiseOffsets(FVector* OutOffsets, float* OutTimes,
@@ -116,7 +96,7 @@ void UParticleModuleBeamNoise::BuildNoiseOffsets(FVector* OutOffsets, float* Out
 		return;
 	}
 
-	const float NextTime = NextRollTime(CurrentTime, NoiseLockTime);
+	const float NextTime = NextRollTime(CurrentTime, NoiseLockTime, NoiseSpeed);
 	for (int32 i = 0; i < NumPoints; ++i)
 	{
 		OutOffsets[i] = FVector(
@@ -131,26 +111,39 @@ void UParticleModuleBeamNoise::BuildNoiseOffsets(FVector* OutOffsets, float* Out
 }
 
 void UParticleModuleBeamNoise::ApplyNoiseOffsets(FVector* OutPoints, const FVector* Offsets,
-	int32 NumPoints, const FVector& SourceLocal, const FVector& TargetLocal) const
+	int32 NumPoints, const FBeam2TypeDataPayload& BeamPayload) const
 {
 	if (!OutPoints || !Offsets || NumPoints <= 0)
 	{
 		return;
 	}
 
-	const FVector Delta = TargetLocal - SourceLocal;
-	const float BeamLength = Delta.Length();
+	// Hermite-form Bezier: matches the curve evaluation in
+	// FParticleSystemSceneProxy::EvaluateBeamCurve so noise + tangent curve
+	// compose cleanly. The renderer ignores tangents when NoisePoints is
+	// non-empty, so we have to bake them into the centerline here.
+	const FVector SourceLocal = BeamPayload.SourcePoint;
+	const FVector TargetLocal = BeamPayload.TargetPoint;
+	const FVector SourceControl = SourceLocal + BeamPayload.SourceTangent * (std::max(0.0f, BeamPayload.SourceStrength) / 3.0f);
+	const FVector TargetControl = TargetLocal - BeamPayload.TargetTangent * (std::max(0.0f, BeamPayload.TargetStrength) / 3.0f);
+	const float BeamLength = (TargetLocal - SourceLocal).Length();
+
 	for (int32 i = 0; i < NumPoints; ++i)
 	{
 		const float T = NoisePointAlpha(i, NumPoints, BeamLength, FrequencyDistance);
+		const float InvT = 1.0f - T;
+		const FVector Center = SourceLocal * (InvT * InvT * InvT)
+			+ SourceControl * (3.0f * InvT * InvT * T)
+			+ TargetControl * (3.0f * InvT * T * T)
+			+ TargetLocal * (T * T * T);
 		const float TargetScale = bTargetNoise ? 1.0f : (1.0f - T);
-		OutPoints[i] = SourceLocal + Delta * T + Offsets[i] * TargetScale;
+		OutPoints[i] = Center + Offsets[i] * TargetScale;
 	}
 }
 
 void UParticleModuleBeamNoise::Spawn(const FSpawnContext& Context)
 {
-	if (!bLowFreq_Enabled || !Context.ParticleBase || Frequency <= 0)
+	if (!bEnabled || !Context.ParticleBase || Frequency <= 0)
 	{
 		return;
 	}
@@ -181,20 +174,19 @@ void UParticleModuleBeamNoise::Spawn(const FSpawnContext& Context)
 	Payload->NoiseTimes    = &Beam.NoiseTimeArena[Slot * Frequency];
 	Payload->NoiseIndex    = 0;
 	const float CurrentTime = Beam.BeamTravelTime + Context.SpawnTime;
-	Payload->NextNoiseTime = NextRollTime(CurrentTime, NoiseLockTime);
+	Payload->NextNoiseTime = NextRollTime(CurrentTime, NoiseLockTime, NoiseSpeed);
 
-	// Endpoints already written by TypeData/Source/Target Spawn (we run last).
+	// Endpoints/tangents already written by TypeData/Source/Target Spawn (we run last).
 	FBeam2TypeDataPayload* BeamPayload = reinterpret_cast<FBeam2TypeDataPayload*>(
 		reinterpret_cast<uint8*>(Context.ParticleBase) + Context.Offset);
 	FVector* Offsets = &Beam.NoiseOffsetArena[Slot * Frequency];
 	BuildNoiseOffsets(Offsets, Payload->NoiseTimes, Frequency, CurrentTime);
-	ApplyNoiseOffsets(Payload->NoisePoints, Offsets, Frequency,
-		BeamPayload->SourcePoint, BeamPayload->TargetPoint);
+	ApplyNoiseOffsets(Payload->NoisePoints, Offsets, Frequency, *BeamPayload);
 }
 
 void UParticleModuleBeamNoise::Update(const FUpdateContext& UpdateContext)
 {
-	if (!bLowFreq_Enabled || Frequency <= 0)
+	if (!bEnabled || Frequency <= 0)
 	{
 		return;
 	}
@@ -236,13 +228,12 @@ void UParticleModuleBeamNoise::Update(const FUpdateContext& UpdateContext)
 		if (bArenaChanged || CurrentTime >= Payload->NextNoiseTime)
 		{
 			++Payload->NoiseIndex;
-			Payload->NextNoiseTime = NextRollTime(CurrentTime, NoiseLockTime);
+			Payload->NextNoiseTime = NextRollTime(CurrentTime, NoiseLockTime, NoiseSpeed);
 			BuildNoiseOffsets(Offsets, Payload->NoiseTimes, Frequency, CurrentTime);
 		}
 
 		FBeam2TypeDataPayload* BeamPayload = reinterpret_cast<FBeam2TypeDataPayload*>(
 			reinterpret_cast<uint8*>(Particle) + UpdateContext.Offset);
-		ApplyNoiseOffsets(Payload->NoisePoints, Offsets, Frequency,
-			BeamPayload->SourcePoint, BeamPayload->TargetPoint);
+		ApplyNoiseOffsets(Payload->NoisePoints, Offsets, Frequency, *BeamPayload);
 	}
 }

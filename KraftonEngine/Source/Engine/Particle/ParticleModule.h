@@ -2,6 +2,7 @@
 
 #include "Core/EngineTypes.h"
 #include "Core/CollisionTypes.h"
+#include "Math/FloatCurve.h"
 #include "Object/Object.h"
 #include "Particle/ParticleEmitterTypes.h"
 #include "ParticleModule.generated.h"
@@ -60,6 +61,54 @@ enum class EParticleCollisionResponseMode : uint8
 	Bounce = 0,
 	Stop = 1,
 	Kill = 2,
+};
+
+enum class EParticleDistributionMode : uint8
+{
+	Constant,
+	Uniform,
+	ConstantCurve,
+	UniformCurve,
+};
+
+struct FParticleDistributionFloat
+{
+	EParticleDistributionMode Mode = EParticleDistributionMode::Constant;
+	float Constant = 0.0f;
+	float Min = 0.0f;
+	float Max = 0.0f;
+	FFloatCurve ConstantCurve;
+	FFloatCurve MinCurve;
+	FFloatCurve MaxCurve;
+
+	void SetConstant(float Value);
+	void SetUniform(float InMin, float InMax);
+	void SetConstantCurve(float Time0, float Value0, float Time1, float Value1);
+	void SetUniformCurve(float Time0, float Min0, float Max0, float Time1, float Min1, float Max1);
+	float Evaluate(float Time) const;
+	float EvaluateRandom(float Time) const;
+	float GetMaxValue() const;
+	bool UsesCurve() const;
+	FFloatCurve* GetCurve(bool bMaxCurve = false);
+	const FFloatCurve* GetCurve(bool bMaxCurve = false) const;
+};
+
+struct FParticleDistributionVector
+{
+	FParticleDistributionFloat X;
+	FParticleDistributionFloat Y;
+	FParticleDistributionFloat Z;
+
+	void SetConstant(const FVector& Value);
+	void SetUniform(const FVector& MinValue, const FVector& MaxValue);
+	void SetConstantCurve(float Time0, const FVector& Value0, float Time1, const FVector& Value1);
+	void SetUniformCurve(float Time0, const FVector& Min0, const FVector& Max0, float Time1, const FVector& Min1, const FVector& Max1);
+	FVector Evaluate(float Time) const;
+	FVector EvaluateRandom(float Time) const;
+	FVector GetMaxValue() const;
+	bool UsesCurve() const;
+	FParticleDistributionFloat* GetChannel(int32 ChannelIndex);
+	const FParticleDistributionFloat* GetChannel(int32 ChannelIndex) const;
 };
 
 UCLASS()
@@ -194,6 +243,7 @@ public:
 
 	UPROPERTY(Edit, Category="Spawn", DisplayName="Rate", Min=0.0f, Max=10000.0f, Speed=1.0f)
 	float Rate = 10.0f;
+	FParticleDistributionFloat RateDistribution;
 
 	TArray<FParticleBurst> BurstList;
 	EParticleBurstMethod ParticleBurstMethod = EPBM_Instant;
@@ -232,9 +282,10 @@ public:
 	float Lifetime = 1.0f;
 	float LifetimeMin = 1.0f;
 	float LifetimeMax = 1.0f;
+	FParticleDistributionFloat LifetimeDistribution;
 
 	void Spawn(const FSpawnContext& Context) override;
-	float GetMaxLifetime() override { return LifetimeMax; }
+	float GetMaxLifetime() override { return LifetimeDistribution.GetMaxValue(); }
 	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
 };
 
@@ -258,6 +309,7 @@ public:
 	FVector StartLocation = FVector::ZeroVector;
 	FVector StartLocationMin = FVector::ZeroVector;
 	FVector StartLocationMax = FVector::ZeroVector;
+	FParticleDistributionVector StartLocationDistribution;
 
 	void Spawn(const FSpawnContext& Context) override;
 	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
@@ -286,6 +338,7 @@ public:
 	FVector StartVelocity = FVector::UpVector;
 	FVector StartVelocityMin = FVector::UpVector;
 	FVector StartVelocityMax = FVector::UpVector;
+	FParticleDistributionVector StartVelocityDistribution;
 
 	void Spawn(const FSpawnContext& Context) override;
 	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
@@ -303,6 +356,7 @@ public:
 	FVector StartRotationDegrees = FVector::ZeroVector;
 	FVector StartRotationDegreesMin = FVector::ZeroVector;
 	FVector StartRotationDegreesMax = FVector::ZeroVector;
+	FParticleDistributionVector StartRotationDistribution;
 
 	void Spawn(const FSpawnContext& Context) override;
 	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
@@ -320,6 +374,7 @@ public:
 	FVector StartRotationRateDegrees = FVector::ZeroVector;
 	FVector StartRotationRateDegreesMin = FVector::ZeroVector;
 	FVector StartRotationRateDegreesMax = FVector::ZeroVector;
+	FParticleDistributionVector StartRotationRateDistribution;
 
 	void Spawn(const FSpawnContext& Context) override;
 	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
@@ -335,6 +390,7 @@ public:
 
 	UPROPERTY(Edit, Category="Acceleration", DisplayName="Acceleration")
 	FVector Acceleration = FVector::ZeroVector;
+	FParticleDistributionVector AccelerationDistribution;
 
 	void Update(const FUpdateContext& Context) override;
 	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
@@ -393,11 +449,13 @@ public:
 	FVector StartColor = FVector::OneVector;
 	FVector StartColorMin = FVector::OneVector;
 	FVector StartColorMax = FVector::OneVector;
+	FParticleDistributionVector StartColorDistribution;
 
 	UPROPERTY(Edit, Category="Color", DisplayName="Start Alpha", Min=0.0f, Max=1.0f, Speed=0.01f)
 	float StartAlpha = 1.0f;
 	float StartAlphaMin = 1.0f;
 	float StartAlphaMax = 1.0f;
+	FParticleDistributionFloat StartAlphaDistribution;
 
 	void Spawn(const FSpawnContext& Context) override;
 	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
@@ -414,9 +472,11 @@ public:
 
 	UPROPERTY(Edit, Category="Color", DisplayName="Color Over Life")
 	FVector ColorOverLife = FVector::OneVector;
+	FParticleDistributionVector ColorOverLifeDistribution;
 
 	UPROPERTY(Edit, Category="Color", DisplayName="Alpha Over Life", Min=0.0f, Max=1.0f, Speed=0.01f)
 	float AlphaOverLife = 0.0f;
+	FParticleDistributionFloat AlphaOverLifeDistribution;
 
 	void Spawn(const FSpawnContext& Context) override;
 	void Update(const FUpdateContext& Context) override;
@@ -433,9 +493,11 @@ public:
 
 	UPROPERTY(Edit, Category="Color", DisplayName="Color Scale Over Life")
 	FVector ColorScaleOverLife = FVector::OneVector;
+	FParticleDistributionVector ColorScaleOverLifeDistribution;
 
 	UPROPERTY(Edit, Category="Color", DisplayName="Alpha Scale Over Life", Min=0.0f, Max=1.0f, Speed=0.01f)
 	float AlphaScaleOverLife = 1.0f;
+	FParticleDistributionFloat AlphaScaleOverLifeDistribution;
 
 	void Update(const FUpdateContext& Context) override;
 	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
@@ -460,6 +522,7 @@ public:
 	FVector StartSize = FVector::OneVector;
 	FVector StartSizeMin = FVector::OneVector;
 	FVector StartSizeMax = FVector::OneVector;
+	FParticleDistributionVector StartSizeDistribution;
 
 	void Spawn(const FSpawnContext& Context) override;
 	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
