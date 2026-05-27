@@ -795,14 +795,18 @@ void UParticleModuleCollision::FinalUpdate(const FUpdateContext& Context)
 		EventData.HitActor = Hit.HitActor;
 		EventData.HitComponent = Hit.HitComponent;
 
+		bool bEventGenerated = false;
 		if (Owner.CurrentLODLevel && Owner.CurrentLODLevel->EventGenerator)
 		{
 			FParticleEventInstancePayload* EventPayload = reinterpret_cast<FParticleEventInstancePayload*>(
 				Owner.GetModuleInstanceData(Owner.CurrentLODLevel->EventGenerator));
-			Owner.CurrentLODLevel->EventGenerator->HandleParticleCollision(&Owner, EventPayload,
+			bEventGenerated = Owner.CurrentLODLevel->EventGenerator->HandleParticleCollision(&Owner, EventPayload,
 				Particle, Hit.WorldHitLocation, Normal, 0.0f);
 		}
-		Owner.Component->QueueParticleCollisionEvent(EventData);
+		if (!bEventGenerated)
+		{
+			Owner.Component->QueueParticleCollisionEvent(EventData);
+		}
 
 		++Payload->CollisionCount;
 		Particle->Flags |= STATE_Particle_CollisionHasOccurred;

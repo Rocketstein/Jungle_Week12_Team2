@@ -50,8 +50,8 @@
         "Properties" : {
           "Auto Activate" : true,
           "Cast Shadows" : true,
-          "Color" : [1.000000, 1.000000, 1.000000, 1.000000],
-          "Intensity" : 1.000000,
+          "Color" : [0.420000, 0.520000, 0.900000, 1.000000],
+          "Intensity" : 0.180000,
           "RelativeTransform" : {
             "Location" : [8.050000, -8.050001, 11.384422],
             "Scale" : [1.000000, 1.000000, 1.000000]
@@ -120,8 +120,8 @@
         "Properties" : {
           "Auto Activate" : true,
           "Cast Shadows" : true,
-          "Color" : [1.000000, 1.000000, 1.000000, 1.000000],
-          "Intensity" : 0.100000,
+          "Color" : [0.180000, 0.220000, 0.420000, 1.000000],
+          "Intensity" : 0.030000,
           "RelativeTransform" : {
             "Location" : [-4.000000, 0.000000, 9.300000],
             "Scale" : [1.000000, 1.000000, 1.000000]
@@ -410,8 +410,8 @@
         "Properties" : {
           "Auto Activate" : true,
           "Cast Shadows" : true,
-          "Color" : [1.000000, 1.000000, 1.000000, 1.000000],
-          "Intensity" : 0.150000,
+          "Color" : [0.180000, 0.220000, 0.420000, 1.000000],
+          "Intensity" : 0.040000,
           "RelativeTransform" : {
             "Location" : [0.000000, 0.000000, 11.941832],
             "Scale" : [1.000000, 1.000000, 1.000000]
@@ -480,10 +480,10 @@
         "Properties" : {
           "Auto Activate" : true,
           "Cutoff Distance" : 0.000000,
-          "Fog Density" : 0.003000,
+          "Fog Density" : 0.001500,
           "Height Falloff" : 0.100000,
-          "Inscattering Color" : [0.450000, 0.550000, 0.650000, 1.000000],
-          "Max Opacity" : 1.000000,
+          "Inscattering Color" : [0.015000, 0.025000, 0.070000, 1.000000],
+          "Max Opacity" : 0.850000,
           "RelativeTransform" : {
             "Location" : [0.000000, 0.000000, 11.200000],
             "Scale" : [1.000000, 1.000000, 1.000000]
@@ -2025,8 +2025,8 @@
         }
       }
     }, {
-      "ClassName" : "AStaticMeshActor",
-      "Name" : "AStaticMeshActor_37",
+      "ClassName" : "AEmitter",
+      "Name" : "AEmitter_0",
       "NonSceneComponents" : [],
       "Properties" : {
         "Tags" : [],
@@ -2036,7 +2036,7 @@
       "RootComponent" : {
         "Children" : [{
             "Children" : [],
-            "ClassName" : "UParticleSystemComponent",
+            "ClassName" : "UBillboardComponent",
             "Properties" : {
               "Auto Activate" : true,
               "Cast Shadow" : true,
@@ -2046,8 +2046,10 @@
               "Generate Overlap Events" : false,
               "Is Visible" : true,
               "Mass (Kg)" : 1.000000,
+              "Material" : {
+                "Path" : "Asset/Materials/Editor/Emitter.mat"
+              },
               "Object Type" : 0,
-              "Particle System Priority" : 0,
               "RelativeTransform" : {
                 "Location" : [0.000000, 0.000000, 0.000000],
                 "Scale" : [1.000000, 1.000000, 1.000000]
@@ -2062,14 +2064,14 @@
               },
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Simulate Physics" : false,
-              "Template" : "Asset/Particle/CherryBlossom.uasset",
-              "bEditorOnly" : false,
-              "bHiddenInComponentTree" : false,
+              "bEditorOnly" : true,
+              "bHiddenInComponentTree" : true,
               "bIsActive" : true,
               "bTickEnable" : true
-            }
+            },
+            "bHiddenInComponentTree" : true
           }],
-        "ClassName" : "UStaticMeshComponent",
+        "ClassName" : "UParticleSystemComponent",
         "Properties" : {
           "Auto Activate" : true,
           "Cast Shadow" : true,
@@ -2079,12 +2081,10 @@
           "Generate Overlap Events" : false,
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
-          "Materials" : [{
-              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
-            }],
           "Object Type" : 0,
+          "Particle System Priority" : 0,
           "RelativeTransform" : {
-            "Location" : [-16.695784, -19.116177, 6.280390],
+            "Location" : [-27.116293, -15.332172, 8.895893],
             "Scale" : [1.000000, 1.000000, 1.000000]
           },
           "Response Container" : {
@@ -2097,7 +2097,7 @@
           },
           "Rotation" : [0.000000, 0.000000, 0.000000],
           "Simulate Physics" : false,
-          "Static Mesh" : "Asset/Mesh/BasicShape/Cube_StaticMesh.uasset",
+          "Template" : "Asset/Particle/CherryBlossom.uasset",
           "bEditorOnly" : false,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -2112,9 +2112,9 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [-18.939901, 8.644172, 12.234755],
+    "Location" : [-53.646076, -1.973221, 18.172714],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, 17.322403, -389.089478]
+    "Rotation" : [0.000000, 25.122395, -392.088379]
   },
   "Version" : 2,
   "WorldSettings" : {

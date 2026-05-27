@@ -9,6 +9,7 @@
 #include "Engine/Runtime/WindowsWindow.h"
 #include "Engine/Input/InputSystem.h"
 #include "GameFramework/DecalActor.h"
+#include "GameFramework/Emitter.h"
 #include "GameFramework/HeightFogActor.h"
 #include "GameFramework/TriggerVolumeBase.h"
 #include "GameFramework/Light/AmbientLightActor.h"
@@ -26,6 +27,8 @@
 #include "Platform/Paths.h"
 #include "ImGui/imgui.h"
 #include "Component/CameraComponent.h"
+#include "Particle/ParticleSystem.h"
+#include "Particle/ParticleSystemManager.h"
 #include "Render/Types/MinimalViewInfo.h"
 #include "Component/GizmoComponent.h"
 #include "Component/Light/LightComponentBase.h"
@@ -894,6 +897,33 @@ void FLevelViewportLayout::RenderViewportUI(float DeltaTime)
 				AStaticMeshActor* NewActor = Cast<AStaticMeshActor>(FObjectFactory::Get().Create(AStaticMeshActor::StaticClass()->GetName(), Editor->GetWorld()));
 				NewActor->InitDefaultComponents(FPaths::ToUtf8(ContentItem.Path));
 				Editor->GetWorld()->AddActor(NewActor);
+			}
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ParticleSystemContentItem"))
+			{
+				FContentItem ContentItem = *reinterpret_cast<const FContentItem*>(payload->Data);
+				UParticleSystem* ParticleSystem = FParticleSystemManager::Get().Load(FPaths::ToUtf8(ContentItem.Path.wstring()));
+				if (ParticleSystem && Editor && Editor->GetWorld())
+				{
+					FVector SpawnLocation = FVector::ZeroVector;
+					const ImVec2 MousePos = ImGui::GetMousePos();
+					const int32 SlotIndex = GetActiveViewportSlotIndex();
+					FPoint MousePoint;
+					MousePoint.X = MousePos.x;
+					MousePoint.Y = MousePos.y;
+					TryComputePlacementLocation(SlotIndex, MousePoint, SpawnLocation);
+
+					AEmitter* NewActor = Editor->GetWorld()->SpawnActor<AEmitter>();
+					if (NewActor)
+					{
+						NewActor->InitDefaultComponents(ParticleSystem);
+						NewActor->SetActorLocation(SpawnLocation);
+						Editor->GetWorld()->InsertActorToOctree(NewActor);
+						if (SelectionManager)
+						{
+							SelectionManager->Select(NewActor);
+						}
+					}
+				}
 			}
 			ImGui::EndDragDropTarget();
 		}
