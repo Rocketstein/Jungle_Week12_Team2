@@ -5,6 +5,7 @@
 #include "Particle/ParticleHelper.h"
 #include "Particle/ParticleModule.h"
 #include "Particle/TypeData/ParticleModuleTypeDataBeam2.h"
+#include "Particle/TypeData/ParticleModuleTypeDataRibbon.h"
 #include "Render/Types/VertexTypes.h"
 
 struct FParticleDataContainer
@@ -162,6 +163,7 @@ struct FDynamicRibbonEmitterReplayData : public FDynamicRenderableEmitterReplayD
 
 	int32 SheetsPerTrail = 1;
 	int32 MaxTessellationBetweenParticles = 1;
+	ETrailsRenderAxisOption RenderAxisOption = Trails_CameraUp;
 	float TilingDistance = 0.0f;
 	float DistanceTessellationStepSize = 0.0f;
 	bool bRenderGeometry = true;

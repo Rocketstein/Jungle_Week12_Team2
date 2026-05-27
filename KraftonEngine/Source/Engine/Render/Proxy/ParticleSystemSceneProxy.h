@@ -56,8 +56,11 @@ private:
 
 		// CBuffer, owned by the emitter
 		mutable FConstantBuffer ParticleParamCB;
+		mutable FConstantBuffer ParticleMaterialCB;
 		mutable bool bParticleParamCBDirty = true;
+		mutable bool bParticleMaterialCBDirty = true;
 		FParticleParamConstants ParticleParams;
+		mutable FParticleMaterialConstants ParticleMaterialParams;
 
 	public:
 		uint16 GetSortingPriority() const { return SortingPriority; }

@@ -84,6 +84,7 @@ void MoveRibbonReplayData(FDynamicRibbonEmitterReplayData& Dest, FDynamicRibbonE
 	Dest.Trails = std::move(Source.Trails);
 	Dest.SheetsPerTrail = Source.SheetsPerTrail;
 	Dest.MaxTessellationBetweenParticles = Source.MaxTessellationBetweenParticles;
+	Dest.RenderAxisOption = Source.RenderAxisOption;
 	Dest.TilingDistance = Source.TilingDistance;
 	Dest.DistanceTessellationStepSize = Source.DistanceTessellationStepSize;
 	Dest.bRenderGeometry = Source.bRenderGeometry;
@@ -431,8 +432,7 @@ void UParticleSystemComponent::InitParticles()
 	}
 	
 	EmitterInstances.reserve(ParticleSystemTemplate->Emitters.size());
-	//Particle System(원본)과 같은 크기로 Instance들을 만든다.
-	BuildInstances(ParticleSystemTemplate);
+	BuildInstances(ParticleSystemTemplate);//Particle System(원본)과 같은 크기로 Instance들을 만든다.
 
 	LODDistances = ParticleSystemTemplate->GetLODDistances();
 }

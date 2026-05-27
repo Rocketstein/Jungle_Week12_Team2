@@ -298,6 +298,58 @@ bool UWorld::PhysicsRaycast(const FVector& Start, const FVector& Dir, float MaxD
 	return true;
 }
 
+bool UWorld::PhysicsSphereSweep(const FVector& Start, const FVector& Dir, float MaxDist, float Radius, FHitResult& OutHit,
+	ECollisionChannel TraceChannel, const AActor* IgnoreActor) const
+{
+	if (Radius <= 0.0f)
+	{
+		return PhysicsRaycast(Start, Dir, MaxDist, OutHit, TraceChannel, IgnoreActor);
+	}
+
+	if (MaxDist <= 0.0f || Dir.IsNearlyZero())
+	{
+		return false;
+	}
+
+	FVector NormalizedDir = Dir;
+	NormalizedDir.Normalize();
+
+	FHitResult BestHit;
+	BestHit.Distance = MaxDist;
+	bool bFound = false;
+
+	if (PhysicsScene)
+	{
+		FHitResult PhysicsHit;
+		if (PhysicsScene->SphereSweep(Start, NormalizedDir, MaxDist, Radius, PhysicsHit, TraceChannel, IgnoreActor)
+			&& PhysicsHit.Distance >= 0.0f
+			&& PhysicsHit.Distance <= MaxDist)
+		{
+			BestHit = PhysicsHit;
+			bFound = true;
+		}
+	}
+
+	// StaticMeshComponent still only exposes a ray query path. Keep it as a
+	// conservative fallback so particle collision continues to hit mesh-only
+	// worlds even before mesh sweeps are implemented.
+	FHitResult RayHit;
+	if (PhysicsRaycast(Start, NormalizedDir, MaxDist, RayHit, TraceChannel, IgnoreActor)
+		&& RayHit.Distance <= BestHit.Distance)
+	{
+		BestHit = RayHit;
+		bFound = true;
+	}
+
+	if (!bFound)
+	{
+		return false;
+	}
+
+	OutHit = BestHit;
+	return true;
+}
+
 
 void UWorld::InsertActorToOctree(AActor* Actor)
 {

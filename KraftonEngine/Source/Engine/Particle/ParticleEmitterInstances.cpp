@@ -79,7 +79,7 @@ void FParticleEmitterInstance::InitParameters(UParticleEmitter* InTemplate)
 
 	PayloadOffset = ParticleSize;
 	ParticleSize += static_cast<int32>(RequiredBytes());
-	ParticleSize = AlignParticleDataSize(ParticleSize, 16);
+	ParticleSize = AlignParticleDataSize(ParticleSize, 16); //why doing this?
 	ParticleStride = static_cast<int32>(CalculateParticleStride(static_cast<uint32>(ParticleSize)));
 	ActiveParticles = 0;
 	ParticleCounter = 0;
@@ -727,12 +727,22 @@ void FParticleEmitterInstance::PreSpawn(FBaseParticle* Particle, const FVector& 
 
 void FParticleEmitterInstance::PostSpawn(FBaseParticle* Particle, float Interp, float SpawnTime)
 {
-	(void)Interp;
-	(void)SpawnTime;
 	if (!Particle)
 	{
 		return;
 	}
+
+	if (CurrentLODLevel && CurrentLODLevel->RequiredModule && !CurrentLODLevel->RequiredModule->bUseLocalSpace)
+	{
+		const FVector EmitterMove = OldLocation - Location;
+		if (EmitterMove.Dot(EmitterMove) > 1.0f)
+		{
+			Particle->Location = Particle->Location + EmitterMove * Interp;
+		}
+	}
+
+	Particle->OldLocation = Particle->Location;
+	Particle->Location = Particle->Location + Particle->Velocity * SpawnTime;
 
 	Particle->Flags |= ((ParticleCounter++) & STATE_CounterMask);
 	Particle->ParticleId = ParticleCounter;

@@ -43,6 +43,19 @@ namespace {
 			+ UnitAxis * (UnitAxis.Dot(Value) * (1.0f - C));
 	}
 
+	FVector BuildRibbonSideAxis(const FFrameContext& Frame, ETrailsRenderAxisOption RenderAxis,
+		const FVector& Position, const FVector& Tangent, const FVector& Fallback)
+	{
+		if (RenderAxis == Trails_WorldUp || RenderAxis == Trails_SourceUp)
+		{
+			return SafeNormalizeBeam(FVector::UpVector, Fallback);
+		}
+
+		const FVector ToCamera = SafeNormalizeBeam(Frame.CameraPosition - Position, Frame.CameraForward * -1.0f);
+		const FVector CameraUp = SafeNormalizeBeam(Frame.CameraUp, FVector::UpVector);
+		return SafeNormalizeBeam(ToCamera.Cross(Tangent), CameraUp);
+	}
+
 	float ApplyBeamTaper(EBeamTaperMethod TaperMethod, float TaperFactor, float TaperScale, float Alpha)
 	{
 		Alpha = std::clamp(Alpha, 0.0f, 1.0f);
@@ -506,6 +519,42 @@ bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevic
 	}
 	Cmd.Bindings.PerShaderCB[0] = &Hit.ParticleParamCB;
 
+	FVector4 MaterialColor(1.0f, 1.0f, 1.0f, 1.0f);
+	if (Hit.Material)
+	{
+		Hit.Material->GetVector4Parameter("SectionColor", MaterialColor);
+	}
+	const uint32 HasDiffuseTexture = Hit.Material && Hit.Material->GetCachedSRVs()[(int)EMaterialTextureSlot::Diffuse] ? 1u : 0u;
+	if (Hit.ParticleMaterialParams.MaterialColor.X != MaterialColor.X
+		|| Hit.ParticleMaterialParams.MaterialColor.Y != MaterialColor.Y
+		|| Hit.ParticleMaterialParams.MaterialColor.Z != MaterialColor.Z
+		|| Hit.ParticleMaterialParams.MaterialColor.W != MaterialColor.W
+		|| Hit.ParticleMaterialParams.HasDiffuseTexture != HasDiffuseTexture)
+	{
+		Hit.ParticleMaterialParams.MaterialColor = MaterialColor;
+		Hit.ParticleMaterialParams.HasDiffuseTexture = HasDiffuseTexture;
+		Hit.bParticleMaterialCBDirty = true;
+	}
+
+	if (Hit.bParticleMaterialCBDirty)
+	{
+		if (!Hit.ParticleMaterialCB.GetBuffer())
+		{
+			Hit.ParticleMaterialCB.Create(
+				InDevice,
+				sizeof(FParticleMaterialConstants),
+				"ParticleMaterialCB");
+		}
+
+		Hit.ParticleMaterialCB.Update(
+			InDeviceContext,
+			&Hit.ParticleMaterialParams,
+			sizeof(FParticleMaterialConstants));
+
+		Hit.bParticleMaterialCBDirty = false;
+	}
+	Cmd.Bindings.PerShaderCB[1] = &Hit.ParticleMaterialCB;
+
 	if (Hit.Type == DET_Mesh && Hit.MeshGeom && Hit.InstanceCount > 0)
 	{
 		Cmd.Shader = FShaderManager::Get().GetOrCreate(EShaderPath::ParticleMesh);
@@ -550,6 +599,9 @@ bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevic
 	}
 	else if (Hit.Type == DET_Ribbon && Hit.IndexCount > 0)
 	{
+		// TODO: Remove once material domain compatibility is enforced by the editor/material system.
+		Cmd.Shader = FShaderManager::Get().GetOrCreate(EShaderPath::ParticleRibbon);
+
 		Cmd.Buffer.VB         = RibbonPacker.GetVertexBuffer();
 		Cmd.Buffer.VBStride   = sizeof(FRibbonParticleInstanceVertex);
 		Cmd.Buffer.IB         = RibbonPacker.GetIndexBuffer();
@@ -1066,6 +1118,7 @@ void FParticleSystemSceneProxy::FRibbonParticlePacker::PackEmitter(const FFrameC
 		{
 			const uint32 SheetVertexBase = static_cast<uint32>(PackedVertices.size());
 			FVector PreviousTangent = FVector::ForwardVector;
+			FVector PreviousSideAxis = FVector::RightVector;
 
 			for (int32 PointIdx = 0; PointIdx < Trail.PointCount; ++PointIdx)
 			{
@@ -1077,13 +1130,17 @@ void FParticleSystemSceneProxy::FRibbonParticlePacker::PackEmitter(const FFrameC
 				FVector Tangent = SafeNormalizeBeam(NextPoint.Position - PrevPoint.Position, PreviousTangent);
 				PreviousTangent = Tangent;
 
-				const FVector ToCamera = SafeNormalizeBeam(Frame.CameraPosition - Point.Position, FVector::UpVector);
-				FVector SideAxis = SafeNormalizeBeam(ToCamera.Cross(Tangent), FVector::RightVector);
+				FVector SideAxis = BuildRibbonSideAxis(Frame, Source.RenderAxisOption, Point.Position, Tangent, PreviousSideAxis);
 				if (SheetIdx > 0)
 				{
 					const float SheetAngle = Pi * static_cast<float>(SheetIdx) / static_cast<float>(SheetCount);
 					SideAxis = SafeNormalizeBeam(RotateAroundAxis(SideAxis, Tangent, SheetAngle), SideAxis);
 				}
+				if (SideAxis.Dot(PreviousSideAxis) < 0.0f)
+				{
+					SideAxis = SideAxis * -1.0f;
+				}
+				PreviousSideAxis = SideAxis;
 
 				const float HalfWidth = std::max(0.0f, Point.Width) * 0.5f;
 				const float U = (Source.TilingDistance > 0.0f)

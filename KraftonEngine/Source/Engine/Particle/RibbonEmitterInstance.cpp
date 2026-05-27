@@ -96,6 +96,7 @@ FDynamicEmitterReplayDataBase* FRibbonEmitterInstance::GetReplayData()
 	ReplayData->Scale = FVector::OneVector;
 	ReplayData->SheetsPerTrail = std::max(1, RibbonModule->SheetsPerTrail);
 	ReplayData->MaxTessellationBetweenParticles = std::max(0, RibbonModule->MaxTessellationBetweenParticles);
+	ReplayData->RenderAxisOption = RibbonModule->RenderAxis;
 	ReplayData->TilingDistance = std::max(0.0f, RibbonModule->TilingDistance);
 	ReplayData->DistanceTessellationStepSize = std::max(0.0f, RibbonModule->DistanceTessellationStepSize);
 	ReplayData->bRenderGeometry = RibbonModule->bRenderGeometry;
