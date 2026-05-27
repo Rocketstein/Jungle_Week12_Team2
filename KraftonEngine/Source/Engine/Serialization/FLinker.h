@@ -21,6 +21,8 @@ public:
 	void  Finalize();                           // writes [Count][Path*Count][Buffer] to Inner
 
 	void      Serialize(void* Data, size_t Num) override;     // appends to SaveBuffer
+
+	using FArchive::operator<<;
 	FArchive& operator<<(UObject*& Obj) override;             // writes int32 index
 
 private:
@@ -37,5 +39,7 @@ public:
 	UObject* ObjectForIndex(int32 Index) const;                 // bounds-checked, 0 = null
 
 	void      Serialize(void* Data, size_t Num) override;       // forwards to Inner
+
+	using FArchive::operator<<;
 	FArchive& operator<<(UObject*& Obj) override;               // reads int32 index, looks up
 };
