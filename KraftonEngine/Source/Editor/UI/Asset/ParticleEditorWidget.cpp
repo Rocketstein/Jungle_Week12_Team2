@@ -920,6 +920,14 @@ void FParticleEditorWidget::Tick(float DeltaTime)
 	{
 		PreviewActor->bTickInEditor = bSimulating;
 	}
+
+	if (bSimulating)
+	{
+		if (UWorld* PreviewWorld = ViewportClient.GetPreviewWorld())
+		{
+			PreviewWorld->Tick(DeltaTime, LEVELTICK_ViewportsOnly);
+		}
+	}
 }
 
 void FParticleEditorWidget::CollectPreviewViewports(TArray<IEditorPreviewViewportClient*>& OutClients) const

@@ -4,7 +4,6 @@
 #include "Editor/PIE/PIETypes.h"
 #include "Editor/UI/EditorTextureManager.h"
 #include "Platform/Paths.h"
-#include "Editor/UI/ParticleSmokeTestPanel.h"
 #include "ImGui/imgui.h"
 
 void FEditorPlayToolbarWidget::Initialize(UEditorEngine* InEditor, ID3D11Device* InDevice)
@@ -85,15 +84,4 @@ void FEditorPlayToolbarWidget::Render(float Width)
 
 	// 다음 콘텐츠는 툴바 아래로 이어지도록 커서 복원
 	ImGui::SetCursorScreenPos(ImVec2(CursorStart.x, CursorStart.y + ToolbarHeight));
-
-	// ---- TRANSIENT: particle renderer smoke test panel ----
-	// Floats in its own ImGui window so the buttons don't fight the shared
-	// viewport toolbar for the same screen real estate. Remove this single call
-	// (and the panel files) once the CPU sim drives the proxy end-to-end.
-	static bool bParticleSmokeTestsOpen = true;
-	if (bParticleSmokeTestsOpen)
-	{
-		FParticleSmokeTestPanel::Render(Editor, &bParticleSmokeTestsOpen);
-	}
-	// -------------------------------------------------------
 }
