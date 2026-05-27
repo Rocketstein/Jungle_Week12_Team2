@@ -1,5 +1,6 @@
 ﻿#include "FObjectProperty.h"
 #include "Core/UObject/FObjectPtr.h"
+#include "Serialization/Archive.h"
 #include "SimpleJSON/json.hpp"
 
 namespace 
@@ -51,7 +52,21 @@ void FObjectProperty::Deserialize(void* Instance, const json::JSON& Value) const
 	SetObjectPropertyValue(ContainerPtrToValuePtr(Instance), Resolved);
 }
 
+// TODO: Implement FLinker subclass of FArchive
 void FObjectProperty::SerializeItem(FArchive& Ar, void* Value, const void* Defaults) const
 {
-	Ar << *static_cast<FObjectPtr*>(Value);
+	FObjectPtr* Ptr = static_cast<FObjectPtr*>(Value);
+
+	if (Ar.IsSaving())
+	{
+		UObject* Obj = Ptr->Get();
+		FString PathKey = Obj ? Obj->GetPathName() : FString("None");
+		Ar << PathKey;
+	}
+	else
+	{
+		FString PathKey;
+		Ar << PathKey;
+		SetObjectPropertyValue(Value, ResolveHardReference(PathKey));
+	}
 }
