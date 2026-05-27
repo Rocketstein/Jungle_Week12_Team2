@@ -49,6 +49,7 @@ private:
 		BeamSource,
 		BeamTarget,
 		BeamNoise,
+		EventGenerator,
 		Collision
 	};
 

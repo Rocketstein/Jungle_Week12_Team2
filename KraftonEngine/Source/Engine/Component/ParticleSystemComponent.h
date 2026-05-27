@@ -9,6 +9,7 @@
 #include "ParticleSystemComponent.generated.h"
 
 class UParticleSystemComponent;
+class AParticleEventManager;
 class UFXSystemAsset;
 class FParticleSystemSceneProxy;
 struct FParticleEmitterInstance;
@@ -56,8 +57,16 @@ public:
 
 	//Related To Collision
 	void QueueParticleCollisionEvent(const FParticleEventCollideData& EventData);
+	void ReportEventSpawn(FName InEventName, float InEmitterTime, const FVector& InLocation, const FVector& InVelocity);
+	void ReportEventDeath(FName InEventName, float InEmitterTime, const FVector& InLocation, const FVector& InVelocity,
+		float InParticleTime, const FVector& InDirection);
+	void ReportEventCollision(FName InEventName, float InEmitterTime, const FVector& InLocation, const FVector& InDirection,
+		const FVector& InVelocity, float InParticleTime, const FVector& InNormal, float InHitTime);
+	void ReportEventBurst(FName InEventName, float InEmitterTime, int32 InParticleCount, const FVector& InLocation);
 	void DispatchParticleCollisionEvents();
 	void ClearParticleCollisionEvents();
+	void DispatchParticleEvents();
+	void ClearParticleEvents();
 	
 	//Wrapper
 	void InitializeSystem();
@@ -74,7 +83,10 @@ public:
 	UPROPERTY(Edit, Category="Particles", DisplayName="Particle System Priority", Min=0, Max=65535, Speed=1.0f)
 	int32 SortPriority = 0;
 
-	TArray<FParticleEventCollideData> ParticleEventCollideDatas;
+	TArray<FParticleEventSpawnData> SpawnEvents;
+	TArray<FParticleEventDeathData> DeathEvents;
+	TArray<FParticleEventCollideData> CollisionEvents;
+	TArray<FParticleEventBurstData> BurstEvents;
 	FParticleCollideSignature OnParticleCollide;
 	int32 MaxParticleCollisionEventsPerFrame = 256;
 	bool bDispatchingParticleCollisionEvents = false;

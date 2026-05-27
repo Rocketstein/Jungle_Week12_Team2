@@ -123,7 +123,16 @@ void FSlateApplication::BringViewportToFront(FViewportClient* Client)
 
 bool FSlateApplication::DoesClientOwnMouseInput(FViewportClient* Client) const
 {
-	return Client && (Client == CapturedClient || Client == HoveredClient);
+	if (!Client) return false;
+
+	// 누군가 마우스를 꽉 붙잡고(Capture) 있다면, 그 녀석만 권한을 가짐
+	if (CapturedClient)
+	{
+		return Client == CapturedClient;
+	}
+
+	// 붙잡고 있는 녀석이 없을 때만 마우스가 올라가 있는(Hover) 녀석에게 권한을 줌
+	return Client == HoveredClient;
 }
 
 bool FSlateApplication::DoesClientOwnKeyboardInput(FViewportClient* Client) const

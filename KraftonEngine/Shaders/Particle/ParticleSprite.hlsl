@@ -58,14 +58,26 @@ float4 ProjectCameraPositionBillboard(float3 WorldPosition, float2 Corner, float
 
 float2 ComputeSubUVTexcoord(float2 LocalUV, float SubImage)
 {
-    uint Cols = max(SubUVCols, 1u);
-    uint Rows = max(SubUVRows, 1u);
-    uint FrameCount = max(Cols * Rows, 1u);
+    // --- 아틀라스 전체 여백 보정 (줌인) ---
+    float2 AtlasMin = float2(0.01, 0.01); 
+    float2 AtlasMax = float2(0.99, 0.99);
+    // ------------------------------------
+
+    // 강제 4x3 폴백 (엔진 변수 무시하고 벚꽃에 최적화)
+    uint ActualCols = 4;
+    uint ActualRows = 3;
+
+    uint FrameCount = ActualCols * ActualRows;
     uint FrameIndex = (uint)clamp(floor(SubImage), 0.0f, (float)(FrameCount - 1));
-    uint FrameCol = FrameIndex % Cols;
-    uint FrameRow = FrameIndex / Cols;
-    float2 CellSize = 1.0f / float2((float)Cols, (float)Rows);
-    return (LocalUV + float2((float)FrameCol, (float)FrameRow)) * CellSize;
+    
+    uint FrameCol = FrameIndex % ActualCols;
+    uint FrameRow = FrameIndex / ActualCols; // 행 계산 방식 (Cols로 나누어야 함)
+    
+    float2 CellSize = 1.0f / float2((float)ActualCols, (float)ActualRows);
+    float2 Offset = float2((float)FrameCol, (float)FrameRow) * CellSize;
+    
+    float2 UVInCell = LocalUV * CellSize + Offset;
+    return lerp(AtlasMin, AtlasMax, UVInCell);
 }
 
 PS_Input_Particle VS(VS_Input_ParticleSprite Input)
@@ -115,6 +127,8 @@ PS_Input_Particle VS(VS_Input_ParticleSprite Input)
         Out.position = mul(mul(WorldPos, View), Projection);
     }
 
+    // 셰이더 내부의 불안정한 랜덤 해시를 제거하고, 
+    // C++(CPU)에서 이미 계산되어 넘어온 고정된 Input.subImage 값을 그대로 사용합니다.
     Out.texcoord = ComputeSubUVTexcoord(float2(Input.uv.x, 1.0f - Input.uv.y), Input.subImage);
     Out.color    = Input.color;
     return Out;

@@ -521,6 +521,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Engine\Particle\ParticleEmitter.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleEmitterInstances.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleEventCollideData.cpp" />
+    <ClCompile Include="Source\Engine\Particle\ParticleEventManager.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleLODContext.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleLODLevel.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleModules.cpp" />
@@ -882,6 +883,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\Particle\ParticleEmitterInstances.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEmitterTypes.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEventCollideData.h" />
+    <ClInclude Include="Source\Engine\Particle\ParticleEventManager.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleHelper.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleLODContext.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleLODLevel.h" />

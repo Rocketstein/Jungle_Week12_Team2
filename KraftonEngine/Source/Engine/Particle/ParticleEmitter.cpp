@@ -50,6 +50,10 @@ UParticleLODLevel* UParticleEmitter::DuplicateLODLevelForEmitter(UParticleLODLev
 				{
 					NewLOD->TypeDataModule = TypeData;
 				}
+				if (UParticleModuleEventGenerator* EventGen = Cast<UParticleModuleEventGenerator>(NewModule))
+				{
+					NewLOD->EventGenerator = EventGen;
+				}
 			}
 		}
 	}

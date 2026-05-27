@@ -83,7 +83,7 @@ void FParticleStats::RecordComponent(const UParticleSystemComponent& Component)
 	Current.ComponentCount++;
 	Current.SimMemoryBytes += static_cast<uint64>(Component.EmitterInstances.capacity() * sizeof(FParticleEmitterInstance*));
 	Current.SimMemoryBytes += static_cast<uint64>(Component.LODDistances.capacity() * sizeof(float));
-	Current.SimMemoryBytes += static_cast<uint64>(Component.ParticleEventCollideDatas.capacity() * sizeof(FParticleEventCollideData));
+	Current.SimMemoryBytes += static_cast<uint64>(Component.CollisionEvents.capacity() * sizeof(FParticleEventCollideData));
 
 	for (const FParticleEmitterInstance* Instance : Component.EmitterInstances)
 	{
