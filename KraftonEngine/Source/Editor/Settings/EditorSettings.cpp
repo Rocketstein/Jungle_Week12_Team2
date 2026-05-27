@@ -32,6 +32,7 @@ namespace Key
 	constexpr const char* bOctree = "bOctree";
 	constexpr const char* bFog = "bFog";
 	constexpr const char* bFXAA = "bFXAA";
+	constexpr const char* bParticles = "bParticles";
 	constexpr const char* bGammaCorrection = "bGammaCorrection";
 	constexpr const char* bViewLightCulling = "bViewLightCulling";
 	constexpr const char* bVisualize25DCulling = "bVisualize25DCulling";
@@ -137,6 +138,7 @@ json::JSON SaveRenderOptions(const FViewportRenderOptions& Opts)
 	Obj[Key::bOctree] = Opts.ShowFlags.bOctree;
 	Obj[Key::bFog] = Opts.ShowFlags.bFog;
 	Obj[Key::bFXAA] = Opts.ShowFlags.bFXAA;
+	Obj[Key::bParticles] = Opts.ShowFlags.bParticles;
 	Obj[Key::bGammaCorrection] = Opts.ShowFlags.bGammaCorrection;
 	Obj[Key::bViewLightCulling] = Opts.ShowFlags.bViewLightCulling;
 	Obj[Key::bVisualize25DCulling] = Opts.ShowFlags.bVisualize25DCulling;
@@ -187,6 +189,8 @@ void LoadRenderOptions(json::JSON Obj, FViewportRenderOptions& Opts)
 		Opts.ShowFlags.bFog = Obj[Key::bFog].ToBool();
 	if (Obj.hasKey(Key::bFXAA))
 		Opts.ShowFlags.bFXAA = Obj[Key::bFXAA].ToBool();
+	if (Obj.hasKey(Key::bParticles))
+		Opts.ShowFlags.bParticles = Obj[Key::bParticles].ToBool();
 	if (Obj.hasKey(Key::bGammaCorrection))
 		Opts.ShowFlags.bGammaCorrection = Obj[Key::bGammaCorrection].ToBool();
 	if (Obj.hasKey(Key::bViewLightCulling))

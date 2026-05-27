@@ -129,9 +129,17 @@ namespace ParticleKeys
 	static constexpr const char* Z = "Z";
 	static constexpr const char* Collision = "Collision";
 	static constexpr const char* EventGenerator = "EventGenerator";
+	static constexpr const char* EventReceiverSpawn = "EventReceiverSpawn";
 	static constexpr const char* Events = "Events";
 	static constexpr const char* EventType = "EventType";
+	static constexpr const char* EventGeneratorType = "EventGeneratorType";
 	static constexpr const char* CustomName = "CustomName";
+	static constexpr const char* EventName = "EventName";
+	static constexpr const char* SpawnCount = "SpawnCount";
+	static constexpr const char* bSpawnOnlyOnEvent = "bSpawnOnlyOnEvent";
+	static constexpr const char* SpawnLocationOffset = "SpawnLocationOffset";
+	static constexpr const char* bInheritEventVelocity = "bInheritEventVelocity";
+	static constexpr const char* EventVelocityScale = "EventVelocityScale";
 	static constexpr const char* ParticleFrequency = "ParticleFrequency";
 	static constexpr const char* FirstTimeOnly = "FirstTimeOnly";
 	static constexpr const char* LastTimeOnly = "LastTimeOnly";
@@ -218,6 +226,12 @@ namespace ParticleKeys
 	static constexpr const char* DistanceTessellationStepSize = "DistanceTessellationStepSize";
 	static constexpr const char* bEnableTangentDiffInterpScale = "bEnableTangentDiffInterpScale";
 	static constexpr const char* TangentTessellationScalar = "TangentTessellationScalar";
+	static constexpr const char* bUseSourceEmitter = "bUseSourceEmitter";
+	static constexpr const char* SourceEmitterName = "SourceEmitterName";
+	static constexpr const char* SourceTrailLifetime = "SourceTrailLifetime";
+	static constexpr const char* SourceSampleInterval = "SourceSampleInterval";
+	static constexpr const char* SourceMinSampleDistance = "SourceMinSampleDistance";
+	static constexpr const char* SourceWidthScale = "SourceWidthScale";
 }
 
 json::JSON MakeVectorJSON(const FVector& Value)
@@ -600,6 +614,12 @@ json::JSON SerializeTypeDataModule(UParticleModuleTypeDataBase* TypeData)
 		Object[ParticleKeys::Width] = Ribbon->Width;
 		Object[ParticleKeys::Color] = MakeVectorJSON(Ribbon->Color);
 		Object[ParticleKeys::Alpha] = Ribbon->Alpha;
+		Object[ParticleKeys::bUseSourceEmitter] = Ribbon->bUseSourceEmitter;
+		Object[ParticleKeys::SourceEmitterName] = Ribbon->SourceEmitterName.ToString();
+		Object[ParticleKeys::SourceTrailLifetime] = Ribbon->SourceTrailLifetime;
+		Object[ParticleKeys::SourceSampleInterval] = Ribbon->SourceSampleInterval;
+		Object[ParticleKeys::SourceMinSampleDistance] = Ribbon->SourceMinSampleDistance;
+		Object[ParticleKeys::SourceWidthScale] = Ribbon->SourceWidthScale;
 	}
 
 	return Object;
@@ -623,6 +643,7 @@ const char* GetSerializableModuleType(UParticleModule* Module)
 	if (Module->IsA<UParticleModuleBeamNoise>()) return "BeamNoise";
 	if (Module->IsA<UParticleModuleCollision>()) return ParticleKeys::Collision;
 	if (Module->IsA<UParticleModuleEventGenerator>()) return ParticleKeys::EventGenerator;
+	if (Module->IsA<UParticleModuleEventReceiverSpawn>()) return ParticleKeys::EventReceiverSpawn;
 	return nullptr;
 }
 
@@ -786,6 +807,16 @@ json::JSON SerializeModule(UParticleModule* Module)
 			Events.append(EventObject);
 		}
 		Object[ParticleKeys::Events] = Events;
+	}
+	else if (UParticleModuleEventReceiverSpawn* EventReceiver = Cast<UParticleModuleEventReceiverSpawn>(Module))
+	{
+		Object[ParticleKeys::EventGeneratorType] = static_cast<int32>(EventReceiver->EventGeneratorType);
+		Object[ParticleKeys::EventName] = EventReceiver->EventName.ToString();
+		Object[ParticleKeys::SpawnCount] = EventReceiver->SpawnCount;
+		Object[ParticleKeys::bSpawnOnlyOnEvent] = EventReceiver->bSpawnOnlyOnEvent;
+		Object[ParticleKeys::SpawnLocationOffset] = MakeVectorJSON(EventReceiver->SpawnLocationOffset);
+		Object[ParticleKeys::bInheritEventVelocity] = EventReceiver->bInheritEventVelocity;
+		Object[ParticleKeys::EventVelocityScale] = EventReceiver->EventVelocityScale;
 	}
 
 	return Object;
@@ -1035,7 +1066,7 @@ UParticleModuleTypeDataBase* DeserializeTypeDataModule(json::JSON& Object, UPart
 		UParticleModuleTypeDataRibbon* Ribbon = GUObjectArray.CreateObject<UParticleModuleTypeDataRibbon>(Outer);
 		if (Object.hasKey(ParticleKeys::MaxTessellationBetweenParticles)) Ribbon->MaxTessellationBetweenParticles = std::clamp(static_cast<int32>(Object[ParticleKeys::MaxTessellationBetweenParticles].ToInt()), 0, 32);
 		if (Object.hasKey(ParticleKeys::SheetsPerTrail)) Ribbon->SheetsPerTrail = std::clamp(static_cast<int32>(Object[ParticleKeys::SheetsPerTrail].ToInt()), 1, 16);
-		if (Object.hasKey(ParticleKeys::MaxTrailCount)) Ribbon->MaxTrailCount = std::clamp(static_cast<int32>(Object[ParticleKeys::MaxTrailCount].ToInt()), 1, 64);
+		if (Object.hasKey(ParticleKeys::MaxTrailCount)) Ribbon->MaxTrailCount = std::clamp(static_cast<int32>(Object[ParticleKeys::MaxTrailCount].ToInt()), 1, 512);
 		if (Object.hasKey(ParticleKeys::MaxParticleInTrailCount)) Ribbon->MaxParticleInTrailCount = std::clamp(static_cast<int32>(Object[ParticleKeys::MaxParticleInTrailCount].ToInt()), 2, 1024);
 		if (Object.hasKey(ParticleKeys::bDeadTrailsOnDeactivate)) Ribbon->bDeadTrailsOnDeactivate = Object[ParticleKeys::bDeadTrailsOnDeactivate].ToBool();
 		if (Object.hasKey(ParticleKeys::bDeadTrailsOnSourceLoss)) Ribbon->bDeadTrailsOnSourceLoss = Object[ParticleKeys::bDeadTrailsOnSourceLoss].ToBool();
@@ -1060,6 +1091,12 @@ UParticleModuleTypeDataBase* DeserializeTypeDataModule(json::JSON& Object, UPart
 		if (Object.hasKey(ParticleKeys::Width)) Ribbon->Width = std::max(0.0f, static_cast<float>(Object[ParticleKeys::Width].ToFloat()));
 		Ribbon->Color = ReadVectorJSON(Object, ParticleKeys::Color, Ribbon->Color);
 		if (Object.hasKey(ParticleKeys::Alpha)) Ribbon->Alpha = std::clamp(static_cast<float>(Object[ParticleKeys::Alpha].ToFloat()), 0.0f, 1.0f);
+		if (Object.hasKey(ParticleKeys::bUseSourceEmitter)) Ribbon->bUseSourceEmitter = Object[ParticleKeys::bUseSourceEmitter].ToBool();
+		if (Object.hasKey(ParticleKeys::SourceEmitterName)) Ribbon->SourceEmitterName = FName(Object[ParticleKeys::SourceEmitterName].ToString());
+		if (Object.hasKey(ParticleKeys::SourceTrailLifetime)) Ribbon->SourceTrailLifetime = std::max(0.001f, static_cast<float>(Object[ParticleKeys::SourceTrailLifetime].ToFloat()));
+		if (Object.hasKey(ParticleKeys::SourceSampleInterval)) Ribbon->SourceSampleInterval = std::max(0.0f, static_cast<float>(Object[ParticleKeys::SourceSampleInterval].ToFloat()));
+		if (Object.hasKey(ParticleKeys::SourceMinSampleDistance)) Ribbon->SourceMinSampleDistance = std::max(0.0f, static_cast<float>(Object[ParticleKeys::SourceMinSampleDistance].ToFloat()));
+		if (Object.hasKey(ParticleKeys::SourceWidthScale)) Ribbon->SourceWidthScale = std::max(0.0f, static_cast<float>(Object[ParticleKeys::SourceWidthScale].ToFloat()));
 		return Ribbon;
 	}
 
@@ -1365,6 +1402,22 @@ UParticleModule* DeserializeModule(json::JSON& Object, UParticleLODLevel* Outer)
 			}
 		}
 		Module = EventGenerator;
+	}
+	else if (Type == ParticleKeys::EventReceiverSpawn)
+	{
+		UParticleModuleEventReceiverSpawn* EventReceiver = GUObjectArray.CreateObject<UParticleModuleEventReceiverSpawn>(Outer);
+		if (Object.hasKey(ParticleKeys::EventGeneratorType))
+		{
+			const int32 Value = static_cast<int32>(Object[ParticleKeys::EventGeneratorType].ToInt());
+			EventReceiver->EventGeneratorType = static_cast<EParticleEventType>(std::clamp(Value, 0, static_cast<int32>(EPET_MAX) - 1));
+		}
+		if (Object.hasKey(ParticleKeys::EventName)) EventReceiver->EventName = FName(Object[ParticleKeys::EventName].ToString());
+		if (Object.hasKey(ParticleKeys::SpawnCount)) EventReceiver->SpawnCount = std::clamp(static_cast<int32>(Object[ParticleKeys::SpawnCount].ToInt()), 0, 1024);
+		if (Object.hasKey(ParticleKeys::bSpawnOnlyOnEvent)) EventReceiver->bSpawnOnlyOnEvent = Object[ParticleKeys::bSpawnOnlyOnEvent].ToBool();
+		EventReceiver->SpawnLocationOffset = ReadVectorJSON(Object, ParticleKeys::SpawnLocationOffset, EventReceiver->SpawnLocationOffset);
+		if (Object.hasKey(ParticleKeys::bInheritEventVelocity)) EventReceiver->bInheritEventVelocity = Object[ParticleKeys::bInheritEventVelocity].ToBool();
+		if (Object.hasKey(ParticleKeys::EventVelocityScale)) EventReceiver->EventVelocityScale = std::max(0.0f, static_cast<float>(Object[ParticleKeys::EventVelocityScale].ToFloat()));
+		Module = EventReceiver;
 	}
 
 	if (Module && Object.hasKey(ParticleKeys::bEnabled))

@@ -14,6 +14,27 @@
 #include <malloc.h>
 #include <utility>
 
+namespace
+{
+bool ShouldSuppressAutomaticSpawning(const UParticleLODLevel* LODLevel)
+{
+	if (!LODLevel)
+	{
+		return false;
+	}
+
+	for (UParticleModuleEventReceiverBase* Receiver : LODLevel->EventReceiverModules)
+	{
+		const UParticleModuleEventReceiverSpawn* SpawnReceiver = Cast<UParticleModuleEventReceiverSpawn>(Receiver);
+		if (SpawnReceiver && SpawnReceiver->bEnabled && SpawnReceiver->bSpawnOnlyOnEvent)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+}
+
 FParticleEmitterInstance::FParticleEmitterInstance(UParticleSystemComponent* InComponent)
 	: Component(InComponent)
 {
@@ -293,7 +314,7 @@ float FParticleEmitterInstance::Tick_SpawnParticles(float DeltaTime, UParticleLO
 	(void)InCurrentLODLevel;
 	(void)bFirstTime;
 
-	if (bSuppressSpawning)
+	if (bSuppressSpawning || ShouldSuppressAutomaticSpawning(InCurrentLODLevel))
 	{
 		return SpawnFraction;
 	}

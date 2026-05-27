@@ -30,7 +30,7 @@ public:
 	UPROPERTY(Edit, Category="Trail", Min=1, Max=16, Speed=1.0f)
 	int32 SheetsPerTrail = 1;
 
-	UPROPERTY(Edit, Category="Trail", Min=1, Max=64, Speed=1.0f)
+	UPROPERTY(Edit, Category="Trail", Min=1, Max=512, Speed=1.0f)
 	int32 MaxTrailCount = 1;
 
 	UPROPERTY(Edit, Category="Trail", Min=2, Max=1024, Speed=1.0f)
@@ -97,4 +97,24 @@ public:
 
 	UPROPERTY(Edit, Category="Rendering", Min=0.0f, Max=1.0f, Speed=0.01f)
 	float Alpha = 1.0f;
+
+	// Source-particle trails let this ribbon emitter render one smoke trail per
+	// active particle in a sibling sprite emitter.
+	UPROPERTY(Edit, Category="Source")
+	bool bUseSourceEmitter = false;
+
+	UPROPERTY(Edit, Category="Source", DisplayName="Source Emitter Name")
+	FName SourceEmitterName = FName::None;
+
+	UPROPERTY(Edit, Category="Source", Min=0.016f, Max=10.0f, Speed=0.01f)
+	float SourceTrailLifetime = 0.75f;
+
+	UPROPERTY(Edit, Category="Source", Min=0.0f, Max=1.0f, Speed=0.001f)
+	float SourceSampleInterval = 0.033f;
+
+	UPROPERTY(Edit, Category="Source", Min=0.0f, Max=1000.0f, Speed=0.1f)
+	float SourceMinSampleDistance = 5.0f;
+
+	UPROPERTY(Edit, Category="Source", Min=0.0f, Max=100.0f, Speed=0.1f)
+	float SourceWidthScale = 1.0f;
 };

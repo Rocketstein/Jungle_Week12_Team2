@@ -65,6 +65,7 @@ public:
 	void ReportEventBurst(FName InEventName, float InEmitterTime, int32 InParticleCount, const FVector& InLocation);
 	void DispatchParticleCollisionEvents();
 	void ClearParticleCollisionEvents();
+	void ProcessParticleEventReceivers(float DeltaTime);
 	void DispatchParticleEvents();
 	void ClearParticleEvents();
 	
@@ -83,6 +84,10 @@ public:
 	UPROPERTY(Edit, Category="Particles", DisplayName="Particle System Priority", Min=0, Max=65535, Speed=1.0f)
 	int32 SortPriority = 0;
 
+	UPROPERTY(Edit, Category="Particles", DisplayName="Show Particles")
+	bool bShowParticles = true;
+
+	TArray<FParticleEventCollideData> ParticleEventCollideDatas;
 	TArray<FParticleEventSpawnData> SpawnEvents;
 	TArray<FParticleEventDeathData> DeathEvents;
 	TArray<FParticleEventCollideData> CollisionEvents;

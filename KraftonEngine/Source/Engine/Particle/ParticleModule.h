@@ -241,6 +241,36 @@ public:
 };
 
 UCLASS()
+class UParticleModuleEventReceiverSpawn : public UParticleModuleEventReceiverBase
+{
+public:
+	GENERATED_BODY(UParticleModuleEventReceiverSpawn)
+
+	UParticleModuleEventReceiverSpawn();
+
+	UPROPERTY(Edit, Category="Event")
+	FName EventName = FName::None;
+
+	UPROPERTY(Edit, Category="Spawn", Min=0, Max=1024, Speed=1.0f)
+	int32 SpawnCount = 1;
+
+	UPROPERTY(Edit, Category="Spawn")
+	bool bSpawnOnlyOnEvent = true;
+
+	UPROPERTY(Edit, Category="Spawn")
+	FVector SpawnLocationOffset = FVector::ZeroVector;
+
+	UPROPERTY(Edit, Category="Spawn")
+	bool bInheritEventVelocity = false;
+
+	UPROPERTY(Edit, Category="Spawn", Min=0.0f, Max=100.0f, Speed=0.1f)
+	float EventVelocityScale = 1.0f;
+
+	bool ProcessParticleEvent(FParticleEmitterInstance* Owner, FParticleEventData& InEvent, float DeltaTime) override;
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
+};
+
+UCLASS()
 class UParticleModuleRequired : public UParticleModule
 {
 public:

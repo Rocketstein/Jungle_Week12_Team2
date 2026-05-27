@@ -1685,6 +1685,7 @@
                 "WorldStatic" : 2
               },
               "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Show Particles" : true,
               "Simulate Physics" : false,
               "Template" : "Asset/Particle/P_Collision_Test.uasset",
               "bEditorOnly" : false,
@@ -1944,6 +1945,7 @@
                 "WorldStatic" : 2
               },
               "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Show Particles" : true,
               "Simulate Physics" : false,
               "Template" : "Asset/Particle/P_RibbonTest.uasset",
               "bEditorOnly" : false,
@@ -2142,6 +2144,7 @@
             "WorldStatic" : 2
           },
           "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Show Particles" : true,
           "Simulate Physics" : false,
           "Template" : "Asset/Particle/CherryBlossom.uasset",
           "bEditorOnly" : false,
@@ -2456,9 +2459,9 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [-113.584518, 14.950644, 46.675114],
+    "Location" : [-29.312325, 10.127920, 11.716016],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, 21.349808, -10.791250]
+    "Rotation" : [0.000000, 17.922398, -372.438385]
   },
   "Version" : 2,
   "WorldSettings" : {

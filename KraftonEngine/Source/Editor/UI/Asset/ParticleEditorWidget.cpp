@@ -48,6 +48,8 @@ namespace
 		"Asset/Mesh/BasicShape/Sphere_Lowpoly_StaticMesh.uasset";
 	constexpr const char* DefaultParticleMeshMaterialPath =
 		"Asset/Materials/Editor/DefaultParticleMesh.mat";
+	constexpr const char* DefaultParticleRibbonMaterialPath =
+		"Asset/Materials/Editor/DefaultParticleRibbon.mat";
 
 	const char* GScreenAlignmentNames[] =
 	{
@@ -212,6 +214,29 @@ namespace
 		return FMaterialManager::Get().GetOrCreateMaterial(DefaultParticleMeshMaterialPath);
 	}
 
+	UMaterial* GetDefaultParticleRibbonMaterial()
+	{
+		return FMaterialManager::Get().GetOrCreateMaterial(DefaultParticleRibbonMaterialPath);
+	}
+
+	bool IsCompatibleParticleRibbonMaterial(UMaterialInterface* MaterialInterface)
+	{
+		const UMaterial* Material = MaterialInterface ? MaterialInterface->GetMaterial() : nullptr;
+		if (!Material)
+		{
+			return false;
+		}
+
+		const EBlendState BlendState = Material->GetBlendState();
+		if (BlendState != EBlendState::AlphaBlend && BlendState != EBlendState::Additive)
+		{
+			return false;
+		}
+
+		FShader* Shader = Material->GetShader();
+		return Shader == FShaderManager::Get().GetOrCreate(EShaderPath::ParticleRibbon);
+	}
+
 	bool EnsureParticleMeshEmitterDefaults(UParticleModuleRequired* Required)
 	{
 		if (!Required)
@@ -229,6 +254,27 @@ namespace
 		{
 			Required->ScreenAlignment = PSA_TypeSpecific;
 			bChanged = true;
+		}
+		return bChanged;
+	}
+
+	bool EnsureParticleRibbonEmitterDefaults(UParticleModuleRequired* Required)
+	{
+		if (!Required)
+		{
+			return false;
+		}
+
+		bool bChanged = false;
+		if (Required->ScreenAlignment != PSA_TypeSpecific)
+		{
+			Required->ScreenAlignment = PSA_TypeSpecific;
+			bChanged = true;
+		}
+		if (!IsCompatibleParticleRibbonMaterial(Required->Material))
+		{
+			Required->Material = GetDefaultParticleRibbonMaterial();
+			bChanged = Required->Material != nullptr;
 		}
 		return bChanged;
 	}
@@ -903,6 +949,7 @@ void FParticleEditorWidget::Open(UObject* Object)
 	bParticleSystemSelected = false;
 	SyncAssetNameBuffer();
 	EnsureDefaultSystem();
+	SyncEmitterNameBuffer();
 	InitializePreviewWorld();
 }
 
@@ -917,6 +964,9 @@ void FParticleEditorWidget::Close()
 	SelectedModule = nullptr;
 	bParticleSystemSelected = false;
 	AssetNameBuffer[0] = '\0';
+	EmitterNameBuffer[0] = '\0';
+	EmitterNameBufferIndex = -1;
+	EmitterNameBufferEmitter = nullptr;
 }
 
 void FParticleEditorWidget::Tick(float DeltaTime)
@@ -1207,6 +1257,16 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 		EventGenerator->Events.push_back(CollisionEvent);
 		return EventGenerator;
 	}
+	case EAddableModuleType::EventReceiverSpawn:
+	{
+		UParticleModuleEventReceiverSpawn* EventReceiver = GUObjectArray.CreateObject<UParticleModuleEventReceiverSpawn>(Outer);
+		EventReceiver->bEnabled = true;
+		EventReceiver->EventGeneratorType = EPET_Collision;
+		EventReceiver->EventName = FName("Collision");
+		EventReceiver->SpawnCount = 1;
+		EventReceiver->bSpawnOnlyOnEvent = true;
+		return EventReceiver;
+	}
 	}
 
 	return nullptr;
@@ -1324,6 +1384,10 @@ void FParticleEditorWidget::SetEmitterTypeData(int32 EmitterIndex, EEmitterTypeD
 				bChanged |= EnsureParticleMeshEmitterDefaults(LOD->RequiredModule);
 				bChanged |= EnsureParticleMeshSizeDefaults(LOD);
 			}
+			else if (TypeData == EEmitterTypeData::Ribbon)
+			{
+				bChanged |= EnsureParticleRibbonEmitterDefaults(LOD->RequiredModule);
+			}
 			continue;
 		}
 
@@ -1370,15 +1434,7 @@ void FParticleEditorWidget::SetEmitterTypeData(int32 EmitterIndex, EEmitterTypeD
 		}
 		else if (TypeData == EEmitterTypeData::Ribbon && LOD->RequiredModule)
 		{
-			LOD->RequiredModule->ScreenAlignment = PSA_TypeSpecific;
-			if (!LOD->RequiredModule->Material ||
-				GetMaterialPath(LOD->RequiredModule->Material) == "Asset/Particle/Materials/M_Fire_B.mat")
-			{
-				if (UMaterial* RibbonMaterial = FMaterialManager::Get().GetOrCreateMaterial("Asset/Materials/Editor/DefaultParticleRibbon.mat"))
-				{
-					LOD->RequiredModule->Material = RibbonMaterial;
-				}
-			}
+			bChanged |= EnsureParticleRibbonEmitterDefaults(LOD->RequiredModule);
 		}
 
 		bChanged = true;
@@ -1794,6 +1850,152 @@ void FParticleEditorWidget::CommitAssetNameEdit()
 	}
 }
 
+void FParticleEditorWidget::SyncEmitterNameBuffer()
+{
+	if (!EditingParticleSystem || EditingParticleSystem->Emitters.empty())
+	{
+		EmitterNameBuffer[0] = '\0';
+		EmitterNameBufferIndex = -1;
+		EmitterNameBufferEmitter = nullptr;
+		return;
+	}
+
+	const int32 ClampedIndex = std::clamp(SelectedEmitterIndex, 0,
+		static_cast<int32>(EditingParticleSystem->Emitters.size()) - 1);
+	UParticleEmitter* Emitter = EditingParticleSystem->Emitters[ClampedIndex];
+	const FString Name = Emitter ? GetEmitterDisplayName(Emitter, ClampedIndex) : FString();
+	std::snprintf(EmitterNameBuffer, sizeof(EmitterNameBuffer), "%s", Name.c_str());
+	EmitterNameBufferIndex = ClampedIndex;
+	EmitterNameBufferEmitter = Emitter;
+}
+
+bool FParticleEditorWidget::IsEmitterNameAvailable(const FString& Name, int32 IgnoreEmitterIndex) const
+{
+	if (!EditingParticleSystem)
+	{
+		return false;
+	}
+
+	for (int32 Index = 0; Index < static_cast<int32>(EditingParticleSystem->Emitters.size()); ++Index)
+	{
+		if (Index == IgnoreEmitterIndex)
+		{
+			continue;
+		}
+
+		UParticleEmitter* Emitter = EditingParticleSystem->Emitters[Index];
+		if (Emitter && Emitter->GetEmitterName().ToString() == Name)
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+void FParticleEditorWidget::UpdateEmitterNameReferences(const FName& OldName, const FName& NewName)
+{
+	if (!EditingParticleSystem || !OldName.IsValid() || OldName == FName::None || OldName == NewName)
+	{
+		return;
+	}
+
+	auto RenameIfMatched = [&](FName& Name)
+	{
+		if (Name == OldName)
+		{
+			Name = NewName;
+		}
+	};
+
+	for (UParticleEmitter* Emitter : EditingParticleSystem->Emitters)
+	{
+		if (!Emitter)
+		{
+			continue;
+		}
+
+		for (UParticleLODLevel* LOD : Emitter->LODLevels)
+		{
+			if (!LOD)
+			{
+				continue;
+			}
+
+			if (UParticleModuleTypeDataRibbon* Ribbon = Cast<UParticleModuleTypeDataRibbon>(LOD->TypeDataModule))
+			{
+				RenameIfMatched(Ribbon->SourceEmitterName);
+			}
+			else if (UParticleModuleTypeDataBeam2* Beam = Cast<UParticleModuleTypeDataBeam2>(LOD->TypeDataModule))
+			{
+				RenameIfMatched(Beam->BranchParentName);
+				for (FBeamTargetData& Target : Beam->TargetData)
+				{
+					RenameIfMatched(Target.TargetName);
+				}
+			}
+
+			for (UParticleModule* Module : LOD->Modules)
+			{
+				if (UParticleModuleBeamSource* BeamSource = Cast<UParticleModuleBeamSource>(Module))
+				{
+					RenameIfMatched(BeamSource->SourceName);
+				}
+				else if (UParticleModuleBeamTarget* BeamTarget = Cast<UParticleModuleBeamTarget>(Module))
+				{
+					RenameIfMatched(BeamTarget->TargetName);
+				}
+			}
+		}
+	}
+}
+
+bool FParticleEditorWidget::CommitEmitterNameEdit()
+{
+	if (!EditingParticleSystem || EditingParticleSystem->Emitters.empty())
+	{
+		SyncEmitterNameBuffer();
+		return false;
+	}
+
+	const int32 ClampedIndex = std::clamp(SelectedEmitterIndex, 0,
+		static_cast<int32>(EditingParticleSystem->Emitters.size()) - 1);
+	UParticleEmitter* Emitter = EditingParticleSystem->Emitters[ClampedIndex];
+	if (!Emitter)
+	{
+		SyncEmitterNameBuffer();
+		return false;
+	}
+
+	FString NewName = EmitterNameBuffer;
+	const size_t First = NewName.find_first_not_of(" \t\r\n");
+	if (First == FString::npos)
+	{
+		SyncEmitterNameBuffer();
+		return false;
+	}
+
+	const size_t Last = NewName.find_last_not_of(" \t\r\n");
+	NewName = NewName.substr(First, Last - First + 1);
+	if (NewName == "None" || !IsEmitterNameAvailable(NewName, ClampedIndex))
+	{
+		SyncEmitterNameBuffer();
+		return false;
+	}
+
+	const FName OldName = Emitter->GetEmitterName();
+	const FName NewFName(NewName);
+	if (OldName == NewFName)
+	{
+		SyncEmitterNameBuffer();
+		return false;
+	}
+
+	Emitter->SetEmitterName(NewFName);
+	UpdateEmitterNameReferences(OldName, NewFName);
+	SyncEmitterNameBuffer();
+	return true;
+}
+
 int32 FParticleEditorWidget::GetLODCount() const
 {
 	return EditingParticleSystem ? EditingParticleSystem->GetLODCount() : 1;
@@ -2023,6 +2225,10 @@ FString FParticleEditorWidget::GetModuleDisplayName(UParticleModule* Module) con
 	{
 		return "Event Generator";
 	}
+	if (Module->IsA<UParticleModuleEventReceiverSpawn>())
+	{
+		return "Event Receiver Spawn";
+	}
 	if (Module->IsA<UParticleModuleTypeDataRibbon>())
 	{
 		return "Ribbon";
@@ -2171,6 +2377,10 @@ void FParticleEditorWidget::RenderToolbar()
 	if (ImGui::Button("Save"))
 	{
 		CommitAssetNameEdit();
+		if (CommitEmitterNameEdit())
+		{
+			ApplyEmitterEdit();
+		}
 		if (FParticleSystemManager::Get().Save(EditingParticleSystem))
 		{
 			ClearDirty();
@@ -2525,6 +2735,10 @@ void FParticleEditorWidget::RenderEmitterList()
 			if (ImGui::MenuItem("Event Generator"))
 			{
 				QueueAddModule(EmitterIndex, EAddableModuleType::EventGenerator);
+			}
+			if (ImGui::MenuItem("Event Receiver Spawn"))
+			{
+				QueueAddModule(EmitterIndex, EAddableModuleType::EventReceiverSpawn);
 			}
 			ImGui::EndMenu();
 		}
@@ -3272,8 +3486,33 @@ bool FParticleEditorWidget::RenderDetailsPanel()
 	}
 
 	bool bChanged = false;
+	if (EmitterNameBufferIndex != SelectedEmitterIndex || EmitterNameBufferEmitter != Emitter)
+	{
+		SyncEmitterNameBuffer();
+	}
+
+	ImGui::TextUnformatted("Emitter");
+	ImGui::SetNextItemWidth(220.0f);
+	if (ImGui::InputText("Name", EmitterNameBuffer, sizeof(EmitterNameBuffer), ImGuiInputTextFlags_EnterReturnsTrue))
+	{
+		bChanged |= CommitEmitterNameEdit();
+	}
+	if (ImGui::IsItemDeactivatedAfterEdit())
+	{
+		bChanged |= CommitEmitterNameEdit();
+	}
+
+	const FString PendingName = EmitterNameBuffer;
+	const bool bDuplicateName = !PendingName.empty()
+		&& !IsEmitterNameAvailable(PendingName, SelectedEmitterIndex)
+		&& Emitter->GetEmitterName().ToString() != PendingName;
+	if (bDuplicateName)
+	{
+		ImGui::TextDisabled("Emitter name must be unique.");
+	}
+
+	ImGui::Separator();
 	ImGui::TextUnformatted(GetModuleDisplayName(Module).c_str());
-	ImGui::TextDisabled("%s", GetEmitterDisplayName(Emitter, SelectedEmitterIndex).c_str());
 	ImGui::Separator();
 
 	bChanged |= RenderModuleDetails(Module);
@@ -4138,6 +4377,55 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 			ImGui::PopID();
 		}
 	}
+	else if (UParticleModuleEventReceiverSpawn* EventReceiver = Cast<UParticleModuleEventReceiverSpawn>(Module))
+	{
+		int EventType = static_cast<int>(EventReceiver->EventGeneratorType);
+		if (ImGui::Combo("Event Type", &EventType, GParticleEventTypeNames, IM_ARRAYSIZE(GParticleEventTypeNames)))
+		{
+			EventReceiver->EventGeneratorType = static_cast<EParticleEventType>(std::clamp(EventType, 0, static_cast<int>(EPET_Blueprint)));
+			bChanged = true;
+		}
+
+		char NameBuffer[128] = {};
+		const FString CurrentName = EventReceiver->EventName.ToString();
+		std::snprintf(NameBuffer, sizeof(NameBuffer), "%s", CurrentName.c_str());
+		if (ImGui::InputText("Event Name", NameBuffer, sizeof(NameBuffer)))
+		{
+			EventReceiver->EventName = FName(NameBuffer);
+			bChanged = true;
+		}
+
+		int SpawnCount = EventReceiver->SpawnCount;
+		if (ImGui::DragInt("Spawn Count", &SpawnCount, 1.0f, 0, 1024))
+		{
+			EventReceiver->SpawnCount = std::clamp(SpawnCount, 0, 1024);
+			bChanged = true;
+		}
+
+		if (ImGui::Checkbox("Spawn Only On Event", &EventReceiver->bSpawnOnlyOnEvent))
+		{
+			bChanged = true;
+		}
+
+		FVector SpawnLocationOffset = EventReceiver->SpawnLocationOffset;
+		if (ImGui::DragFloat3("Location Offset", &SpawnLocationOffset.X, 0.25f, -100000.0f, 100000.0f))
+		{
+			EventReceiver->SpawnLocationOffset = SpawnLocationOffset;
+			bChanged = true;
+		}
+
+		if (ImGui::Checkbox("Inherit Event Velocity", &EventReceiver->bInheritEventVelocity))
+		{
+			bChanged = true;
+		}
+
+		float EventVelocityScale = EventReceiver->EventVelocityScale;
+		if (ImGui::DragFloat("Event Velocity Scale", &EventVelocityScale, 0.01f, 0.0f, 100.0f))
+		{
+			EventReceiver->EventVelocityScale = (std::max)(0.0f, EventVelocityScale);
+			bChanged = true;
+		}
+	}
 	else if (UParticleModuleCollision* Collision = Cast<UParticleModuleCollision>(Module))
 	{
 		int TraceChannel = static_cast<int>(Collision->TraceChannel);
@@ -4185,6 +4473,96 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 	}
 	else if (UParticleModuleTypeDataRibbon* Ribbon = Cast<UParticleModuleTypeDataRibbon>(Module))
 	{
+		if (ImGui::TreeNodeEx("Source", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			if (ImGui::Checkbox("Use Source Emitter", &Ribbon->bUseSourceEmitter))
+			{
+				bChanged = true;
+			}
+
+			const bool bHasExplicitSource = Ribbon->SourceEmitterName.IsValid()
+				&& Ribbon->SourceEmitterName != FName::None;
+			const FString SourcePreview = bHasExplicitSource
+				? Ribbon->SourceEmitterName.ToString()
+				: FString("Auto");
+
+			if (ImGui::BeginCombo("Source Emitter", SourcePreview.c_str()))
+			{
+				const bool bAutoSelected = !bHasExplicitSource;
+				if (ImGui::Selectable("Auto", bAutoSelected))
+				{
+					Ribbon->SourceEmitterName = FName::None;
+					bChanged = true;
+				}
+				if (bAutoSelected)
+				{
+					ImGui::SetItemDefaultFocus();
+				}
+
+				if (EditingParticleSystem)
+				{
+					for (int32 EmitterIndex = 0; EmitterIndex < static_cast<int32>(EditingParticleSystem->Emitters.size()); ++EmitterIndex)
+					{
+						if (EmitterIndex == SelectedEmitterIndex)
+						{
+							continue;
+						}
+
+						UParticleEmitter* CandidateEmitter = EditingParticleSystem->Emitters[EmitterIndex];
+						UParticleLODLevel* CandidateLOD = GetSelectedLODLevel(CandidateEmitter);
+						if (!CandidateEmitter || !CandidateLOD || CandidateLOD->TypeDataModule)
+						{
+							continue;
+						}
+
+						const FName& CandidateName = CandidateEmitter->GetEmitterName();
+						const FString CandidateLabel = GetEmitterDisplayName(CandidateEmitter, EmitterIndex);
+						const bool bSelected = bHasExplicitSource && Ribbon->SourceEmitterName == CandidateName;
+						if (ImGui::Selectable(CandidateLabel.c_str(), bSelected))
+						{
+							Ribbon->SourceEmitterName = CandidateName;
+							bChanged = true;
+						}
+						if (bSelected)
+						{
+							ImGui::SetItemDefaultFocus();
+						}
+					}
+				}
+				ImGui::EndCombo();
+			}
+
+			float SourceTrailLifetime = Ribbon->SourceTrailLifetime;
+			if (ImGui::DragFloat("Trail Lifetime", &SourceTrailLifetime, 0.01f, 0.001f, 10.0f))
+			{
+				Ribbon->SourceTrailLifetime = (std::max)(0.001f, SourceTrailLifetime);
+				bChanged = true;
+			}
+
+			float SourceSampleInterval = Ribbon->SourceSampleInterval;
+			if (ImGui::DragFloat("Sample Interval", &SourceSampleInterval, 0.001f, 0.0f, 1.0f, "%.3f"))
+			{
+				Ribbon->SourceSampleInterval = (std::max)(0.0f, SourceSampleInterval);
+				bChanged = true;
+			}
+
+			float SourceMinSampleDistance = Ribbon->SourceMinSampleDistance;
+			if (ImGui::DragFloat("Min Sample Distance", &SourceMinSampleDistance, 0.1f, 0.0f, 1000.0f))
+			{
+				Ribbon->SourceMinSampleDistance = (std::max)(0.0f, SourceMinSampleDistance);
+				bChanged = true;
+			}
+
+			float SourceWidthScale = Ribbon->SourceWidthScale;
+			if (ImGui::DragFloat("Source Width Scale", &SourceWidthScale, 0.01f, 0.0f, 100.0f))
+			{
+				Ribbon->SourceWidthScale = (std::max)(0.0f, SourceWidthScale);
+				bChanged = true;
+			}
+
+			ImGui::TreePop();
+		}
+
 		int MaxTessellationBetweenParticles = Ribbon->MaxTessellationBetweenParticles;
 		if (ImGui::DragInt("Max Tessellation Between Particles", &MaxTessellationBetweenParticles, 1.0f, 0, 32))
 		{
@@ -4200,9 +4578,9 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		}
 
 		int MaxTrailCount = Ribbon->MaxTrailCount;
-		if (ImGui::DragInt("Max Trail Count", &MaxTrailCount, 1.0f, 1, 64))
+		if (ImGui::DragInt("Max Trail Count", &MaxTrailCount, 1.0f, 1, 512))
 		{
-			Ribbon->MaxTrailCount = std::clamp(MaxTrailCount, 1, 64);
+			Ribbon->MaxTrailCount = std::clamp(MaxTrailCount, 1, 512);
 			bChanged = true;
 		}
 
