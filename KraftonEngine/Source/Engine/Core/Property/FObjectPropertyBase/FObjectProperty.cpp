@@ -3,6 +3,16 @@
 #include "Serialization/Archive.h"
 #include "SimpleJSON/json.hpp"
 
+// TODO(PIE): FObjectProperty does not yet survive PIE duplication. Both the
+// JSON path (FindObjectByPath) and the binary path (FLinkerSave/Load's path
+// table) key references by GetPathName(), which encodes the source object's
+// outer world. After duplication, PIE-world objects have new paths, so refs
+// either resolve to the editor-world original (identity bug) or to null.
+// Fix requires a duplicate-specific FArchive subclass (Unreal-style
+// FArchiveUObject + old->new pointer fixup map) that overrides
+// operator<<(UObject*&) to substitute mapped pointers in-scope and pass
+// out-of-scope refs through unchanged.
+
 UObject* FObjectProperty::GetObjectPropertyValue(void* Addr) const
 {
 	return static_cast<FObjectPtr*>(Addr)->Get();
