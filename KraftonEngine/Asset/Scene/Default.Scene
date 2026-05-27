@@ -2931,7 +2931,7 @@
             }],
           "Object Type" : 0,
           "RelativeTransform" : {
-            "Location" : [17.530083, 7.037521, -5.185501],
+            "Location" : [17.530083, 7.037521, -4.565192],
             "Scale" : [1.000000, 1.000000, 1.000000]
           },
           "Response Container" : {
@@ -2942,7 +2942,7 @@
             "WorldDynamic" : 2,
             "WorldStatic" : 2
           },
-          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Rotation" : [0.000000, 60.800003, 0.000000],
           "Simulate Physics" : false,
           "Static Mesh" : "Asset/Mesh/Tanabata/TanabataCombined.uasset",
           "bEditorOnly" : false,
@@ -2959,9 +2959,9 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [-2.358168, -0.834496, 7.141701],
+    "Location" : [-2.754852, -0.316693, 9.496189],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, 54.799782, 8.258753]
+    "Rotation" : [0.000000, 67.999817, -2.691251]
   },
   "Version" : 2,
   "WorldSettings" : {
