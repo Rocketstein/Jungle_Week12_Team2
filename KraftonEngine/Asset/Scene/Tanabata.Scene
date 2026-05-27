@@ -503,13 +503,7 @@
               "Generate Overlap Events" : false,
               "Is Visible" : false,
               "Mass (Kg)" : 1.000000,
-              "Materials" : [{
-                  "Path" : "Asset/Mesh/Manny/Meshes/SKM_Manny_Simple_MI_Manny_01_New.mat",
-                  "SlotName" : ""
-                }, {
-                  "Path" : "Asset/Mesh/Manny/Meshes/SKM_Manny_Simple_MI_Manny_02_New.mat",
-                  "SlotName" : ""
-                }],
+              "Materials" : [],
               "Object Type" : 0,
               "RelativeTransform" : {
                 "Location" : [0.000000, 0.000000, -3.000000],
@@ -525,7 +519,7 @@
               },
               "Rotation" : [0.000000, -90.000000, 0.000000],
               "Simulate Physics" : false,
-              "Skeletal Mesh" : "Asset/Mesh/Manny/Meshes/SKM_Manny_Simple_SkeletalMesh.uasset",
+              "Skeletal Mesh" : "None",
               "Two Bone IK Chains" : [{
                   "Enabled" : true,
                   "End Bone Index" : 76,
@@ -4538,10 +4532,92 @@
             "WorldDynamic" : 2,
             "WorldStatic" : 2
           },
-          "Rotation" : [-0.000000, 125.498924, 0.000000],
+          "Rotation" : [0.000000, 125.498932, 0.000000],
           "Show Particles" : true,
           "Simulate Physics" : false,
           "Template" : "Asset/Particle/P_Beam.uasset",
+          "bEditorOnly" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bTickEnable" : true
+        }
+      }
+    }, {
+      "ClassName" : "AEmitter",
+      "Name" : "AEmitter_10",
+      "NonSceneComponents" : [],
+      "Properties" : {
+        "Tags" : [],
+        "bNeedsTick" : true,
+        "bVisible" : true
+      },
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UBillboardComponent",
+            "Properties" : {
+              "Auto Activate" : true,
+              "Cast Shadow" : true,
+              "Cast Shadow as Two-Sided" : false,
+              "Center of Mass" : [0.000000, 0.000000, 0.000000],
+              "Collision Enabled" : 0,
+              "Generate Overlap Events" : false,
+              "Is Visible" : true,
+              "Mass (Kg)" : 1.000000,
+              "Material" : {
+                "Path" : "Asset/Materials/Editor/Emitter.mat",
+                "SlotName" : ""
+              },
+              "Object Type" : 0,
+              "RelativeTransform" : {
+                "Location" : [0.000000, 0.000000, 0.000000],
+                "Scale" : [1.000000, 1.000000, 1.000000]
+              },
+              "Response Container" : {
+                "FootIK" : 2,
+                "Pawn" : 2,
+                "Projectile" : 2,
+                "Trigger" : 2,
+                "WorldDynamic" : 2,
+                "WorldStatic" : 2
+              },
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Simulate Physics" : false,
+              "bEditorOnly" : true,
+              "bHiddenInComponentTree" : true,
+              "bIsActive" : true,
+              "bTickEnable" : true
+            },
+            "bHiddenInComponentTree" : true
+          }],
+        "ClassName" : "UParticleSystemComponent",
+        "Properties" : {
+          "Auto Activate" : true,
+          "Cast Shadow" : true,
+          "Cast Shadow as Two-Sided" : false,
+          "Center of Mass" : [0.000000, 0.000000, 0.000000],
+          "Collision Enabled" : 0,
+          "Generate Overlap Events" : false,
+          "Is Visible" : true,
+          "Mass (Kg)" : 1.000000,
+          "Object Type" : 0,
+          "Particle System Priority" : 0,
+          "RelativeTransform" : {
+            "Location" : [78.601913, 51.345871, 36.342274],
+            "Scale" : [1.000000, 1.000000, 1.000000]
+          },
+          "Response Container" : {
+            "FootIK" : 2,
+            "Pawn" : 2,
+            "Projectile" : 2,
+            "Trigger" : 2,
+            "WorldDynamic" : 2,
+            "WorldStatic" : 2
+          },
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Show Particles" : true,
+          "Simulate Physics" : false,
+          "Template" : "Asset/Particle/LOD_Test.uasset",
           "bEditorOnly" : false,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -4556,9 +4632,9 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [-19.411201, 41.629440, 18.958136],
+    "Location" : [1.566398, 0.562254, 52.141617],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, 18.350039, 741.600281]
+    "Rotation" : [0.000000, 21.500034, 765.900635]
   },
   "Version" : 2,
   "WorldSettings" : {
