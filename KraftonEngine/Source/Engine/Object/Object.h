@@ -207,6 +207,18 @@ inline bool IsValid(const UObject* Object)
 	return GUObjectArray.IsAlive(Object);
 }
 
+inline UObject* FindObjectByPath(const FString& Path)
+{
+	if (Path.empty() || Path == FString("None")) return nullptr;
+	for (const FUObjectItem& Item : GUObjectArray.GetItems())
+	{
+		UObject* Obj = Item.Object;
+		if (!Obj) continue;
+		if (Obj->GetPathName() == Path) return Obj;
+	}
+	return nullptr;
+}
+
 inline bool IsAliveObject(const UObject* Object)
 {
 	return IsValid(Object);
