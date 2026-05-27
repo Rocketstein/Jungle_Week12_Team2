@@ -4038,6 +4038,23 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 			bChanged = true;
 		}
 
+		if (ImGui::Checkbox("Previous Tangent Recalculation", &Ribbon->bEnablePreviousTangentRecalculation))
+		{
+			bChanged = true;
+		}
+
+		if (ImGui::Checkbox("Tangent Recalculation Every Frame", &Ribbon->bTangentRecalculationEveryFrame))
+		{
+			bChanged = true;
+		}
+
+		float TangentSpawningScalar = Ribbon->TangentSpawningScalar;
+		if (ImGui::DragFloat("Tangent Spawning Scalar", &TangentSpawningScalar, 0.1f, 0.0f, 1000.0f))
+		{
+			Ribbon->TangentSpawningScalar = (std::max)(0.0f, TangentSpawningScalar);
+			bChanged = true;
+		}
+
 		if (ImGui::Checkbox("Render Geometry", &Ribbon->bRenderGeometry))
 		{
 			bChanged = true;
@@ -4058,6 +4075,11 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 			bChanged = true;
 		}
 
+		if (ImGui::Checkbox("Tangent Diff Interp Scale", &Ribbon->bEnableTangentDiffInterpScale))
+		{
+			bChanged = true;
+		}
+
 		float TilingDistance = Ribbon->TilingDistance;
 		if (ImGui::DragFloat("Tiling Distance", &TilingDistance, 1.0f, 0.0f, 10000.0f))
 		{
@@ -4069,6 +4091,13 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		if (ImGui::DragFloat("Distance Tessellation Step", &DistanceTessellationStepSize, 1.0f, 0.0f, 10000.0f))
 		{
 			Ribbon->DistanceTessellationStepSize = (std::max)(0.0f, DistanceTessellationStepSize);
+			bChanged = true;
+		}
+
+		float TangentTessellationScalar = Ribbon->TangentTessellationScalar;
+		if (ImGui::DragFloat("Tangent Tessellation Scalar", &TangentTessellationScalar, 0.1f, 0.0f, 1000.0f))
+		{
+			Ribbon->TangentTessellationScalar = (std::max)(0.0f, TangentTessellationScalar);
 			bChanged = true;
 		}
 
