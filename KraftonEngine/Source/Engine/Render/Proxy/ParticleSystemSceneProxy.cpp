@@ -774,11 +774,10 @@ void FParticleSystemSceneProxy::FSpriteParticlePacker::PackEmitter(const FFrameC
 		const uint16 Idx = SortedParticleIndices[i];
 		const uint8* Bytes = Source.DataContainer.ParticleData + Idx * Source.ParticleStride;
 		const FBaseParticle& P = *reinterpret_cast<const FBaseParticle*>(Bytes);
-		const float NormalizedAge = std::clamp(P.RelativeTime, 0.0f, 1.0f);
-		const int32 SubImageIndex = std::clamp(
-			static_cast<int32>(std::floor(NormalizedAge * static_cast<float>(SubImageCount))),
-			0,
-			SubImageCount - 1);
+		
+		// 벚꽃처럼 각 파티클이 고정된 하나의 랜덤 꽃잎을 가지게 하기 위해
+		// 나이(Age) 기반 애니메이션 대신 ParticleId를 이용한 고정 랜덤 인덱스를 사용합니다.
+		const int32 SubImageIndex = P.ParticleId % SubImageCount;
 
 		for (int corner = 0; corner < 4; ++corner)
 		{
