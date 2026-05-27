@@ -228,6 +228,7 @@ json::JSON FMaterialSlotProperty::Serialize(const void* Instance) const
 {
 	const auto* Slot = static_cast<const FMaterialSlot*>(ContainerPtrToValuePtr(Instance));
 	json::JSON Object = json::Object();
+	Object["SlotName"] = json::JSON(Slot->SlotName);
 	Object["Path"] = json::JSON(Slot->Path);
 	return Object;
 }
@@ -235,6 +236,10 @@ json::JSON FMaterialSlotProperty::Serialize(const void* Instance) const
 void FMaterialSlotProperty::Deserialize(void* Instance, const json::JSON& Value) const
 {
 	auto* Slot = static_cast<FMaterialSlot*>(ContainerPtrToValuePtr(Instance));
+	if (Value.hasKey("SlotName"))
+	{
+		Slot->SlotName = Value.at("SlotName").ToString();
+	}
 	if (Value.hasKey("Path"))
 	{
 		Slot->Path = Value.at("Path").ToString();
@@ -243,7 +248,8 @@ void FMaterialSlotProperty::Deserialize(void* Instance, const json::JSON& Value)
 
 void FMaterialSlotProperty::SerializeItem(FArchive& Ar, void* Value, const void* Defaults) const
 {
-	Ar << static_cast<FMaterialSlot*>(Value)->Path;
+	FMaterialSlot* Slot = static_cast<FMaterialSlot*>(Value);
+	Ar << Slot->SlotName << Slot->Path;
 }
 
 json::JSON FNameProperty::Serialize(const void* Instance) const

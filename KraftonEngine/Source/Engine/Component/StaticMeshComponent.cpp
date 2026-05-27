@@ -13,6 +13,27 @@
 #include "Render/Proxy/PrimitiveSceneProxy.h"
 #include "Serialization/Archive.h"
 
+namespace
+{
+	int32 FindStaticMaterialSlotIndex(UStaticMesh* Mesh, const FString& SlotName, int32 FallbackIndex)
+	{
+		if (!Mesh || SlotName.empty())
+		{
+			return FallbackIndex;
+		}
+
+		const TArray<FStaticMaterial>& Materials = Mesh->GetStaticMaterials();
+		for (int32 Index = 0; Index < static_cast<int32>(Materials.size()); ++Index)
+		{
+			if (Materials[Index].MaterialSlotName == SlotName)
+			{
+				return Index;
+			}
+		}
+		return FallbackIndex;
+	}
+}
+
 FPrimitiveSceneProxy* UStaticMeshComponent::CreateSceneProxy()
 {
 	return new FStaticMeshSceneProxy(this);
@@ -33,6 +54,7 @@ void UStaticMeshComponent::SetStaticMesh(UStaticMesh* InMesh)
 
 		for (int32 i = 0; i < (int32)DefaultMaterials.size(); ++i)
 		{
+			MaterialSlots[i].SlotName = DefaultMaterials[i].MaterialSlotName;
 			OverrideMaterials[i] = DefaultMaterials[i].MaterialInterface;
 
 			if (OverrideMaterials[i])
@@ -211,7 +233,7 @@ primitive AABB 기준으로 후보만 추립니다.
 // FArchive 기반 직렬화 — 복제 왕복용. 자산은 경로로만 들고, 실제 로드는 PostDuplicate에서.
 static FArchive& operator<<(FArchive& Ar, FMaterialSlot& Slot)
 {
-	Ar << Slot.Path;
+	Ar << Slot.SlotName << Slot.Path;
 	return Ar;
 }
 
@@ -231,18 +253,29 @@ void UStaticMeshComponent::PostDuplicate()
 			SetStaticMesh(Loaded);
 
 			// Override material 재로딩
-			for (int32 i = 0; i < (int32)MaterialSlots.size() && i < (int32)SavedSlots.size(); ++i)
+			for (int32 i = 0; i < (int32)SavedSlots.size(); ++i)
 			{
-				MaterialSlots[i] = SavedSlots[i];
-				const FString& MatPath = MaterialSlots[i].Path;
+				const int32 SlotIndex = FindStaticMaterialSlotIndex(Loaded, SavedSlots[i].SlotName, i);
+				if (SlotIndex < 0 || SlotIndex >= static_cast<int32>(MaterialSlots.size()))
+				{
+					continue;
+				}
+
+				if (!SavedSlots[i].SlotName.empty())
+				{
+					MaterialSlots[SlotIndex].SlotName = SavedSlots[i].SlotName;
+				}
+
+				const FString& MatPath = SavedSlots[i].Path;
+				MaterialSlots[SlotIndex].Path = MatPath;
 				if (MatPath.empty() || MatPath == "None")
 				{
-					OverrideMaterials[i] = nullptr;
+					OverrideMaterials[SlotIndex] = nullptr;
 				}
 				else
 				{
 					UMaterial* LoadedMat = FMaterialManager::Get().GetOrCreateMaterial(MatPath);
-					OverrideMaterials[i] = LoadedMat;
+					OverrideMaterials[SlotIndex] = LoadedMat;
 				}
 			}
 		}
@@ -275,19 +308,32 @@ void UStaticMeshComponent::PostEditProperty(const char* PropertyName)
 
 	if (strcmp(PropertyName, "Materials") == 0)
 	{
-		for (int32 Index = 0; Index < (int32)MaterialSlots.size(); ++Index)
+		const TArray<FMaterialSlot> SavedSlots = MaterialSlots;
+		for (int32 Index = 0; Index < (int32)SavedSlots.size(); ++Index)
 		{
-			const FString& NewMatPath = MaterialSlots[Index].Path;
+			const FMaterialSlot& SavedSlot = SavedSlots[Index];
+			const int32 SlotIndex = FindStaticMaterialSlotIndex(GetStaticMesh(), SavedSlot.SlotName, Index);
+			if (SlotIndex < 0 || SlotIndex >= static_cast<int32>(MaterialSlots.size()))
+			{
+				continue;
+			}
+
+			if (!SavedSlot.SlotName.empty())
+			{
+				MaterialSlots[SlotIndex].SlotName = SavedSlot.SlotName;
+			}
+
+			const FString& NewMatPath = SavedSlot.Path;
 			if (NewMatPath == "None" || NewMatPath.empty())
 			{
-				SetMaterial(Index, nullptr);
+				SetMaterial(SlotIndex, nullptr);
 			}
 			else
 			{
 				UMaterial* LoadedMat = FMaterialManager::Get().GetOrCreateMaterial(NewMatPath);
 				if (LoadedMat)
 				{
-					SetMaterial(Index, LoadedMat);
+					SetMaterial(SlotIndex, LoadedMat);
 				}
 			}
 		}

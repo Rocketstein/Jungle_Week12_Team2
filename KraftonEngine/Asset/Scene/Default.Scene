@@ -22,7 +22,8 @@
               "Is Visible" : true,
               "Mass (Kg)" : 1.000000,
               "Material" : {
-                "Path" : "Asset/Materials/Editor/DirectionalLight.mat"
+                "Path" : "Asset/Materials/Editor/DirectionalLight.mat",
+                "SlotName" : ""
               },
               "Object Type" : 0,
               "RelativeTransform" : {
@@ -92,7 +93,8 @@
               "Is Visible" : true,
               "Mass (Kg)" : 1.000000,
               "Material" : {
-                "Path" : "Asset/Materials/Editor/AmbientLight.mat"
+                "Path" : "Asset/Materials/Editor/AmbientLight.mat",
+                "SlotName" : ""
               },
               "Object Type" : 0,
               "RelativeTransform" : {
@@ -162,7 +164,8 @@
               "Is Visible" : true,
               "Mass (Kg)" : 1.000000,
               "Material" : {
-                "Path" : "Asset/Materials/Editor/PointLight.mat"
+                "Path" : "Asset/Materials/Editor/PointLight.mat",
+                "SlotName" : ""
               },
               "Object Type" : 0,
               "RelativeTransform" : {
@@ -234,7 +237,8 @@
               "Is Visible" : true,
               "Mass (Kg)" : 1.000000,
               "Material" : {
-                "Path" : "Asset/Materials/Editor/SpotLight.mat"
+                "Path" : "Asset/Materials/Editor/SpotLight.mat",
+                "SlotName" : ""
               },
               "Object Type" : 0,
               "RelativeTransform" : {
@@ -308,7 +312,8 @@
               "Is Visible" : true,
               "Mass (Kg)" : 1.000000,
               "Material" : {
-                "Path" : "Asset/Materials/Editor/SpotLight.mat"
+                "Path" : "Asset/Materials/Editor/SpotLight.mat",
+                "SlotName" : ""
               },
               "Object Type" : 0,
               "RelativeTransform" : {
@@ -382,7 +387,8 @@
               "Is Visible" : true,
               "Mass (Kg)" : 1.000000,
               "Material" : {
-                "Path" : "Asset/Materials/Editor/AmbientLight.mat"
+                "Path" : "Asset/Materials/Editor/AmbientLight.mat",
+                "SlotName" : ""
               },
               "Object Type" : 0,
               "RelativeTransform" : {
@@ -452,7 +458,8 @@
               "Is Visible" : true,
               "Mass (Kg)" : 1.000000,
               "Material" : {
-                "Path" : "Asset/Materials/Editor/HeightFog.mat"
+                "Path" : "Asset/Materials/Editor/HeightFog.mat",
+                "SlotName" : ""
               },
               "Object Type" : 0,
               "RelativeTransform" : {
@@ -482,7 +489,7 @@
           "Cutoff Distance" : 0.000000,
           "Fog Density" : 0.001500,
           "Height Falloff" : 0.100000,
-          "Inscattering Color" : [0.001602, 0.003535, 0.042194, 1.000000],
+          "Inscattering Color" : [0.001745, 0.003068, 0.029536, 1.000000],
           "Max Opacity" : 0.850000,
           "RelativeTransform" : {
             "Location" : [0.000000, 0.000000, 11.200000],
@@ -572,9 +579,11 @@
               "Is Visible" : false,
               "Mass (Kg)" : 1.000000,
               "Materials" : [{
-                  "Path" : "Asset/Mesh/Manny/Meshes/SKM_Manny_Simple_MI_Manny_01_New.mat"
+                  "Path" : "Asset/Mesh/Manny/Meshes/SKM_Manny_Simple_MI_Manny_01_New.mat",
+                  "SlotName" : ""
                 }, {
-                  "Path" : "Asset/Mesh/Manny/Meshes/SKM_Manny_Simple_MI_Manny_02_New.mat"
+                  "Path" : "Asset/Mesh/Manny/Meshes/SKM_Manny_Simple_MI_Manny_02_New.mat",
+                  "SlotName" : ""
                 }],
               "Object Type" : 0,
               "RelativeTransform" : {
@@ -727,7 +736,8 @@
                                           "Is Visible" : true,
                                           "Mass (Kg)" : 1.000000,
                                           "Materials" : [{
-                                              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+                                              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+                                              "SlotName" : "BasicShapeMaterial"
                                             }],
                                           "Object Type" : 5,
                                           "RelativeTransform" : {
@@ -762,7 +772,8 @@
                                       "Is Visible" : true,
                                       "Mass (Kg)" : 1.000000,
                                       "Materials" : [{
-                                          "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+                                          "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+                                          "SlotName" : "BasicShapeMaterial"
                                         }],
                                       "Object Type" : 5,
                                       "RelativeTransform" : {
@@ -797,7 +808,8 @@
                                   "Is Visible" : true,
                                   "Mass (Kg)" : 1.000000,
                                   "Materials" : [{
-                                      "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+                                      "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+                                      "SlotName" : "BasicShapeMaterial"
                                     }],
                                   "Object Type" : 5,
                                   "RelativeTransform" : {
@@ -832,7 +844,8 @@
                               "Is Visible" : true,
                               "Mass (Kg)" : 1.000000,
                               "Materials" : [{
-                                  "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+                                  "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+                                  "SlotName" : "BasicShapeMaterial"
                                 }],
                               "Object Type" : 5,
                               "RelativeTransform" : {
@@ -867,7 +880,8 @@
                           "Is Visible" : true,
                           "Mass (Kg)" : 1.000000,
                           "Materials" : [{
-                              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+                              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+                              "SlotName" : "BasicShapeMaterial"
                             }],
                           "Object Type" : 5,
                           "RelativeTransform" : {
@@ -902,7 +916,8 @@
                       "Is Visible" : true,
                       "Mass (Kg)" : 1.000000,
                       "Materials" : [{
-                          "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+                          "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+                          "SlotName" : "BasicShapeMaterial"
                         }],
                       "Object Type" : 5,
                       "RelativeTransform" : {
@@ -937,7 +952,8 @@
                   "Is Visible" : true,
                   "Mass (Kg)" : 1.000000,
                   "Materials" : [{
-                      "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+                      "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+                      "SlotName" : "BasicShapeMaterial"
                     }],
                   "Object Type" : 5,
                   "RelativeTransform" : {
@@ -972,7 +988,8 @@
               "Is Visible" : true,
               "Mass (Kg)" : 1.000000,
               "Materials" : [{
-                  "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+                  "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+                  "SlotName" : "BasicShapeMaterial"
                 }],
               "Object Type" : 5,
               "RelativeTransform" : {
@@ -1042,7 +1059,8 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+              "SlotName" : "BasicShapeMaterial"
             }],
           "Object Type" : 5,
           "RelativeTransform" : {
@@ -1088,7 +1106,8 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat"
+              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat",
+              "SlotName" : "MI_DefaultColorway"
             }],
           "Object Type" : 0,
           "RelativeTransform" : {
@@ -1134,7 +1153,8 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Materials/Auto/BasicShapeMaterial.mat"
+              "Path" : "Asset/Materials/Auto/BasicShapeMaterial.mat",
+              "SlotName" : "MI_PrototypeGrid_Gray"
             }],
           "Object Type" : 0,
           "RelativeTransform" : {
@@ -1180,7 +1200,8 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat"
+              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat",
+              "SlotName" : "MI_PrototypeGrid_Gray"
             }],
           "Object Type" : 0,
           "RelativeTransform" : {
@@ -1226,7 +1247,8 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat"
+              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat",
+              "SlotName" : "MI_PrototypeGrid_Gray"
             }],
           "Object Type" : 5,
           "RelativeTransform" : {
@@ -1272,7 +1294,8 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat"
+              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat",
+              "SlotName" : "MI_PrototypeGrid_Gray"
             }],
           "Object Type" : 5,
           "RelativeTransform" : {
@@ -1318,7 +1341,8 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat"
+              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat",
+              "SlotName" : "MI_PrototypeGrid_Gray"
             }],
           "Object Type" : 0,
           "RelativeTransform" : {
@@ -1364,11 +1388,12 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat"
+              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat",
+              "SlotName" : "MI_PrototypeGrid_Gray"
             }],
           "Object Type" : 0,
           "RelativeTransform" : {
-            "Location" : [-10.000000, -73.918411, 0.000000],
+            "Location" : [-10.000000, 123.670586, 0.000000],
             "Scale" : [20.000000, 10.000000, 5.000000]
           },
           "Response Container" : {
@@ -1410,7 +1435,8 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat"
+              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat",
+              "SlotName" : "MI_PrototypeGrid_Gray"
             }],
           "Object Type" : 0,
           "RelativeTransform" : {
@@ -1456,7 +1482,8 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat"
+              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat",
+              "SlotName" : "MI_PrototypeGrid_Gray"
             }],
           "Object Type" : 0,
           "RelativeTransform" : {
@@ -1502,7 +1529,8 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat"
+              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat",
+              "SlotName" : "MI_PrototypeGrid_Gray"
             }],
           "Object Type" : 0,
           "RelativeTransform" : {
@@ -1548,7 +1576,8 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat"
+              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat",
+              "SlotName" : "MI_PrototypeGrid_Gray"
             }],
           "Object Type" : 5,
           "RelativeTransform" : {
@@ -1594,7 +1623,8 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat"
+              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat",
+              "SlotName" : "MI_PrototypeGrid_Gray"
             }],
           "Object Type" : 5,
           "RelativeTransform" : {
@@ -1674,7 +1704,8 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+              "SlotName" : "BasicShapeMaterial"
             }],
           "Object Type" : 0,
           "RelativeTransform" : {
@@ -1755,7 +1786,8 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+              "SlotName" : "BasicShapeMaterial"
             }],
           "Object Type" : 0,
           "RelativeTransform" : {
@@ -1836,7 +1868,8 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+              "SlotName" : "BasicShapeMaterial"
             }],
           "Object Type" : 0,
           "RelativeTransform" : {
@@ -1930,11 +1963,12 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+              "SlotName" : "BasicShapeMaterial"
             }],
           "Object Type" : 0,
           "RelativeTransform" : {
-            "Location" : [-0.582663, -32.212265, 1.632000],
+            "Location" : [-0.582663, 53.505898, 1.632000],
             "Scale" : [1.000000, 1.000000, 1.000000]
           },
           "Response Container" : {
@@ -2010,7 +2044,8 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+              "SlotName" : "BasicShapeMaterial"
             }],
           "Object Type" : 0,
           "RelativeTransform" : {
@@ -2057,7 +2092,8 @@
               "Is Visible" : true,
               "Mass (Kg)" : 1.000000,
               "Material" : {
-                "Path" : "Asset/Materials/Editor/Emitter.mat"
+                "Path" : "Asset/Materials/Editor/Emitter.mat",
+                "SlotName" : ""
               },
               "Object Type" : 0,
               "RelativeTransform" : {
@@ -2094,7 +2130,7 @@
           "Object Type" : 0,
           "Particle System Priority" : 0,
           "RelativeTransform" : {
-            "Location" : [-66.208916, -16.118855, 27.196953],
+            "Location" : [5.464251, 25.316002, 27.196953],
             "Scale" : [1.000000, 1.000000, 1.000000]
           },
           "Response Container" : {
@@ -2108,165 +2144,6 @@
           "Rotation" : [0.000000, 0.000000, 0.000000],
           "Simulate Physics" : false,
           "Template" : "Asset/Particle/CherryBlossom.uasset",
-          "bEditorOnly" : false,
-          "bHiddenInComponentTree" : false,
-          "bIsActive" : true,
-          "bTickEnable" : true
-        }
-      }
-    }, {
-      "ClassName" : "AStaticMeshActor",
-      "Name" : "AStaticMeshActor_18",
-      "NonSceneComponents" : [],
-      "Properties" : {
-        "Tags" : [],
-        "bNeedsTick" : true,
-        "bVisible" : true
-      },
-      "RootComponent" : {
-        "Children" : [{
-            "Children" : [],
-            "ClassName" : "UBoxComponent",
-            "Properties" : {
-              "Auto Activate" : true,
-              "Box Extent" : [1.000000, 1.000000, 1.000000],
-              "Cast Shadow" : false,
-              "Cast Shadow as Two-Sided" : false,
-              "Center of Mass" : [0.000000, 0.000000, 0.000000],
-              "Collision Enabled" : 3,
-              "Draw Only If Selected" : false,
-              "Generate Overlap Events" : false,
-              "Is Visible" : true,
-              "Mass (Kg)" : 1.000000,
-              "Object Type" : 0,
-              "RelativeTransform" : {
-                "Location" : [0.000000, -88.990822, 1.853382],
-                "Scale" : [10.000000, 10.000000, 1.000000]
-              },
-              "Response Container" : {
-                "FootIK" : 2,
-                "Pawn" : 2,
-                "Projectile" : 2,
-                "Trigger" : 2,
-                "WorldDynamic" : 2,
-                "WorldStatic" : 2
-              },
-              "Rotation" : [0.000000, 0.000000, 0.000000],
-              "Shape Color" : [0.000000, 1.000000, 0.000000, 1.000000],
-              "Simulate Physics" : true,
-              "bEditorOnly" : false,
-              "bHiddenInComponentTree" : false,
-              "bIsActive" : true,
-              "bTickEnable" : true
-            }
-          }],
-        "ClassName" : "UStaticMeshComponent",
-        "Properties" : {
-          "Auto Activate" : true,
-          "Cast Shadow" : true,
-          "Cast Shadow as Two-Sided" : false,
-          "Center of Mass" : [0.000000, 0.000000, 0.000000],
-          "Collision Enabled" : 0,
-          "Generate Overlap Events" : false,
-          "Is Visible" : true,
-          "Mass (Kg)" : 1.000000,
-          "Materials" : [{
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Rock_sides.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Lake_Bottom.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_lambert27.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_lambert26.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama__props_Japanese_Grandma_s_House_V1_9_lambert9.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama__props_Japanese_Grandma_s_House_V1_9_Gohei_Texture.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama__props_Japanese_Grandma_s_House_V1_9_lambert5.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_lambert1.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama__props_Japanese_Grandma_s_House_V1_9_lambert10.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_lambert33.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_TeahouseProps_tex.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Planks_Tex.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_lambert7.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_DarkWood.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_lambert6.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_White_Concrete.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_lambert11.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_RoofTexture.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_ConcreteBases.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_lambert8.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_shrine_Upper.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Shrine_Bottom.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Stone_Lantern.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Stone_Lantern_Window.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_standardSurface2.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_leaves_Sakura.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_SakuraTree_01_tex.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_GroundGrasBlender_01_tex.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_GroundPath_01_tex.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_GrassBlender.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Decals_01_tex.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Man_Made.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Blinds_And_Vents.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Stone_Base_House.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Railings.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Door_AndClothes.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Default_Material.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_aiStandardSurface2.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Material #8966.mat"
-            }, {
-              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_standardSurface3.mat"
-            }],
-          "Object Type" : 0,
-          "RelativeTransform" : {
-            "Location" : [-11.800000, 324.854004, -8.100000],
-            "Scale" : [4.000000, 4.000000, 4.000000]
-          },
-          "Response Container" : {
-            "FootIK" : 2,
-            "Pawn" : 2,
-            "Projectile" : 2,
-            "Trigger" : 2,
-            "WorldDynamic" : 2,
-            "WorldStatic" : 2
-          },
-          "Rotation" : [0.000000, 0.000000, 0.000000],
-          "Simulate Physics" : false,
-          "Static Mesh" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_StaticMesh.uasset",
           "bEditorOnly" : false,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,
@@ -2296,7 +2173,8 @@
               "Is Visible" : true,
               "Mass (Kg)" : 1.000000,
               "Material" : {
-                "Path" : "Asset/Materials/Editor/SpotLight.mat"
+                "Path" : "Asset/Materials/Editor/SpotLight.mat",
+                "SlotName" : ""
               },
               "Object Type" : 0,
               "RelativeTransform" : {
@@ -2370,7 +2248,8 @@
               "Is Visible" : true,
               "Mass (Kg)" : 1.000000,
               "Material" : {
-                "Path" : "Asset/Materials/Editor/SpotLight.mat"
+                "Path" : "Asset/Materials/Editor/SpotLight.mat",
+                "SlotName" : ""
               },
               "Object Type" : 0,
               "RelativeTransform" : {
@@ -2444,7 +2323,8 @@
               "Is Visible" : true,
               "Mass (Kg)" : 1.000000,
               "Material" : {
-                "Path" : "Asset/Materials/Editor/SpotLight.mat"
+                "Path" : "Asset/Materials/Editor/SpotLight.mat",
+                "SlotName" : ""
               },
               "Object Type" : 0,
               "RelativeTransform" : {
@@ -2518,7 +2398,8 @@
               "Is Visible" : true,
               "Mass (Kg)" : 1.000000,
               "Material" : {
-                "Path" : "Asset/Materials/Editor/PointLight.mat"
+                "Path" : "Asset/Materials/Editor/PointLight.mat",
+                "SlotName" : ""
               },
               "Object Type" : 0,
               "RelativeTransform" : {
@@ -2567,6 +2448,509 @@
           "bTickEnable" : true
         }
       }
+    }, {
+      "ClassName" : "AStaticMeshActor",
+      "Name" : "AStaticMeshActor_19",
+      "NonSceneComponents" : [],
+      "Properties" : {
+        "Tags" : [],
+        "bNeedsTick" : true,
+        "bVisible" : true
+      },
+      "RootComponent" : {
+        "Children" : [],
+        "ClassName" : "UStaticMeshComponent",
+        "Properties" : {
+          "Auto Activate" : true,
+          "Cast Shadow" : true,
+          "Cast Shadow as Two-Sided" : false,
+          "Center of Mass" : [0.000000, 0.000000, 0.000000],
+          "Collision Enabled" : 0,
+          "Generate Overlap Events" : false,
+          "Is Visible" : true,
+          "Mass (Kg)" : 1.000000,
+          "Materials" : [{
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #20.mat",
+              "SlotName" : "Material #20"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #13.mat",
+              "SlotName" : "Material #13"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #15.mat",
+              "SlotName" : "Material #15"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #16.mat",
+              "SlotName" : "Material #16"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #27.mat",
+              "SlotName" : "Material #27"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #21.mat",
+              "SlotName" : "Material #21"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #22.mat",
+              "SlotName" : "Material #22"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #18.mat",
+              "SlotName" : "Material #18"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8908.mat",
+              "SlotName" : "Material #8908"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8184.mat",
+              "SlotName" : "Material #8184"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #111.mat",
+              "SlotName" : "Material #111"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #79.mat",
+              "SlotName" : "Material #79"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #94.mat",
+              "SlotName" : "Material #94"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #95.mat",
+              "SlotName" : "Material #95"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #25.mat",
+              "SlotName" : "Material #25"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #91.mat",
+              "SlotName" : "Material #91"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #78.mat",
+              "SlotName" : "Material #78"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #90 Slot #5.mat",
+              "SlotName" : "Material #90 Slot #5"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #107.mat",
+              "SlotName" : "Material #107"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #108.mat",
+              "SlotName" : "Material #108"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #113.mat",
+              "SlotName" : "Material #113"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #106 Slot #3.mat",
+              "SlotName" : "Material #106 Slot #3"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #106 Slot #5.mat",
+              "SlotName" : "Material #106 Slot #5"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #106 Slot #10.mat",
+              "SlotName" : "Material #106 Slot #10"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #25 Slot #2.mat",
+              "SlotName" : "Material #25 Slot #2"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #26.mat",
+              "SlotName" : "Material #26"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #41.mat",
+              "SlotName" : "Material #41"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #42.mat",
+              "SlotName" : "Material #42"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #43.mat",
+              "SlotName" : "Material #43"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8911.mat",
+              "SlotName" : "Material #8911"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #44.mat",
+              "SlotName" : "Material #44"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #1.mat",
+              "SlotName" : "Material #7934 Slot #1"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #2.mat",
+              "SlotName" : "Material #7934 Slot #2"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #3.mat",
+              "SlotName" : "Material #7934 Slot #3"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #4.mat",
+              "SlotName" : "Material #7934 Slot #4"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #5.mat",
+              "SlotName" : "Material #7934 Slot #5"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #6.mat",
+              "SlotName" : "Material #7934 Slot #6"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #7.mat",
+              "SlotName" : "Material #7934 Slot #7"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #8.mat",
+              "SlotName" : "Material #7934 Slot #8"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #9.mat",
+              "SlotName" : "Material #7934 Slot #9"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #10.mat",
+              "SlotName" : "Material #7934 Slot #10"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #11.mat",
+              "SlotName" : "Material #7934 Slot #11"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_stairs.mat",
+              "SlotName" : "stairs"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8912.mat",
+              "SlotName" : "Material #8912"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8919.mat",
+              "SlotName" : "Material #8919"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8913.mat",
+              "SlotName" : "Material #8913"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8914.mat",
+              "SlotName" : "Material #8914"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #23.mat",
+              "SlotName" : "Material #23"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8915.mat",
+              "SlotName" : "Material #8915"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8953.mat",
+              "SlotName" : "Material #8953"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8916.mat",
+              "SlotName" : "Material #8916"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8917.mat",
+              "SlotName" : "Material #8917"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8950.mat",
+              "SlotName" : "Material #8950"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8918.mat",
+              "SlotName" : "Material #8918"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #9282 Slot #1.mat",
+              "SlotName" : "Material #9282 Slot #1"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #9282 Slot #2.mat",
+              "SlotName" : "Material #9282 Slot #2"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #9282 Slot #3.mat",
+              "SlotName" : "Material #9282 Slot #3"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #9282 Slot #4.mat",
+              "SlotName" : "Material #9282 Slot #4"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #9282 Slot #5.mat",
+              "SlotName" : "Material #9282 Slot #5"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #9282 Slot #6.mat",
+              "SlotName" : "Material #9282 Slot #6"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8946.mat",
+              "SlotName" : "Material #8946"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #30.mat",
+              "SlotName" : "Material #30"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8930 Slot #1.mat",
+              "SlotName" : "Material #8930 Slot #1"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8930 Slot #2.mat",
+              "SlotName" : "Material #8930 Slot #2"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8930 Slot #3.mat",
+              "SlotName" : "Material #8930 Slot #3"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8930 Slot #4.mat",
+              "SlotName" : "Material #8930 Slot #4"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8930 Slot #5.mat",
+              "SlotName" : "Material #8930 Slot #5"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8930 Slot #6.mat",
+              "SlotName" : "Material #8930 Slot #6"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8930 Slot #7.mat",
+              "SlotName" : "Material #8930 Slot #7"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #28.mat",
+              "SlotName" : "Material #28"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #26 Slot #2.mat",
+              "SlotName" : "Material #26 Slot #2"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #29.mat",
+              "SlotName" : "Material #29"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #1 Slot #2.mat",
+              "SlotName" : "Material #7934 Slot #1 Slot #2"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #2 Slot #2.mat",
+              "SlotName" : "Material #7934 Slot #2 Slot #2"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #3 Slot #2.mat",
+              "SlotName" : "Material #7934 Slot #3 Slot #2"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #4 Slot #2.mat",
+              "SlotName" : "Material #7934 Slot #4 Slot #2"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #5 Slot #2.mat",
+              "SlotName" : "Material #7934 Slot #5 Slot #2"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #6 Slot #2.mat",
+              "SlotName" : "Material #7934 Slot #6 Slot #2"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #7 Slot #2.mat",
+              "SlotName" : "Material #7934 Slot #7 Slot #2"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #8 Slot #2.mat",
+              "SlotName" : "Material #7934 Slot #8 Slot #2"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #9 Slot #2.mat",
+              "SlotName" : "Material #7934 Slot #9 Slot #2"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #10 Slot #2.mat",
+              "SlotName" : "Material #7934 Slot #10 Slot #2"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #11 Slot #2.mat",
+              "SlotName" : "Material #7934 Slot #11 Slot #2"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8965.mat",
+              "SlotName" : "Material #8965"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #62.mat",
+              "SlotName" : "Material #62"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #30 Slot #2.mat",
+              "SlotName" : "Material #30 Slot #2"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8947.mat",
+              "SlotName" : "Material #8947"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8951.mat",
+              "SlotName" : "Material #8951"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8949.mat",
+              "SlotName" : "Material #8949"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8952.mat",
+              "SlotName" : "Material #8952"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8966.mat",
+              "SlotName" : "Material #8966"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8967.mat",
+              "SlotName" : "Material #8967"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8964 Slot #1.mat",
+              "SlotName" : "Material #8964 Slot #1"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #25 Slot #3.mat",
+              "SlotName" : "Material #25 Slot #3"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8964 Slot #1 Slot #2.mat",
+              "SlotName" : "Material #8964 Slot #1 Slot #2"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8964 Slot #1 Slot #3.mat",
+              "SlotName" : "Material #8964 Slot #1 Slot #3"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8964 Slot #1 Slot #4.mat",
+              "SlotName" : "Material #8964 Slot #1 Slot #4"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8964 Slot #1 Slot #5.mat",
+              "SlotName" : "Material #8964 Slot #1 Slot #5"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8964 Slot #1 Slot #6.mat",
+              "SlotName" : "Material #8964 Slot #1 Slot #6"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8964 Slot #1 Slot #7.mat",
+              "SlotName" : "Material #8964 Slot #1 Slot #7"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8964 Slot #1 Slot #8.mat",
+              "SlotName" : "Material #8964 Slot #1 Slot #8"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8964 Slot #1 Slot #9.mat",
+              "SlotName" : "Material #8964 Slot #1 Slot #9"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8964 Slot #1 Slot #10.mat",
+              "SlotName" : "Material #8964 Slot #1 Slot #10"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8964 Slot #1 Slot #11.mat",
+              "SlotName" : "Material #8964 Slot #1 Slot #11"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8964 Slot #1 Slot #12.mat",
+              "SlotName" : "Material #8964 Slot #1 Slot #12"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8964 Slot #1 Slot #13.mat",
+              "SlotName" : "Material #8964 Slot #1 Slot #13"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8964 Slot #1 Slot #14.mat",
+              "SlotName" : "Material #8964 Slot #1 Slot #14"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8964 Slot #1 Slot #15.mat",
+              "SlotName" : "Material #8964 Slot #1 Slot #15"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8964 Slot #1 Slot #16.mat",
+              "SlotName" : "Material #8964 Slot #1 Slot #16"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8948.mat",
+              "SlotName" : "Material #8948"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #2.mat",
+              "SlotName" : "Material #2"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #44 Slot #2.mat",
+              "SlotName" : "Material #44 Slot #2"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #1.mat",
+              "SlotName" : "Material #1"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_yatai.mat",
+              "SlotName" : "yatai"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #811.mat",
+              "SlotName" : "Material #811"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #810.mat",
+              "SlotName" : "Material #810"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8945.mat",
+              "SlotName" : "Material #8945"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #1 Slot #3.mat",
+              "SlotName" : "Material #7934 Slot #1 Slot #3"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #2 Slot #3.mat",
+              "SlotName" : "Material #7934 Slot #2 Slot #3"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #3 Slot #3.mat",
+              "SlotName" : "Material #7934 Slot #3 Slot #3"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #4 Slot #3.mat",
+              "SlotName" : "Material #7934 Slot #4 Slot #3"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #5 Slot #3.mat",
+              "SlotName" : "Material #7934 Slot #5 Slot #3"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #6 Slot #3.mat",
+              "SlotName" : "Material #7934 Slot #6 Slot #3"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #7 Slot #3.mat",
+              "SlotName" : "Material #7934 Slot #7 Slot #3"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #8 Slot #3.mat",
+              "SlotName" : "Material #7934 Slot #8 Slot #3"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #9 Slot #3.mat",
+              "SlotName" : "Material #7934 Slot #9 Slot #3"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #10 Slot #3.mat",
+              "SlotName" : "Material #7934 Slot #10 Slot #3"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #11 Slot #3.mat",
+              "SlotName" : "Material #7934 Slot #11 Slot #3"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #1 Slot #4.mat",
+              "SlotName" : "Material #7934 Slot #1 Slot #4"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #2 Slot #4.mat",
+              "SlotName" : "Material #7934 Slot #2 Slot #4"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #3 Slot #4.mat",
+              "SlotName" : "Material #7934 Slot #3 Slot #4"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #4 Slot #4.mat",
+              "SlotName" : "Material #7934 Slot #4 Slot #4"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #5 Slot #4.mat",
+              "SlotName" : "Material #7934 Slot #5 Slot #4"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #6 Slot #4.mat",
+              "SlotName" : "Material #7934 Slot #6 Slot #4"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #7 Slot #4.mat",
+              "SlotName" : "Material #7934 Slot #7 Slot #4"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #8 Slot #4.mat",
+              "SlotName" : "Material #7934 Slot #8 Slot #4"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #9 Slot #4.mat",
+              "SlotName" : "Material #7934 Slot #9 Slot #4"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #10 Slot #4.mat",
+              "SlotName" : "Material #7934 Slot #10 Slot #4"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #11 Slot #4.mat",
+              "SlotName" : "Material #7934 Slot #11 Slot #4"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #1 Slot #5.mat",
+              "SlotName" : "Material #7934 Slot #1 Slot #5"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #2 Slot #5.mat",
+              "SlotName" : "Material #7934 Slot #2 Slot #5"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #3 Slot #5.mat",
+              "SlotName" : "Material #7934 Slot #3 Slot #5"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #4 Slot #5.mat",
+              "SlotName" : "Material #7934 Slot #4 Slot #5"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #5 Slot #5.mat",
+              "SlotName" : "Material #7934 Slot #5 Slot #5"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #6 Slot #5.mat",
+              "SlotName" : "Material #7934 Slot #6 Slot #5"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #7 Slot #5.mat",
+              "SlotName" : "Material #7934 Slot #7 Slot #5"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #8 Slot #5.mat",
+              "SlotName" : "Material #7934 Slot #8 Slot #5"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #9 Slot #5.mat",
+              "SlotName" : "Material #7934 Slot #9 Slot #5"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #10 Slot #5.mat",
+              "SlotName" : "Material #7934 Slot #10 Slot #5"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #7934 Slot #11 Slot #5.mat",
+              "SlotName" : "Material #7934 Slot #11 Slot #5"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8964 Slot #1 Slot #17.mat",
+              "SlotName" : "Material #8964 Slot #1 Slot #17"
+            }, {
+              "Path" : "Asset/Mesh/Tanabata/testexport_Material #8931.mat",
+              "SlotName" : "Material #8931"
+            }, {
+              "Path" : "None",
+              "SlotName" : "None"
+            }],
+          "Object Type" : 0,
+          "RelativeTransform" : {
+            "Location" : [17.530083, 7.037521, -5.185501],
+            "Scale" : [1.000000, 1.000000, 1.000000]
+          },
+          "Response Container" : {
+            "FootIK" : 2,
+            "Pawn" : 2,
+            "Projectile" : 2,
+            "Trigger" : 2,
+            "WorldDynamic" : 2,
+            "WorldStatic" : 2
+          },
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Simulate Physics" : false,
+          "Static Mesh" : "Asset/Mesh/Tanabata/TanabataCombined.uasset",
+          "bEditorOnly" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bTickEnable" : true
+        }
+      }
     }],
   "ClassName" : "UWorld",
   "ContextHandle" : "NewScene",
@@ -2575,9 +2959,9 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [0.296872, 24.537367, 15.402233],
+    "Location" : [-2.358168, -0.834496, 7.141701],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, 13.399990, -104.841911]
+    "Rotation" : [0.000000, 54.799782, 8.258753]
   },
   "Version" : 2,
   "WorldSettings" : {

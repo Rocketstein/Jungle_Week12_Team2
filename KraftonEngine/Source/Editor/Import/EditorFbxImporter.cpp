@@ -67,6 +67,19 @@ namespace
 		return NormalizeProjectPath(FPaths::ToUtf8(MatPath.generic_wstring()));
 	}
 
+	FString MakeUniqueMaterialSlotName(const FString& InName, TMap<FString, int32>& NameCounts)
+	{
+		const FString BaseName = InName.empty() ? FString("None") : InName;
+		int32& Count = NameCounts[BaseName];
+		++Count;
+		if (Count == 1)
+		{
+			return BaseName;
+		}
+
+		return BaseName + " Slot #" + std::to_string(Count);
+	}
+
 	std::wstring ToLowerWide(std::wstring Value)
 	{
 		std::transform(Value.begin(), Value.end(), Value.begin(), ::towlower);
@@ -1440,6 +1453,7 @@ void FEditorFbxImporter::CollectMaterials(FbxScene* Scene)
 	MaterialToSlotIndex.clear();
 
 	int32 MaterialCount = Scene->GetMaterialCount();
+	TMap<FString, int32> MaterialNameCounts;
 
 	for (int32 i = 0; i < MaterialCount; ++i)
 	{
@@ -1447,7 +1461,7 @@ void FEditorFbxImporter::CollectMaterials(FbxScene* Scene)
 		if (!Material) continue;
 
 		FMaterialInfo MatInfo;
-		MatInfo.Name = Material->GetName();
+		MatInfo.Name = MakeUniqueMaterialSlotName(Material->GetName(), MaterialNameCounts);
 		MatInfo.DiffuseColor = { 1.0f, 1.0f, 1.0f };
 
 		FbxProperty DiffuseProp = Material->FindProperty(FbxSurfaceMaterial::sDiffuse);
