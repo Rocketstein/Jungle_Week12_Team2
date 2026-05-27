@@ -65,7 +65,7 @@ public:
 	UPROPERTY(Edit, Category="Beam")
 	EBeam2Method BeamMethod = PEB2M_Target;
 
-	UPROPERTY(Edit, Category="Beam", Min=1, Max=128, Speed=1.0f)
+	UPROPERTY(Edit, Category="Beam", Min=0, Max=128, Speed=1.0f)
 	int32 InterpolationPoints = 8;
 
 	UPROPERTY(Edit, Category="Beam", Min=1, Max=16, Speed=1.0f)

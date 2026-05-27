@@ -42,6 +42,14 @@ float CalculateBeamProgress(float TravelTime, float Speed, const FVector& WorldS
 		? std::clamp((TravelTime * Speed) / FullBeamLength, 0.0f, 1.0f)
 		: 1.0f;
 }
+
+float CalculateParticleAge(const FBaseParticle* Particle, float FallbackAge)
+{
+	return (Particle && Particle->OneOverMaxLifetime > 1e-6f)
+		? std::max(0.0f, Particle->RelativeTime / Particle->OneOverMaxLifetime)
+		: FallbackAge;
+}
+
 }
 
 // O(2n) loop. The base class handles the generic “math” of the offsets,
@@ -240,7 +248,8 @@ FDynamicEmitterReplayDataBase* FParticleBeam2EmitterInstance::GetReplayData()
 		Beam.TaperMethod  = BeamModule->TaperMethod;
 		Beam.TaperFactor  = BeamModule->TaperFactor;
 		Beam.TaperScale   = BeamModule->TaperScale;
-		Beam.BeamProgress = CalculateBeamProgress(BeamTravelTime, BeamModule->Speed, Beam.Source, Beam.Target);
+		Beam.BeamProgress = CalculateBeamProgress(
+			CalculateParticleAge(Particle, BeamTravelTime), BeamModule->Speed, Beam.Source, Beam.Target);
 		Beam.SourceTangent = ComponentToWorld.TransformVector(LocalSourceTangent);
 		Beam.TargetTangent = ComponentToWorld.TransformVector(LocalTargetTangent);
 		Beam.SourceStrength = Payload ? std::max(0.0f, Payload->SourceStrength) : 1.0f;
@@ -252,8 +261,9 @@ FDynamicEmitterReplayDataBase* FParticleBeam2EmitterInstance::GetReplayData()
 				reinterpret_cast<const uint8*>(Particle) + NoiseOffset);
 			if (NoisePayload->NoisePoints)
 			{
-				Beam.NoisePoints.reserve(NoiseFrequency);
-				for (int32 N = 0; N < NoiseFrequency; ++N)
+				const int32 NoisePointCount = std::clamp(NoisePayload->NoiseCount, 0, NoiseFrequency);
+				Beam.NoisePoints.reserve(NoisePointCount);
+				for (int32 N = 0; N < NoisePointCount; ++N)
 				{
 					Beam.NoisePoints.push_back(
 						ComponentToWorld.TransformPositionWithW(NoisePayload->NoisePoints[N]));

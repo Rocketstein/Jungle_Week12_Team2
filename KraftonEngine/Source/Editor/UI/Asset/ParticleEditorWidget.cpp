@@ -3846,9 +3846,9 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		}
 
 		int InterpolationPoints = Beam->InterpolationPoints;
-		if (ImGui::DragInt("Interpolation Points", &InterpolationPoints, 1.0f, 1, 128))
+		if (ImGui::DragInt("Interpolation Points", &InterpolationPoints, 1.0f, 0, 128))
 		{
-			Beam->InterpolationPoints = (std::max)(1, InterpolationPoints);
+			Beam->InterpolationPoints = (std::max)(0, InterpolationPoints);
 			bChanged = true;
 		}
 

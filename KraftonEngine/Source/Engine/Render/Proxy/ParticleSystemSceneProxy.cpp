@@ -70,7 +70,7 @@ namespace {
 	{
 		constexpr int32 MaxSegmentsPerBeam = 256;
 		constexpr int32 MaxSheetsPerBeam = 16;
-		const int32 SegmentCount = std::clamp(Source.InterpolationPoints + 1,
+		const int32 SegmentCount = std::clamp(std::max(1, Source.InterpolationPoints),
 			1, MaxSegmentsPerBeam);
 		const int32 PointCount = SegmentCount + 1;
 		const int32 SheetCount = std::clamp(Source.Sheets,
@@ -816,7 +816,7 @@ void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(const FFrameCon
 	if (!Source.bRenderGeometry || Source.Beams.empty())
 		return;
 
-	const int32 BaseSegmentCount = std::clamp(Source.InterpolationPoints + 1,
+	const int32 BaseSegmentCount = std::clamp(std::max(1, Source.InterpolationPoints),
 		1, static_cast<int32>(MaxSegmentsPerBeam));
 	const int32 BasePointCount = BaseSegmentCount + 1;
 	const int32 SheetCount = std::clamp(Source.Sheets,
@@ -868,11 +868,10 @@ void FParticleSystemSceneProxy::FBeamParticlePacker::PackEmitter(const FFrameCon
 		const float  Progress   = std::clamp(Beam.BeamProgress, 0.0f, 1.0f);
 		const float  VisibleLen = TotalLen * Progress;
 
-		// Tessellation: at least one sample per polyline vertex, plus optional
-		// additional subdivision from InterpolationPoints. Clamped to the proxy
-		// cap.
-		const int32 ThisPointCount = std::min(static_cast<int32>(MaxSegmentsPerBeam) + 1,
-			std::max(PolylineCount, BasePointCount));
+		// Tessellation: InterpolationPoints is the requested step count.
+		// Noise points shape the path, but this value decides how densely that
+		// path is sampled for geometry.
+		const int32 ThisPointCount = BasePointCount;
 		const int32 ThisSegmentCount = ThisPointCount - 1;
 
 		const FVector4 PackedColor(Beam.Color.X, Beam.Color.Y, Beam.Color.Z,
