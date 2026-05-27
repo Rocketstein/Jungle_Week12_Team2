@@ -104,8 +104,10 @@ namespace {
 	{
 		const float T = std::clamp(Alpha, 0.0f, 1.0f);
 		const float InvT = 1.0f - T;
+		// Hermite convention: tangents are velocities along the curve, so the
+		// second control point pulls *backward* from the target (negate sign).
 		const FVector SourceControl = Beam.Source + Beam.SourceTangent * (std::max(0.0f, Beam.SourceStrength) / 3.0f);
-		const FVector TargetControl = Beam.Target + Beam.TargetTangent * (std::max(0.0f, Beam.TargetStrength) / 3.0f);
+		const FVector TargetControl = Beam.Target - Beam.TargetTangent * (std::max(0.0f, Beam.TargetStrength) / 3.0f);
 
 		return Beam.Source * (InvT * InvT * InvT)
 			+ SourceControl * (3.0f * InvT * InvT * T)

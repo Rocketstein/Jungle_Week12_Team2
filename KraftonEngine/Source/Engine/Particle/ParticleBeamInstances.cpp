@@ -88,6 +88,16 @@ void FParticleBeam2EmitterInstance::Tick(float DeltaTime, int32 LODLevel, bool b
 	FParticleEmitterInstance::Tick(DeltaTime, LODLevel, bSuppressSpawning);
 	if (!CurrentLODLevel) return;
 
+	if (BeamModule && BeamModule->bAlwaysOn && !bSuppressSpawning)
+	{
+		const int32 DesiredBeamCount = std::max(1, BeamModule->MaxBeamCount);
+		if (ActiveParticles < DesiredBeamCount)
+		{
+			SpawnParticles(DesiredBeamCount - ActiveParticles, 0.0f, 0.0f,
+				Location, FVector::ZeroVector, nullptr);
+		}
+	}
+
 	BeamTravelTime += DeltaTime;
 
 	UParticleModule::FUpdateContext Context(*this, TypeDataOffset, DeltaTime);
@@ -168,7 +178,7 @@ FDynamicEmitterReplayDataBase* FParticleBeam2EmitterInstance::GetReplayData()
 	const int32 SheetCount = std::max(1, BeamModule->Sheets);
 	const int32 MaxBeamCount = std::max(1, BeamModule->MaxBeamCount);
 	const int32 LogicalBeamCount = BeamModule->bAlwaysOn
-		? std::clamp(std::max(1, ActiveParticles), 1, MaxBeamCount)
+		? MaxBeamCount
 		: std::clamp(ActiveParticles, 0, MaxBeamCount);
 
 	FDynamicBeamEmitterReplayData* NewEmitterReplayData = new FDynamicBeamEmitterReplayData();
@@ -189,7 +199,7 @@ FDynamicEmitterReplayDataBase* FParticleBeam2EmitterInstance::GetReplayData()
 	NewEmitterReplayData->TargetData = BeamModule->TargetData;
 	NewEmitterReplayData->ActiveParticleCount = LogicalBeamCount * SheetCount;
 
-	const int32 NoiseOffset = (BeamNoiseModule && BeamNoiseModule->bEnabled && BeamNoiseModule->bLowFreq_Enabled && BeamNoiseModule->Frequency > 0)
+	const int32 NoiseOffset = (BeamNoiseModule && BeamNoiseModule->bEnabled && BeamNoiseModule->Frequency > 0)
 		? static_cast<int32>(GetModuleDataOffset(BeamNoiseModule))
 		: 0;
 	const int32 NoiseFrequency = NoiseOffset > 0 ? BeamNoiseModule->Frequency : 0;
@@ -197,18 +207,20 @@ FDynamicEmitterReplayDataBase* FParticleBeam2EmitterInstance::GetReplayData()
 	NewEmitterReplayData->Beams.reserve(LogicalBeamCount);
 	for (int32 i = 0; i < LogicalBeamCount; ++i)
 	{
-		FBaseParticle* Particle = (i < ActiveParticles && ParticleIndices)
-			? GetParticleDirect(ParticleIndices[i])
+		const int32 ActiveParticleIndex = (ActiveParticles > 0 && ParticleIndices)
+			? i % ActiveParticles
+			: -1;
+		FBaseParticle* Particle = (ActiveParticleIndex >= 0)
+			? GetParticleDirect(ParticleIndices[ActiveParticleIndex])
 			: nullptr;
 		const FBeam2TypeDataPayload* Payload = GetBeamPayload(Particle);
 		const FVector LocalSource = Payload ? Payload->SourcePoint : FallbackLocalSource;
 		const FVector LocalTarget = Payload ? Payload->TargetPoint : FallbackLocalTarget;
 		const FVector LocalBeamDelta = LocalTarget - LocalSource;
 		const FVector LocalSourceTangent = Payload ? Payload->SourceTangent : LocalBeamDelta;
-		const FVector LocalTargetTangent = Payload ? Payload->TargetTangent : LocalBeamDelta * -1.0f;
+		const FVector LocalTargetTangent = Payload ? Payload->TargetTangent : LocalBeamDelta;
 		const FVector WorldSource = ComponentToWorld.TransformPositionWithW(LocalSource);
 		const FVector WorldTarget = ComponentToWorld.TransformPositionWithW(LocalTarget);
-		const FVector BeamOffset = Particle ? (Particle->Location - Location) : FVector::ZeroVector;
 		const FVector BeamColor = Particle
 			? FVector(Particle->Color.R * BeamModule->Color.X,
 			          Particle->Color.G * BeamModule->Color.Y,
@@ -220,8 +232,8 @@ FDynamicEmitterReplayDataBase* FParticleBeam2EmitterInstance::GetReplayData()
 		const float WidthScale = Particle ? std::max(0.0f, Particle->Size.X) : 1.0f;
 
 		FBeamInstanceData Beam;
-		Beam.Source       = WorldSource + BeamOffset;
-		Beam.Target       = WorldTarget + BeamOffset;
+		Beam.Source       = WorldSource;
+		Beam.Target       = WorldTarget;
 		Beam.Color        = BeamColor;
 		Beam.Alpha        = std::clamp(BeamAlpha, 0.0f, 1.0f);
 		Beam.Width        = BeamModule->Width * WidthScale;
@@ -244,7 +256,7 @@ FDynamicEmitterReplayDataBase* FParticleBeam2EmitterInstance::GetReplayData()
 				for (int32 N = 0; N < NoiseFrequency; ++N)
 				{
 					Beam.NoisePoints.push_back(
-						ComponentToWorld.TransformPositionWithW(NoisePayload->NoisePoints[N]) + BeamOffset);
+						ComponentToWorld.TransformPositionWithW(NoisePayload->NoisePoints[N]));
 				}
 			}
 		}
