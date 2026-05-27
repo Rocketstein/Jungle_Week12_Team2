@@ -1,0 +1,21 @@
+{
+    "PathFileName": "Asset/Materials/CherryBlossom.mat",
+    "ShaderPath": "Shaders/Particle/ParticleDefault.hlsl",
+    "RenderPass": "Translucent",
+    "BlendState": "AlphaBlend",
+    "RasterizerState": "SolidNone",
+    "Parameters": {
+        "BaseTexture": {
+            "Type": "Texture2D",
+            "Value": "Asset/Textures/4_Base_Color.png"
+        },
+        "OpacityTexture": {
+            "Type": "Texture2D",
+            "Value": "Asset/Textures/4_Opacity.png"
+        },
+        "TintColor": {
+            "Type": "Vector4",
+            "Value": [1.0, 1.0, 1.0, 1.0]
+        }
+    }
+}

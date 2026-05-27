@@ -788,7 +788,7 @@ void FParticleEmitterInstance::AddCollisionEvent(const FBaseParticle& Particle, 
 	EventData.Location = HitLocation;
 	EventData.OldLocation = Particle.OldLocation;
 	EventData.Velocity = Particle.Velocity;
-	EventData.Direction = Particle.Velocity;
+	EventData.Direction = Particle.Velocity; 
 	EventData.Direction.Normalize();
 	EventData.Normal = HitNormal;
 	EventData.EmitterTime = EmitterTime;
