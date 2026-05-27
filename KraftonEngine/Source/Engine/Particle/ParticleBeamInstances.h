@@ -35,6 +35,7 @@ struct FParticleBeam2EmitterInstance : public FParticleEmitterInstance
 	// Resize, so the arenas can move freely.
 	TArray<FVector> NoisePointArena;
 	TArray<FVector> NoiseOffsetArena;
+	TArray<FVector> NoiseTargetOffsetArena;
 	TArray<float> NoiseTimeArena;
 
 	float BeamTravelTime = 0.f;

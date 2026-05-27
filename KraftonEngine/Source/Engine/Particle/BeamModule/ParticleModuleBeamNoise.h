@@ -8,6 +8,7 @@ struct FBeamNoisePayloadData {
 	FVector* NoisePoints;
 	float* NoiseTimes;
 	int32 NoiseIndex;
+	int32 NoiseCount;
 	float NextNoiseTime;
 };
 
@@ -37,6 +38,8 @@ public:
 
 	void BuildNoiseOffsets(FVector* OutOffsets, float* OutTimes,
 		int32 NumPoints, float CurrentTime) const;
+	void MoveNoiseOffsets(FVector* CurrentOffsets, const FVector* TargetOffsets,
+		int32 NumPoints, float DeltaTime) const;
 	// Place NumPoints along the beam's Hermite curve (payload tangents/strengths)
 	// and add the per-point random offset. Caller owns OutPoints.
 	void ApplyNoiseOffsets(FVector* OutPoints, const FVector* Offsets,
