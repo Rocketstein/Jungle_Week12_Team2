@@ -29,6 +29,6 @@ public:
 	void          SerializeItem(FArchive& Ar, void* Value, const void* Defaults) const override;
 
 	// FObjectPropertyBase
-	UObject* GetObjectPropertyValue(void* PropertyMemoryAddress) const override;
-	void     SetObjectPropertyValue(void* PropertyMemoryAddress, UObject* Value) const override;
+	UObject* GetObjectPropertyValue(void* Addr) const override;
+	void     SetObjectPropertyValue(void* Addr, UObject* Value) const override;
 };

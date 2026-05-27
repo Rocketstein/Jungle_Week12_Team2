@@ -446,6 +446,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Engine\Core\Log.cpp" />
     <ClCompile Include="Source\Engine\Core\Notification.cpp" />
     <ClCompile Include="Source\Engine\Core\ProjectSettings.cpp" />
+    <ClCompile Include="Source\Engine\Core\Property\FObjectPropertyBase\FObjectProperty.cpp" />
     <ClCompile Include="Source\Engine\Core\TickFunction.cpp" />
     <ClCompile Include="Source\Engine\Core\Property\FField.cpp" />
     <ClCompile Include="Source\Engine\Core\Property\FFieldClass.cpp" />
