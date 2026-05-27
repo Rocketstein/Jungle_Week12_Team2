@@ -205,6 +205,8 @@ namespace {
 FParticleSystemSceneProxy::FParticleSystemSceneProxy(UParticleSystemComponent* InComponent)
 	: FPrimitiveSceneProxy(InComponent)
 {
+	ProxyFlags |= EPrimitiveProxyFlags::Particle;
+
 	// Per-frame CPU pack (sort + quad expansion) needs the FrameContext for
 	// camera-dependent sort order. Required for RenderCollector to invoke
 	// UpdatePerViewport on this proxy each frame.
