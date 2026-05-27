@@ -59,33 +59,30 @@ float4 ProjectCameraPositionBillboard(float3 WorldPosition, float2 Corner, float
 float2 ComputeSubUVTexcoord(float2 LocalUV, float SubImage)
 {
     // --- 아틀라스 전체 여백 보정 (줌인) ---
-    // 전체 텍스처에서 실제 꽃잎들이 있는 영역만 사용합니다.
-    // [0.05, 0.05] 에서 [0.95, 0.95] 사이가 실제 꽃잎 영역이라고 가정 (예시)
-    float2 AtlasMin = float2(0.02, 0.02); 
-    float2 AtlasMax = float2(0.98, 0.98);
+    float2 AtlasMin = float2(0.01, 0.01); 
+    float2 AtlasMax = float2(0.99, 0.99);
     // ------------------------------------
 
-    uint Cols = max(SubUVCols, 1u);
-    uint Rows = max(SubUVRows, 1u);
-    uint FrameCount = max(Cols * Rows, 1u);
+    // 강제 4x3 폴백 (엔진 변수 무시하고 벚꽃에 최적화)
+    uint ActualCols = 4;
+    uint ActualRows = 3;
+
+    uint FrameCount = ActualCols * ActualRows;
     uint FrameIndex = (uint)clamp(floor(SubImage), 0.0f, (float)(FrameCount - 1));
     
-    uint FrameCol = FrameIndex % Cols;
-    uint FrameRow = FrameIndex / Cols;
+    uint FrameCol = FrameIndex % ActualCols;
+    uint FrameRow = FrameIndex / ActualRows; // 행 계산 방식 수정
     
-    float2 CellSize = 1.0f / float2((float)Cols, (float)Rows);
+    float2 CellSize = 1.0f / float2((float)ActualCols, (float)ActualRows);
     float2 Offset = float2((float)FrameCol, (float)FrameRow) * CellSize;
     
-    // 1. 먼저 해당 칸(Cell) 안의 UV를 계산
     float2 UVInCell = LocalUV * CellSize + Offset;
-    
-    // 2. 전체 아틀라스 범위(AtlasMin~AtlasMax)로 매핑 (줌인 효과)
     return lerp(AtlasMin, AtlasMax, UVInCell);
 }
 
 float Hash31(float3 p)
 {
-    p = frac(p * 0.1031);
+    p = frac(p * float3(0.1031, 0.1030, 0.0973));
     p += dot(p, p.yzx + 33.33);
     return frac((p.x + p.y) * p.z);
 }
@@ -137,8 +134,9 @@ PS_Input_Particle VS(VS_Input_ParticleSprite Input)
         Out.position = mul(mul(WorldPos, View), Projection);
     }
 
-    float SubImageCount = float(max(SubUVCols * SubUVRows, 1u));
-    float RandomSubImage = Hash31(Input.position) * SubImageCount;
+    // 위치와 속도를 섞어서 파티클마다 고유한 랜덤 인덱스를 생성
+    float SubImageCount = 12.0; // 4x3 강제 고정
+    float RandomSubImage = Hash31(Input.position + Input.velocity * 137.45) * SubImageCount;
     
     Out.texcoord = ComputeSubUVTexcoord(float2(Input.uv.x, 1.0f - Input.uv.y), RandomSubImage);
     Out.color    = Input.color;
