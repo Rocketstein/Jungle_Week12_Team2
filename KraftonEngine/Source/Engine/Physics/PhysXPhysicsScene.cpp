@@ -1039,3 +1039,78 @@ bool FPhysXPhysicsScene::Raycast(const FVector& Start, const FVector& Dir, float
 
 	return true;
 }
+
+bool FPhysXPhysicsScene::SphereSweep(const FVector& Start, const FVector& Dir, float MaxDist, float Radius, FHitResult& OutHit,
+	ECollisionChannel TraceChannel, const AActor* IgnoreActor) const
+{
+	if (!Scene) return false;
+	if (Radius <= 0.0f)
+	{
+		return Raycast(Start, Dir, MaxDist, OutHit, TraceChannel, IgnoreActor);
+	}
+
+	struct FChannelSweepFilter : PxQueryFilterCallback
+	{
+		const AActor* IgnoreActor = nullptr;
+		PxU32 TraceBit = 0;
+
+		FChannelSweepFilter(const AActor* InIgnoreActor, ECollisionChannel InChannel)
+			: IgnoreActor(InIgnoreActor)
+			, TraceBit(1u << static_cast<PxU32>(InChannel))
+		{
+		}
+
+		PxQueryHitType::Enum preFilter(const PxFilterData&, const PxShape* Shape, const PxRigidActor* Actor, PxHitFlags&) override
+		{
+			if (IgnoreActor && Actor && Actor->userData == IgnoreActor)
+			{
+				return PxQueryHitType::eNONE;
+			}
+
+			if (Shape)
+			{
+				const PxFilterData ShapeData = Shape->getQueryFilterData();
+				if ((ShapeData.word1 & TraceBit) == 0)
+				{
+					return PxQueryHitType::eNONE;
+				}
+			}
+
+			return PxQueryHitType::eBLOCK;
+		}
+
+		PxQueryHitType::Enum postFilter(const PxFilterData&, const PxQueryHit&) override
+		{
+			return PxQueryHitType::eBLOCK;
+		}
+	};
+
+	PxSweepBuffer Hit;
+	PxQueryFilterData FilterData;
+	FilterData.flags = PxQueryFlag::eSTATIC | PxQueryFlag::eDYNAMIC | PxQueryFlag::ePREFILTER;
+	FChannelSweepFilter FilterCallback(IgnoreActor, TraceChannel);
+
+	const PxSphereGeometry Geometry(Radius);
+	const PxTransform Pose(ToPxVec3(Start));
+	const bool bStatus = Scene->sweep(Geometry, Pose, ToPxVec3(Dir), MaxDist, Hit, PxHitFlag::eDEFAULT, FilterData, &FilterCallback);
+	if (!bStatus || !Hit.hasBlock) return false;
+
+	const PxSweepHit& Block = Hit.block;
+	OutHit.bHit = true;
+	OutHit.Distance = Block.distance;
+	OutHit.WorldHitLocation = ToFVector(Block.position);
+	OutHit.ImpactNormal = ToFVector(Block.normal);
+	OutHit.WorldNormal = OutHit.ImpactNormal;
+
+	if (Block.shape && Block.shape->userData)
+	{
+		OutHit.HitComponent = static_cast<UPrimitiveComponent*>(Block.shape->userData);
+		OutHit.HitActor = OutHit.HitComponent->GetOwner();
+	}
+	else if (Block.actor && Block.actor->userData)
+	{
+		OutHit.HitActor = static_cast<AActor*>(Block.actor->userData);
+	}
+
+	return true;
+}

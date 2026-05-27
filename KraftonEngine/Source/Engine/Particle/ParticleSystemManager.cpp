@@ -87,6 +87,13 @@ namespace ParticleKeys
 	static constexpr const char* StartRotationRateDistribution = "StartRotationRateDistribution";
 	static constexpr const char* Acceleration = "Acceleration";
 	static constexpr const char* AccelerationDistribution = "AccelerationDistribution";
+	static constexpr const char* Orbit = "Orbit";
+	static constexpr const char* OrbitOffset = "OrbitOffset";
+	static constexpr const char* OrbitOffsetDistribution = "OrbitOffsetDistribution";
+	static constexpr const char* OrbitRotation = "OrbitRotation";
+	static constexpr const char* OrbitRotationDistribution = "OrbitRotationDistribution";
+	static constexpr const char* OrbitRotationRate = "OrbitRotationRate";
+	static constexpr const char* OrbitRotationRateDistribution = "OrbitRotationRateDistribution";
 	static constexpr const char* StartColor = "StartColor";
 	static constexpr const char* StartColorMin = "StartColorMin";
 	static constexpr const char* StartColorMax = "StartColorMax";
@@ -125,6 +132,7 @@ namespace ParticleKeys
 	static constexpr const char* ResponseMode = "ResponseMode";
 	static constexpr const char* DampingFactor = "DampingFactor";
 	static constexpr const char* CollisionOffset = "CollisionOffset";
+	static constexpr const char* CollisionRadiusScale = "CollisionRadiusScale";
 	static constexpr const char* MaxCollisions = "MaxCollisions";
 	static constexpr const char* Beam2 = "Beam2";
 	static constexpr const char* BeamMethod = "BeamMethod";
@@ -596,6 +604,7 @@ const char* GetSerializableModuleType(UParticleModule* Module)
 	if (Module->IsA<UParticleModuleInitialRotation>()) return "InitialRotation";
 	if (Module->IsA<UParticleModuleInitialRotationRate>()) return "InitialRotationRate";
 	if (Module->IsA<UParticleModuleAcceleration>()) return "Acceleration";
+	if (Module->IsA<UParticleModuleOrbit>()) return ParticleKeys::Orbit;
 	if (Module->IsA<UParticleModuleColor>()) return "InitialColor";
 	if (Module->IsA<UParticleModuleColorOverLife>()) return "ColorOverLife";
 	if (Module->IsA<UParticleModuleColorScaleOverLife>()) return "ColorScaleOverLife";
@@ -669,6 +678,15 @@ json::JSON SerializeModule(UParticleModule* Module)
 		Object[ParticleKeys::Acceleration] = MakeVectorJSON(Acceleration->Acceleration);
 		Object[ParticleKeys::AccelerationDistribution] = MakeVectorDistributionJSON(Acceleration->AccelerationDistribution);
 	}
+	else if (UParticleModuleOrbit* Orbit = Cast<UParticleModuleOrbit>(Module))
+	{
+		Object[ParticleKeys::OrbitOffset] = MakeVectorJSON(Orbit->Offset);
+		Object[ParticleKeys::OrbitOffsetDistribution] = MakeVectorDistributionJSON(Orbit->OffsetDistribution);
+		Object[ParticleKeys::OrbitRotation] = MakeVectorJSON(Orbit->RotationDegrees);
+		Object[ParticleKeys::OrbitRotationDistribution] = MakeVectorDistributionJSON(Orbit->RotationDistribution);
+		Object[ParticleKeys::OrbitRotationRate] = MakeVectorJSON(Orbit->RotationRateDegrees);
+		Object[ParticleKeys::OrbitRotationRateDistribution] = MakeVectorDistributionJSON(Orbit->RotationRateDistribution);
+	}
 	else if (UParticleModuleColor* Color = Cast<UParticleModuleColor>(Module))
 	{
 		Object[ParticleKeys::StartColor] = MakeVectorJSON(Color->StartColor);
@@ -738,6 +756,7 @@ json::JSON SerializeModule(UParticleModule* Module)
 		Object[ParticleKeys::ResponseMode] = static_cast<int32>(Collision->ResponseMode);
 		Object[ParticleKeys::DampingFactor] = Collision->DampingFactor;
 		Object[ParticleKeys::CollisionOffset] = Collision->CollisionOffset;
+		Object[ParticleKeys::CollisionRadiusScale] = Collision->CollisionRadiusScale;
 		Object[ParticleKeys::MaxCollisions] = Collision->MaxCollisions;
 	}
 
@@ -1102,6 +1121,20 @@ UParticleModule* DeserializeModule(json::JSON& Object, UParticleLODLevel* Outer)
 		ReadVectorDistributionJSON(Object, ParticleKeys::AccelerationDistribution, Acceleration->AccelerationDistribution);
 		Module = Acceleration;
 	}
+	else if (Type == ParticleKeys::Orbit)
+	{
+		UParticleModuleOrbit* Orbit = GUObjectArray.CreateObject<UParticleModuleOrbit>(Outer);
+		Orbit->Offset = ReadVectorJSON(Object, ParticleKeys::OrbitOffset, Orbit->Offset);
+		Orbit->RotationDegrees = ReadVectorJSON(Object, ParticleKeys::OrbitRotation, Orbit->RotationDegrees);
+		Orbit->RotationRateDegrees = ReadVectorJSON(Object, ParticleKeys::OrbitRotationRate, Orbit->RotationRateDegrees);
+		Orbit->OffsetDistribution.SetConstant(Orbit->Offset);
+		Orbit->RotationDistribution.SetConstant(Orbit->RotationDegrees);
+		Orbit->RotationRateDistribution.SetConstant(Orbit->RotationRateDegrees);
+		ReadVectorDistributionJSON(Object, ParticleKeys::OrbitOffsetDistribution, Orbit->OffsetDistribution);
+		ReadVectorDistributionJSON(Object, ParticleKeys::OrbitRotationDistribution, Orbit->RotationDistribution);
+		ReadVectorDistributionJSON(Object, ParticleKeys::OrbitRotationRateDistribution, Orbit->RotationRateDistribution);
+		Module = Orbit;
+	}
 	else if (Type == "InitialColor")
 	{
 		UParticleModuleColor* Color = GUObjectArray.CreateObject<UParticleModuleColor>(Outer);
@@ -1269,6 +1302,10 @@ UParticleModule* DeserializeModule(json::JSON& Object, UParticleLODLevel* Outer)
 		if (Object.hasKey(ParticleKeys::CollisionOffset))
 		{
 			Collision->CollisionOffset = std::max(0.0f, static_cast<float>(Object[ParticleKeys::CollisionOffset].ToFloat()));
+		}
+		if (Object.hasKey(ParticleKeys::CollisionRadiusScale))
+		{
+			Collision->CollisionRadiusScale = std::max(0.0f, static_cast<float>(Object[ParticleKeys::CollisionRadiusScale].ToFloat()));
 		}
 		if (Object.hasKey(ParticleKeys::MaxCollisions))
 		{

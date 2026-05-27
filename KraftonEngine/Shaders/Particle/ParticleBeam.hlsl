@@ -5,6 +5,13 @@
 
 Texture2D DiffuseTexture : register(t0);
 
+cbuffer ParticleMaterialBuffer : register(b3)
+{
+    float4 ParticleMaterialColor;
+    uint HasDiffuseTexture;
+    float3 _ParticleMaterialPad;
+}
+
 PS_Input_Particle VS(VS_Input_BeamParticle Input)
 {
     PS_Input_Particle Out;
@@ -16,7 +23,10 @@ PS_Input_Particle VS(VS_Input_BeamParticle Input)
 
 float4 PS(PS_Input_Particle Input) : SV_Target
 {
-    float4 Col = DiffuseTexture.Sample(LinearWrapSampler, Input.texcoord);
+    float4 Col = HasDiffuseTexture != 0
+        ? DiffuseTexture.Sample(LinearWrapSampler, Input.texcoord)
+        : float4(1.0f, 1.0f, 1.0f, 1.0f);
+    Col *= ParticleMaterialColor;
     clip(Col.a * Input.color.a - 0.01f);
 
     return float4(ApplyWireframe(Col.rgb) * Input.color.rgb,

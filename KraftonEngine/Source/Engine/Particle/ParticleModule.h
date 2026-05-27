@@ -425,8 +425,46 @@ public:
 	UPROPERTY(Edit, Category="Collision", DisplayName="Collision Offset", Min=0.0f, Max=100.0f, Speed=0.1f)
 	float CollisionOffset = 0.1f;
 
+	UPROPERTY(Edit, Category="Collision", DisplayName="Collision Radius Scale", Min=0.0f, Max=10.0f, Speed=0.05f)
+	float CollisionRadiusScale = 1.0f;
+
 	UPROPERTY(Edit, Category="Collision", DisplayName="Max Collisions", Min=0, Max=128, Speed=1.0f)
 	int32 MaxCollisions = 1;
+};
+
+struct FParticleOrbitPayload
+{
+	FVector InitialOffset = FVector::ZeroVector;
+	FVector CurrentRotationDegrees = FVector::ZeroVector;
+	FVector RotationRateDegrees = FVector::ZeroVector;
+	FVector RotationRateAccumulatedDegrees = FVector::ZeroVector;
+	FVector LastOffset = FVector::ZeroVector;
+};
+
+UCLASS()
+class UParticleModuleOrbit : public UParticleModule
+{
+public:
+	GENERATED_BODY(UParticleModuleOrbit)
+
+	UParticleModuleOrbit();
+
+	uint32 RequiredBytes(UParticleModuleTypeDataBase* TypeData = nullptr) override;
+	void Spawn(const FSpawnContext& Context) override;
+	void FinalUpdate(const FUpdateContext& Context) override;
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
+
+	UPROPERTY(Edit, Category="Orbit", DisplayName="Offset")
+	FVector Offset = FVector(50.0f, 0.0f, 0.0f);
+	FParticleDistributionVector OffsetDistribution;
+
+	UPROPERTY(Edit, Category="Orbit", DisplayName="Rotation")
+	FVector RotationDegrees = FVector::ZeroVector;
+	FParticleDistributionVector RotationDistribution;
+
+	UPROPERTY(Edit, Category="Orbit", DisplayName="Rotation Rate")
+	FVector RotationRateDegrees = FVector(0.0f, 0.0f, 90.0f);
+	FParticleDistributionVector RotationRateDistribution;
 };
 
 UCLASS()

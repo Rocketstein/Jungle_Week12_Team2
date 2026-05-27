@@ -222,6 +222,14 @@ struct FParticleParamConstants
 };
 static_assert(sizeof(FParticleParamConstants) == 48);
 
+struct FParticleMaterialConstants
+{
+	FVector4 MaterialColor = FVector4(1.0f, 1.0f, 1.0f, 1.0f);
+	uint32 HasDiffuseTexture = 1;
+	float _Pad[3] = {};
+};
+static_assert(sizeof(FParticleMaterialConstants) == 32);
+
 // NOTE: Beams no longer use a per-emitter b3 constant buffer. Geometry is
 // expanded CPU-side into FBeamParticleInstanceVertex and uploaded via a shared
 // dynamic VB/IB (see FParticleSystemSceneProxy::FBeamParticlePacker).

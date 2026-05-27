@@ -1,6 +1,7 @@
 ﻿#include "Physics/NativePhysicsScene.h"
 #include "Collision/CollisionMath.h"
 #include "Component/PrimitiveComponent.h"
+#include "Component/StaticMeshComponent.h"
 #include "GameFramework/World.h"
 #include "GameFramework/AActor.h"
 
@@ -447,6 +448,84 @@ bool FNativePhysicsScene::Raycast(const FVector& Start, const FVector& Dir, floa
 		OutHit.HitComponent = Comp;
 		OutHit.HitActor = Comp->GetOwner();
 		OutHit.WorldHitLocation = Start + Dir * tMin;
+	}
+
+	return bFound;
+}
+
+bool FNativePhysicsScene::SphereSweep(const FVector& Start, const FVector& Dir, float MaxDist, float Radius, FHitResult& OutHit,
+	ECollisionChannel TraceChannel, const AActor* IgnoreActor) const
+{
+	if (Radius <= 0.0f)
+	{
+		return Raycast(Start, Dir, MaxDist, OutHit, TraceChannel, IgnoreActor);
+	}
+
+	FVector InvDir;
+	InvDir.X = (Dir.X != 0.0f) ? (1.0f / Dir.X) : 1e30f;
+	InvDir.Y = (Dir.Y != 0.0f) ? (1.0f / Dir.Y) : 1e30f;
+	InvDir.Z = (Dir.Z != 0.0f) ? (1.0f / Dir.Z) : 1e30f;
+
+	float ClosestDist = MaxDist;
+	bool bFound = false;
+
+	for (UPrimitiveComponent* Comp : RegisteredComponents)
+	{
+		if (IgnoreActor && Comp->GetOwner() == IgnoreActor) continue;
+		if (Comp->GetCollisionResponseToChannel(TraceChannel) != ECollisionResponse::Block) continue;
+		if (Comp->IsA<UStaticMeshComponent>()) continue;
+
+		const FBoundingBox OriginalBox = Comp->GetWorldBoundingBox();
+		FBoundingBox ExpandedBox = OriginalBox;
+		const FVector RadiusExtent(Radius, Radius, Radius);
+		ExpandedBox.Min = ExpandedBox.Min - RadiusExtent;
+		ExpandedBox.Max = ExpandedBox.Max + RadiusExtent;
+
+		float tMin = (ExpandedBox.Min.X - Start.X) * InvDir.X;
+		float tMax = (ExpandedBox.Max.X - Start.X) * InvDir.X;
+		if (tMin > tMax) { float tmp = tMin; tMin = tMax; tMax = tmp; }
+
+		float tyMin = (ExpandedBox.Min.Y - Start.Y) * InvDir.Y;
+		float tyMax = (ExpandedBox.Max.Y - Start.Y) * InvDir.Y;
+		if (tyMin > tyMax) { float tmp = tyMin; tyMin = tyMax; tyMax = tmp; }
+
+		if ((tMin > tyMax) || (tyMin > tMax)) continue;
+		if (tyMin > tMin) tMin = tyMin;
+		if (tyMax < tMax) tMax = tyMax;
+
+		float tzMin = (ExpandedBox.Min.Z - Start.Z) * InvDir.Z;
+		float tzMax = (ExpandedBox.Max.Z - Start.Z) * InvDir.Z;
+		if (tzMin > tzMax) { float tmp = tzMin; tzMin = tzMax; tzMax = tmp; }
+
+		if ((tMin > tzMax) || (tzMin > tMax)) continue;
+		if (tzMin > tMin) tMin = tzMin;
+
+		if (tMin < 0.0f) tMin = 0.0f;
+		if (tMin >= ClosestDist) continue;
+
+		const FVector CenterAtHit = Start + Dir * tMin;
+		FVector ClosestPoint;
+		ClosestPoint.X = std::clamp(CenterAtHit.X, OriginalBox.Min.X, OriginalBox.Max.X);
+		ClosestPoint.Y = std::clamp(CenterAtHit.Y, OriginalBox.Min.Y, OriginalBox.Max.Y);
+		ClosestPoint.Z = std::clamp(CenterAtHit.Z, OriginalBox.Min.Z, OriginalBox.Max.Z);
+
+		FVector Normal = CenterAtHit - ClosestPoint;
+		if (Normal.IsNearlyZero())
+		{
+			Normal = Dir * -1.0f;
+		}
+		Normal.Normalize();
+
+		ClosestDist = tMin;
+		bFound = true;
+
+		OutHit.bHit = true;
+		OutHit.Distance = tMin;
+		OutHit.HitComponent = Comp;
+		OutHit.HitActor = Comp->GetOwner();
+		OutHit.WorldHitLocation = CenterAtHit - Normal * Radius;
+		OutHit.ImpactNormal = Normal;
+		OutHit.WorldNormal = Normal;
 	}
 
 	return bFound;
