@@ -1,9 +1,10 @@
 ﻿#pragma once
 
 #include "Component/ActorComponent.h"
+#include "Component/SceneComponent.h"
+#include "Core/UObject/TObjectPtr.h"
 #include "MovementComponent.generated.h"
 
-class USceneComponent;
 
 //TODO : 해당 컴포넌트 베이스 역할을 하고 고유의 기능은 없기에 오브젝트에 부여할 수 없도록 바꿔야 합니다!
 
@@ -44,4 +45,11 @@ protected:
 	bool bAutoRegisterUpdatedComponent = true;
 	UPROPERTY(Edit, Category="Movement", DisplayName="Updated Component", Type=SceneComponentRef)
 	FString UpdatedComponentPath;
+
+	// Smoke-test field for the FObjectProperty stack. Side-by-side with the
+	// legacy path-based UpdatedComponentPath so save/load round-trips can be
+	// compared. When the migration completes, the path field above and the
+	// raw `UpdatedComponent` cache go away, leaving just this one.
+	UPROPERTY(Edit, Category="Movement", DisplayName="Updated Component (Ref)")
+	TObjectPtr<USceneComponent> UpdatedComponentRef;
 };

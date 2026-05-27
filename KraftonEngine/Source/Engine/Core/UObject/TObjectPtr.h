@@ -96,8 +96,8 @@ public:
 private:
 	union
 	{
-		FObjectPtr ObjectPtr;
-		T* DebugPtr;    
+		FObjectPtr ObjectPtr{};   // value-init so default-constructed TObjectPtr is valid
+		T* DebugPtr;
 	};
 };
 
