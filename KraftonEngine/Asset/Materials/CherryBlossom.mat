@@ -8,10 +8,15 @@
     "ColorIntensity" : 1.000000,
     "EmitterOrigin" : [0.000000, 0.000000, 0.000000],
     "ScreenAlignment" : 0.000000,
-    "SubUVCols" : 4,
-    "SubUVRows" : 3,
+    "SubUVCols" : 0.000000,
+    "SubUVRows" : 0.000000,
     "_Pad" : 0.000000,
     "_Pad1" : 0.000000
+  },
+  "Particle" : {
+    "SubUVColumns" : 4,
+    "SubUVRows" : 3,
+    "UseSubUV" : true
   },
   "PathFileName" : "Asset/Materials/CherryBlossom.mat",
   "RasterizerState" : "SolidNone",

@@ -677,7 +677,7 @@ uint32 FParticleEmitterInstance::GetModuleDataOffset(UParticleModule* Module)
 {
 	if (!EmitterTemplate || !Module)
 	{
-		return 0;
+		return 0;   
 	}
 
 	const auto Offset = EmitterTemplate->ModuleOffsetMap.find(Module);

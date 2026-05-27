@@ -58,14 +58,36 @@ float4 ProjectCameraPositionBillboard(float3 WorldPosition, float2 Corner, float
 
 float2 ComputeSubUVTexcoord(float2 LocalUV, float SubImage)
 {
+    // --- 아틀라스 전체 여백 보정 (줌인) ---
+    // 전체 텍스처에서 실제 꽃잎들이 있는 영역만 사용합니다.
+    // [0.05, 0.05] 에서 [0.95, 0.95] 사이가 실제 꽃잎 영역이라고 가정 (예시)
+    float2 AtlasMin = float2(0.02, 0.02); 
+    float2 AtlasMax = float2(0.98, 0.98);
+    // ------------------------------------
+
     uint Cols = max(SubUVCols, 1u);
     uint Rows = max(SubUVRows, 1u);
     uint FrameCount = max(Cols * Rows, 1u);
     uint FrameIndex = (uint)clamp(floor(SubImage), 0.0f, (float)(FrameCount - 1));
+    
     uint FrameCol = FrameIndex % Cols;
     uint FrameRow = FrameIndex / Cols;
+    
     float2 CellSize = 1.0f / float2((float)Cols, (float)Rows);
-    return (LocalUV + float2((float)FrameCol, (float)FrameRow)) * CellSize;
+    float2 Offset = float2((float)FrameCol, (float)FrameRow) * CellSize;
+    
+    // 1. 먼저 해당 칸(Cell) 안의 UV를 계산
+    float2 UVInCell = LocalUV * CellSize + Offset;
+    
+    // 2. 전체 아틀라스 범위(AtlasMin~AtlasMax)로 매핑 (줌인 효과)
+    return lerp(AtlasMin, AtlasMax, UVInCell);
+}
+
+float Hash31(float3 p)
+{
+    p = frac(p * 0.1031);
+    p += dot(p, p.yzx + 33.33);
+    return frac((p.x + p.y) * p.z);
 }
 
 PS_Input_Particle VS(VS_Input_ParticleSprite Input)
@@ -115,7 +137,10 @@ PS_Input_Particle VS(VS_Input_ParticleSprite Input)
         Out.position = mul(mul(WorldPos, View), Projection);
     }
 
-    Out.texcoord = ComputeSubUVTexcoord(float2(Input.uv.x, 1.0f - Input.uv.y), Input.subImage);
+    float SubImageCount = float(max(SubUVCols * SubUVRows, 1u));
+    float RandomSubImage = Hash31(Input.position) * SubImageCount;
+    
+    Out.texcoord = ComputeSubUVTexcoord(float2(Input.uv.x, 1.0f - Input.uv.y), RandomSubImage);
     Out.color    = Input.color;
     return Out;
 }
