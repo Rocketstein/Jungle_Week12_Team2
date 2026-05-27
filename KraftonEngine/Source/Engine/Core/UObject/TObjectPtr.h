@@ -2,6 +2,12 @@
 #include "FObjectPtr.h"
 #include <type_traits>
 
+template <typename T, typename = void>
+struct TIsComplete : std::false_type {};
+
+template <typename T>
+struct TIsComplete<T, std::void_t<decltype(sizeof(T))>> : std::true_type {};
+
 template <typename T>
 struct TObjectPtr
 {
@@ -9,11 +15,8 @@ struct TObjectPtr
 	// The incomplete-type branch lets headers forward-declare UFoo and still
 	// declare TObjectPtr<UFoo> members; the assert re-fires in TUs that see
 	// the full T definition.
-	static_assert(
-		!std::is_complete_v<T> || std::is_base_of_v<UObject, T>,
+	static_assert(!TIsComplete<T>::value || std::is_base_of_v<UObject, T>,
 		"TObjectPtr<T> requires T to derive from UObject");
-	// ^ If your toolchain lacks std::is_complete_v, swap for the sizeof-SFINAE
-	//   trick Unreal uses (ResolveTypeIsComplete). Optional polish.
 
 public:
 	using ElementType = T;
@@ -94,7 +97,7 @@ private:
 	union
 	{
 		FObjectPtr ObjectPtr;
-		T* DebugPtr;     // debugger ergonomics; same union trick as FObjectPtr
+		T* DebugPtr;    
 	};
 };
 
