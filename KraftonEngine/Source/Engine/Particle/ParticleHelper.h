@@ -109,3 +109,16 @@ enum EParticleStates
 	/** Counter mask. */
 	STATE_CounterMask = (~STATE_Mask)
 };
+
+struct FParticleEventInstancePayload
+{
+	uint32 bSpawnEventsPresent : 1 = false;
+	uint32 bDeathEventsPresent : 1 = false;
+	uint32 bCollisionEventsPresent : 1 = false;
+	uint32 bBurstEventsPresent : 1 = false;
+
+	int32 SpawnTrackingCount = 0;
+	int32 DeathTrackingCount = 0;
+	int32 CollisionTrackingCount = 0;
+	int32 BurstTrackingCount = 0;
+};

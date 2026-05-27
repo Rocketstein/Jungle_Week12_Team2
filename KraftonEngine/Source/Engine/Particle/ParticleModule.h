@@ -4,6 +4,7 @@
 #include "Core/CollisionTypes.h"
 #include "Math/FloatCurve.h"
 #include "Object/Object.h"
+#include "Particle/ParticleEventCollideData.h"
 #include "Particle/ParticleEmitterTypes.h"
 #include "ParticleModule.generated.h"
 
@@ -14,6 +15,7 @@ class UParticleModuleTypeDataBase;
 class UStaticMesh;
 class UParticleLODLevel;
 struct FBaseParticle;
+struct FParticleEventInstancePayload;
 
 /** ModuleType
  *	Indicates the kind of emitter the module can be applied to.
@@ -169,6 +171,73 @@ public:
 
 protected:
 	void CopyModuleBaseTo(UParticleModule* Copy) const;
+};
+
+UCLASS()
+class UParticleModuleEventBase : public UParticleModule
+{
+public:
+	GENERATED_BODY(UParticleModuleEventBase)
+
+	EModuleType GetModuleType() const override { return EPMT_Event; }
+};
+
+struct FParticleEvent_GenerateInfo
+{
+	EParticleEventType Type = EPET_Any;
+	FName CustomName = FName::None;
+	int32 Frequency = 0;
+	int32 ParticleFrequency = 0;
+	bool FirstTimeOnly = false;
+	bool LastTimeOnly = false;
+	bool UseReflectedImpactVector = false;
+	bool bUseOrbitOffset = false;
+};
+
+UCLASS()
+class UParticleModuleEventGenerator : public UParticleModuleEventBase
+{
+public:
+	GENERATED_BODY(UParticleModuleEventGenerator)
+
+	UParticleModuleEventGenerator();
+
+	TArray<FParticleEvent_GenerateInfo> Events;
+
+	void Spawn(const FSpawnContext& Context) override { (void)Context; }
+	void Update(const FUpdateContext& Context) override { (void)Context; }
+	uint32 RequiredBytes(UParticleModuleTypeDataBase* TypeData = nullptr) override { (void)TypeData; return 0; }
+	uint32 RequiredBytesPerInstance() override;
+	uint32 PrepPerInstanceBlock(FParticleEmitterInstance* Owner, void* InstData) override;
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
+
+	bool HandleParticleSpawned(FParticleEmitterInstance* Owner, FParticleEventInstancePayload* EventPayload, FBaseParticle* NewParticle);
+	bool HandleParticleKilled(FParticleEmitterInstance* Owner, FParticleEventInstancePayload* EventPayload, FBaseParticle* DeadParticle);
+	bool HandleParticleCollision(FParticleEmitterInstance* Owner, FParticleEventInstancePayload* EventPayload,
+		FBaseParticle* CollideParticle, const FVector& HitLocation, const FVector& HitNormal, float HitTime);
+	bool HandleParticleBurst(FParticleEmitterInstance* Owner, FParticleEventInstancePayload* EventPayload, int32 ParticleCount);
+};
+
+UCLASS()
+class UParticleModuleEventReceiverBase : public UParticleModuleEventBase
+{
+public:
+	GENERATED_BODY(UParticleModuleEventReceiverBase)
+
+	EParticleEventType EventGeneratorType = EPET_Any;
+
+	virtual bool WillProcessParticleEvent(EParticleEventType InEventType) const
+	{
+		return EventGeneratorType == EPET_Any || EventGeneratorType == InEventType;
+	}
+
+	virtual bool ProcessParticleEvent(FParticleEmitterInstance* Owner, FParticleEventData& InEvent, float DeltaTime)
+	{
+		(void)Owner;
+		(void)InEvent;
+		(void)DeltaTime;
+		return false;
+	}
 };
 
 UCLASS()

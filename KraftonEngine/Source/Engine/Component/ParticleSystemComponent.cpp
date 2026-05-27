@@ -3,6 +3,7 @@
 #include "Particle/ParticleEmitter.h"
 #include "Particle/ParticleEmitterInstances.h"
 #include "Particle/ParticleSystem.h"
+#include "Particle/ParticleEventManager.h"
 #include "Particle/ParticleLODLevel.h"
 #include "Particle/ParticleBeamInstances.h"
 #include "Render/Particle/ParticleDynamicData.h"
@@ -216,6 +217,14 @@ void UParticleSystemComponent::PostEditProperty(const char* PropertyName)
 		ResolveTemplate();
 		InitializeSystem();
 	}
+	else if (std::strcmp(PropertyName, "Show Particles") == 0 || std::strcmp(PropertyName, "bShowParticles") == 0)
+	{
+		if (SceneProxy)
+		{
+			FParticleSystemSceneProxy* ParticleProxy = static_cast<FParticleSystemSceneProxy*>(SceneProxy);
+			ParticleProxy->SetVisibility(bShowParticles);
+		}
+	}
 }
 
 void UParticleSystemComponent::EndPlay()
@@ -265,6 +274,7 @@ void UParticleSystemComponent::SetTemplate(UParticleSystem* NewTemplate)
 FPrimitiveSceneProxy* UParticleSystemComponent::CreateSceneProxy()
 {
 	FParticleSystemSceneProxy* ParticleSceneProxy = new FParticleSystemSceneProxy(this);
+	ParticleSceneProxy->SetVisibility(bShowParticles);
 	ParticleSceneProxy->SetTranslucencySortPriority(ToTranslucencySortPriority(SortPriority));
 	return ParticleSceneProxy;
 }
@@ -278,7 +288,7 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 {
 	PARTICLE_SCOPE_STAT(EParticleStatTimer::ComponentTick);
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	ClearParticleCollisionEvents();
+	ClearParticleEvents();
 
 	UParticleSystem* ParticleTemplate = ResolveTemplate();
 	if (!ParticleTemplate)
@@ -309,7 +319,7 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 		}
 	}
 
-	DispatchParticleCollisionEvents();
+	DispatchParticleEvents();
 	FParticleStats::Get().RecordComponent(*this);
 
 	TArray<FDynamicEmitterDataBase*> NewRenderData;
@@ -466,23 +476,75 @@ void UParticleSystemComponent::InitializeSystem()
 void UParticleSystemComponent::QueueParticleCollisionEvent(const FParticleEventCollideData& EventData)
 {
 	if (MaxParticleCollisionEventsPerFrame >= 0
-		&& static_cast<int32>(ParticleEventCollideDatas.size()) >= MaxParticleCollisionEventsPerFrame)
+		&& static_cast<int32>(CollisionEvents.size()) >= MaxParticleCollisionEventsPerFrame)
 	{
 		return;
 	}
 
-	ParticleEventCollideDatas.push_back(EventData);
+	CollisionEvents.push_back(EventData);
+}
+
+void UParticleSystemComponent::ReportEventSpawn(FName InEventName, float InEmitterTime,
+	const FVector& InLocation, const FVector& InVelocity)
+{
+	FParticleEventSpawnData EventData;
+	EventData.EventName = InEventName;
+	EventData.EmitterTime = InEmitterTime;
+	EventData.Location = InLocation;
+	EventData.Velocity = InVelocity;
+	SpawnEvents.push_back(EventData);
+}
+
+void UParticleSystemComponent::ReportEventDeath(FName InEventName, float InEmitterTime,
+	const FVector& InLocation, const FVector& InVelocity, float InParticleTime, const FVector& InDirection)
+{
+	FParticleEventDeathData EventData;
+	EventData.EventName = InEventName;
+	EventData.EmitterTime = InEmitterTime;
+	EventData.Location = InLocation;
+	EventData.Velocity = InVelocity;
+	EventData.ParticleTime = InParticleTime;
+	EventData.Direction = InDirection;
+	DeathEvents.push_back(EventData);
+}
+
+void UParticleSystemComponent::ReportEventCollision(FName InEventName, float InEmitterTime,
+	const FVector& InLocation, const FVector& InDirection, const FVector& InVelocity,
+	float InParticleTime, const FVector& InNormal, float InHitTime)
+{
+	FParticleEventCollideData EventData;
+	EventData.EventName = InEventName;
+	EventData.EmitterTime = InEmitterTime;
+	EventData.Location = InLocation;
+	EventData.Direction = InDirection;
+	EventData.Velocity = InVelocity;
+	EventData.ParticleTime = InParticleTime;
+	EventData.ParticleRelativeTime = InParticleTime;
+	EventData.Normal = InNormal;
+	EventData.HitTime = InHitTime;
+	CollisionEvents.push_back(EventData);
+}
+
+void UParticleSystemComponent::ReportEventBurst(FName InEventName, float InEmitterTime,
+	int32 InParticleCount, const FVector& InLocation)
+{
+	FParticleEventBurstData EventData;
+	EventData.EventName = InEventName;
+	EventData.EmitterTime = InEmitterTime;
+	EventData.ParticleCount = InParticleCount;
+	EventData.Location = InLocation;
+	BurstEvents.push_back(EventData);
 }
 
 void UParticleSystemComponent::DispatchParticleCollisionEvents()
 {
-	if (bDispatchingParticleCollisionEvents || ParticleEventCollideDatas.empty() || !OnParticleCollide.IsBound())
+	if (bDispatchingParticleCollisionEvents || CollisionEvents.empty() || !OnParticleCollide.IsBound())
 	{
 		return;
 	}
 
 	bDispatchingParticleCollisionEvents = true;
-	const TArray<FParticleEventCollideData> EventsToDispatch = ParticleEventCollideDatas;
+	const TArray<FParticleEventCollideData> EventsToDispatch = CollisionEvents;
 	for (const FParticleEventCollideData& EventData : EventsToDispatch)
 	{
 		OnParticleCollide.Broadcast(this, EventData);
@@ -492,5 +554,42 @@ void UParticleSystemComponent::DispatchParticleCollisionEvents()
 
 void UParticleSystemComponent::ClearParticleCollisionEvents()
 {
-	ParticleEventCollideDatas.clear();
+	CollisionEvents.clear();
+}
+
+void UParticleSystemComponent::DispatchParticleEvents()
+{
+	DispatchParticleCollisionEvents();
+
+	UWorld* World = GetWorld();
+	AParticleEventManager* EventManager = World ? World->MyParticleEventManager : nullptr;
+	if (!EventManager)
+	{
+		return;
+	}
+
+	if (!SpawnEvents.empty())
+	{
+		EventManager->HandleParticleSpawnEvents(this, SpawnEvents);
+	}
+	if (!DeathEvents.empty())
+	{
+		EventManager->HandleParticleDeathEvents(this, DeathEvents);
+	}
+	if (!CollisionEvents.empty())
+	{
+		EventManager->HandleParticleCollisionEvents(this, CollisionEvents);
+	}
+	if (!BurstEvents.empty())
+	{
+		EventManager->HandleParticleBurstEvents(this, BurstEvents);
+	}
+}
+
+void UParticleSystemComponent::ClearParticleEvents()
+{
+	SpawnEvents.clear();
+	DeathEvents.clear();
+	ClearParticleCollisionEvents();
+	BurstEvents.clear();
 }

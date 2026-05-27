@@ -25,6 +25,7 @@ class UPrimitiveComponent;
 class AGameModeBase;
 class AGameStateBase;
 class APlayerController;
+class AParticleEventManager;
 class UClass;
 
 UCLASS()
@@ -112,6 +113,8 @@ public:
 
 
 	FParticleLODContext GetParticleLODContext() const;
+
+	AParticleEventManager* MyParticleEventManager = nullptr;
 private:
 	//TArray<AActor*> Actors;
 	ULevel* PersistentLevel;

@@ -139,6 +139,16 @@ namespace
 		"Kill"
 	};
 
+	const char* GParticleEventTypeNames[] =
+	{
+		"Any",
+		"Spawn",
+		"Death",
+		"Collision",
+		"Burst",
+		"Blueprint"
+	};
+
 	const char* GTrailRenderAxisNames[] =
 	{
 		"Camera Up",
@@ -1237,6 +1247,16 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 		Collision->bEnabled = true;
 		return Collision;
 	}
+	case EAddableModuleType::EventGenerator:
+	{
+		UParticleModuleEventGenerator* EventGenerator = GUObjectArray.CreateObject<UParticleModuleEventGenerator>(Outer);
+		EventGenerator->bEnabled = true;
+		FParticleEvent_GenerateInfo CollisionEvent;
+		CollisionEvent.Type = EPET_Collision;
+		CollisionEvent.CustomName = FName("Collision");
+		EventGenerator->Events.push_back(CollisionEvent);
+		return EventGenerator;
+	}
 	}
 
 	return nullptr;
@@ -2191,6 +2211,10 @@ FString FParticleEditorWidget::GetModuleDisplayName(UParticleModule* Module) con
 	{
 		return "Collision";
 	}
+	if (Module->IsA<UParticleModuleEventGenerator>())
+	{
+		return "Event Generator";
+	}
 	if (Module->IsA<UParticleModuleTypeDataRibbon>())
 	{
 		return "Ribbon";
@@ -2693,6 +2717,10 @@ void FParticleEditorWidget::RenderEmitterList()
 			if (ImGui::MenuItem("Collision"))
 			{
 				QueueAddModule(EmitterIndex, EAddableModuleType::Collision);
+			}
+			if (ImGui::MenuItem("Event Generator"))
+			{
+				QueueAddModule(EmitterIndex, EAddableModuleType::EventGenerator);
 			}
 			ImGui::EndMenu();
 		}
@@ -4252,6 +4280,83 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		{
 			Beam->bAlwaysOn = bAlwaysOn;
 			bChanged = true;
+		}
+	}
+	else if (UParticleModuleEventGenerator* EventGenerator = Cast<UParticleModuleEventGenerator>(Module))
+	{
+		if (ImGui::Button("Add Event"))
+		{
+			FParticleEvent_GenerateInfo EventInfo;
+			EventInfo.Type = EPET_Collision;
+			EventInfo.CustomName = FName("Collision");
+			EventGenerator->Events.push_back(EventInfo);
+			bChanged = true;
+		}
+
+		for (int32 EventIndex = 0; EventIndex < static_cast<int32>(EventGenerator->Events.size()); ++EventIndex)
+		{
+			FParticleEvent_GenerateInfo& EventInfo = EventGenerator->Events[EventIndex];
+			ImGui::PushID(EventIndex);
+			if (ImGui::TreeNodeEx("Event", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				int EventType = static_cast<int>(EventInfo.Type);
+				if (ImGui::Combo("Type", &EventType, GParticleEventTypeNames, IM_ARRAYSIZE(GParticleEventTypeNames)))
+				{
+					EventInfo.Type = static_cast<EParticleEventType>(std::clamp(EventType, 0, static_cast<int>(EPET_Blueprint)));
+					bChanged = true;
+				}
+
+				char NameBuffer[128] = {};
+				const FString CurrentName = EventInfo.CustomName.ToString();
+				std::snprintf(NameBuffer, sizeof(NameBuffer), "%s", CurrentName.c_str());
+				if (ImGui::InputText("Custom Name", NameBuffer, sizeof(NameBuffer)))
+				{
+					EventInfo.CustomName = FName(NameBuffer);
+					bChanged = true;
+				}
+
+				int Frequency = EventInfo.Frequency;
+				if (ImGui::DragInt("Frequency", &Frequency, 1.0f, 0, 1000))
+				{
+					EventInfo.Frequency = (std::max)(0, Frequency);
+					bChanged = true;
+				}
+
+				int ParticleFrequency = EventInfo.ParticleFrequency;
+				if (ImGui::DragInt("Particle Frequency", &ParticleFrequency, 1.0f, 0, 1000))
+				{
+					EventInfo.ParticleFrequency = (std::max)(0, ParticleFrequency);
+					bChanged = true;
+				}
+
+				if (ImGui::Checkbox("First Time Only", &EventInfo.FirstTimeOnly))
+				{
+					bChanged = true;
+				}
+				if (ImGui::Checkbox("Last Time Only", &EventInfo.LastTimeOnly))
+				{
+					bChanged = true;
+				}
+				if (ImGui::Checkbox("Use Reflected Impact Vector", &EventInfo.UseReflectedImpactVector))
+				{
+					bChanged = true;
+				}
+				if (ImGui::Checkbox("Use Orbit Offset", &EventInfo.bUseOrbitOffset))
+				{
+					bChanged = true;
+				}
+
+				if (ImGui::Button("Remove Event"))
+				{
+					EventGenerator->Events.erase(EventGenerator->Events.begin() + EventIndex);
+					bChanged = true;
+					ImGui::TreePop();
+					ImGui::PopID();
+					break;
+				}
+				ImGui::TreePop();
+			}
+			ImGui::PopID();
 		}
 	}
 	else if (UParticleModuleCollision* Collision = Cast<UParticleModuleCollision>(Module))

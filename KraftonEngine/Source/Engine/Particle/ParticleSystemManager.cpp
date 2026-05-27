@@ -128,6 +128,15 @@ namespace ParticleKeys
 	static constexpr const char* Y = "Y";
 	static constexpr const char* Z = "Z";
 	static constexpr const char* Collision = "Collision";
+	static constexpr const char* EventGenerator = "EventGenerator";
+	static constexpr const char* Events = "Events";
+	static constexpr const char* EventType = "EventType";
+	static constexpr const char* CustomName = "CustomName";
+	static constexpr const char* ParticleFrequency = "ParticleFrequency";
+	static constexpr const char* FirstTimeOnly = "FirstTimeOnly";
+	static constexpr const char* LastTimeOnly = "LastTimeOnly";
+	static constexpr const char* UseReflectedImpactVector = "UseReflectedImpactVector";
+	static constexpr const char* bUseOrbitOffset = "bUseOrbitOffset";
 	static constexpr const char* TraceChannel = "TraceChannel";
 	static constexpr const char* ResponseMode = "ResponseMode";
 	static constexpr const char* DampingFactor = "DampingFactor";
@@ -625,6 +634,7 @@ const char* GetSerializableModuleType(UParticleModule* Module)
 	if (Module->IsA<UParticleModuleBeamTarget>()) return "BeamTarget";
 	if (Module->IsA<UParticleModuleBeamNoise>()) return "BeamNoise";
 	if (Module->IsA<UParticleModuleCollision>()) return ParticleKeys::Collision;
+	if (Module->IsA<UParticleModuleEventGenerator>()) return ParticleKeys::EventGenerator;
 	return nullptr;
 }
 
@@ -770,6 +780,24 @@ json::JSON SerializeModule(UParticleModule* Module)
 		Object[ParticleKeys::CollisionOffset] = Collision->CollisionOffset;
 		Object[ParticleKeys::CollisionRadiusScale] = Collision->CollisionRadiusScale;
 		Object[ParticleKeys::MaxCollisions] = Collision->MaxCollisions;
+	}
+	else if (UParticleModuleEventGenerator* EventGenerator = Cast<UParticleModuleEventGenerator>(Module))
+	{
+		json::JSON Events = json::Array();
+		for (const FParticleEvent_GenerateInfo& EventInfo : EventGenerator->Events)
+		{
+			json::JSON EventObject = json::JSON::Make(json::JSON::Class::Object);
+			EventObject[ParticleKeys::EventType] = static_cast<int32>(EventInfo.Type);
+			EventObject[ParticleKeys::CustomName] = EventInfo.CustomName.ToString();
+			EventObject[ParticleKeys::Frequency] = EventInfo.Frequency;
+			EventObject[ParticleKeys::ParticleFrequency] = EventInfo.ParticleFrequency;
+			EventObject[ParticleKeys::FirstTimeOnly] = EventInfo.FirstTimeOnly;
+			EventObject[ParticleKeys::LastTimeOnly] = EventInfo.LastTimeOnly;
+			EventObject[ParticleKeys::UseReflectedImpactVector] = EventInfo.UseReflectedImpactVector;
+			EventObject[ParticleKeys::bUseOrbitOffset] = EventInfo.bUseOrbitOffset;
+			Events.append(EventObject);
+		}
+		Object[ParticleKeys::Events] = Events;
 	}
 
 	return Object;
@@ -1330,6 +1358,31 @@ UParticleModule* DeserializeModule(json::JSON& Object, UParticleLODLevel* Outer)
 			Collision->MaxCollisions = std::max(0, static_cast<int32>(Object[ParticleKeys::MaxCollisions].ToInt()));
 		}
 		Module = Collision;
+	}
+	else if (Type == ParticleKeys::EventGenerator)
+	{
+		UParticleModuleEventGenerator* EventGenerator = GUObjectArray.CreateObject<UParticleModuleEventGenerator>(Outer);
+		if (Object.hasKey(ParticleKeys::Events) && Object[ParticleKeys::Events].JSONType() == json::JSON::Class::Array)
+		{
+			for (auto& EventObject : Object[ParticleKeys::Events].ArrayRange())
+			{
+				FParticleEvent_GenerateInfo EventInfo;
+				if (EventObject.hasKey(ParticleKeys::EventType))
+				{
+					const int32 Value = static_cast<int32>(EventObject[ParticleKeys::EventType].ToInt());
+					EventInfo.Type = static_cast<EParticleEventType>(std::clamp(Value, 0, static_cast<int32>(EPET_MAX) - 1));
+				}
+				if (EventObject.hasKey(ParticleKeys::CustomName)) EventInfo.CustomName = FName(EventObject[ParticleKeys::CustomName].ToString());
+				if (EventObject.hasKey(ParticleKeys::Frequency)) EventInfo.Frequency = std::max(0, static_cast<int32>(EventObject[ParticleKeys::Frequency].ToInt()));
+				if (EventObject.hasKey(ParticleKeys::ParticleFrequency)) EventInfo.ParticleFrequency = std::max(0, static_cast<int32>(EventObject[ParticleKeys::ParticleFrequency].ToInt()));
+				if (EventObject.hasKey(ParticleKeys::FirstTimeOnly)) EventInfo.FirstTimeOnly = EventObject[ParticleKeys::FirstTimeOnly].ToBool();
+				if (EventObject.hasKey(ParticleKeys::LastTimeOnly)) EventInfo.LastTimeOnly = EventObject[ParticleKeys::LastTimeOnly].ToBool();
+				if (EventObject.hasKey(ParticleKeys::UseReflectedImpactVector)) EventInfo.UseReflectedImpactVector = EventObject[ParticleKeys::UseReflectedImpactVector].ToBool();
+				if (EventObject.hasKey(ParticleKeys::bUseOrbitOffset)) EventInfo.bUseOrbitOffset = EventObject[ParticleKeys::bUseOrbitOffset].ToBool();
+				EventGenerator->Events.push_back(EventInfo);
+			}
+		}
+		Module = EventGenerator;
 	}
 
 	if (Module && Object.hasKey(ParticleKeys::bEnabled))

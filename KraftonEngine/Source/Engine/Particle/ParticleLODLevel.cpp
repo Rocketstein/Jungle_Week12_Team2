@@ -12,6 +12,8 @@ void UParticleLODLevel::ClassifyModulesByRole()
 	UpdateModules.clear();
 	FinalUpdateModules.clear();
 	TypeDataModule = nullptr;
+	EventGenerator = nullptr;
+	EventReceiverModules.clear();
 
 	if (SpawnModule && SpawnModule->bEnabled)
 	{
@@ -33,6 +35,16 @@ void UParticleLODLevel::ClassifyModulesByRole()
 		if (UParticleModuleTypeDataBase* TypeData = Cast<UParticleModuleTypeDataBase>(Module))
 		{
 			TypeDataModule = TypeData;
+		}
+
+		if (UParticleModuleEventGenerator* EventGen = Cast<UParticleModuleEventGenerator>(Module))
+		{
+			EventGenerator = EventGen;
+		}
+
+		if (UParticleModuleEventReceiverBase* EventReceiver = Cast<UParticleModuleEventReceiverBase>(Module))
+		{
+			EventReceiverModules.push_back(EventReceiver);
 		}
 
 		// Beam helper modules (Source/Target/Noise/etc.) are driven by their owning

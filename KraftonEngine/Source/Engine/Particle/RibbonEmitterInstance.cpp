@@ -97,7 +97,7 @@ void FRibbonEmitterInstance::Tick(float DeltaTime, int32 LODLevel, bool bSuppres
 		return;
 	}
 
-	FParticleEmitterInstance::Tick(DeltaTime, LODLevel, true);
+	FParticleEmitterInstance::Tick(DeltaTime, LODLevel, true); //ribbon Emitter 자체의 spawn rate로 소환하지 않는다.
 	if (UParticleModuleTypeDataRibbon* RibbonModule = GetRibbonModule())
 	{
 		UpdateSourceTrails(DeltaTime, *RibbonModule);
@@ -319,6 +319,7 @@ void FRibbonEmitterInstance::UpdateSourceTrails(float DeltaTime, const UParticle
 	if (SourceEmitter && SourceEmitter->ParticleIndices && SourceEmitter->ActiveParticles > 0)
 	{
 		const int32 MaxTrailCount = std::max(1, RibbonModule.MaxTrailCount);
+		//for
 		for (int32 ActiveIndex = 0; ActiveIndex < SourceEmitter->ActiveParticles; ++ActiveIndex)
 		{
 			const FBaseParticle* SourceParticle = SourceEmitter->GetParticleDirect(SourceEmitter->ParticleIndices[ActiveIndex]);

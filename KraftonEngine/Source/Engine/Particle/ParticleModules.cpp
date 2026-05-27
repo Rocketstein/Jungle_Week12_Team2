@@ -257,6 +257,183 @@ UParticleModule* UParticleModule::CloneForLOD(UParticleLODLevel* NewOuter) const
 	return Copy;
 }
 
+UParticleModuleEventGenerator::UParticleModuleEventGenerator()
+{
+	bSpawnModule = false;
+	bUpdateModule = false;
+}
+
+uint32 UParticleModuleEventGenerator::RequiredBytesPerInstance()
+{
+	return sizeof(FParticleEventInstancePayload);
+}
+
+uint32 UParticleModuleEventGenerator::PrepPerInstanceBlock(FParticleEmitterInstance* Owner, void* InstData)
+{
+	(void)Owner;
+	if (!InstData)
+	{
+		return 0;
+	}
+
+	FParticleEventInstancePayload* Payload = static_cast<FParticleEventInstancePayload*>(InstData);
+	*Payload = FParticleEventInstancePayload();
+
+	for (const FParticleEvent_GenerateInfo& EventInfo : Events)
+	{
+		switch (EventInfo.Type)
+		{
+		case EPET_Spawn:
+			Payload->bSpawnEventsPresent = true;
+			break;
+		case EPET_Death:
+			Payload->bDeathEventsPresent = true;
+			break;
+		case EPET_Collision:
+			Payload->bCollisionEventsPresent = true;
+			break;
+		case EPET_Burst:
+			Payload->bBurstEventsPresent = true;
+			break;
+		default:
+			break;
+		}
+	}
+
+	return sizeof(FParticleEventInstancePayload);
+}
+
+UParticleModule* UParticleModuleEventGenerator::CloneForLOD(UParticleLODLevel* NewOuter) const
+{
+	UParticleModuleEventGenerator* Copy = GUObjectArray.CreateObject<UParticleModuleEventGenerator>(NewOuter);
+	CopyModuleBaseTo(Copy);
+	Copy->Events = Events;
+	return Copy;
+}
+
+static bool ShouldGenerateParticleEvent(const FParticleEvent_GenerateInfo& EventInfo, int32 TrackingCount, const FBaseParticle* Particle)
+{
+	if (EventInfo.Frequency > 0 && (TrackingCount % EventInfo.Frequency) != 0)
+	{
+		return false;
+	}
+	if (Particle && EventInfo.ParticleFrequency > 0 && (Particle->ParticleId % static_cast<uint32>(EventInfo.ParticleFrequency)) != 0)
+	{
+		return false;
+	}
+	return true;
+}
+
+bool UParticleModuleEventGenerator::HandleParticleSpawned(FParticleEmitterInstance* Owner,
+	FParticleEventInstancePayload* EventPayload, FBaseParticle* NewParticle)
+{
+	if (!Owner || !Owner->Component || !EventPayload || !NewParticle || !EventPayload->bSpawnEventsPresent)
+	{
+		return false;
+	}
+
+	++EventPayload->SpawnTrackingCount;
+	bool bProcessed = false;
+	for (const FParticleEvent_GenerateInfo& EventInfo : Events)
+	{
+		if (EventInfo.Type != EPET_Spawn || !ShouldGenerateParticleEvent(EventInfo, EventPayload->SpawnTrackingCount, NewParticle))
+		{
+			continue;
+		}
+
+		Owner->Component->ReportEventSpawn(EventInfo.CustomName, Owner->EmitterTime, NewParticle->Location, NewParticle->Velocity);
+		bProcessed = true;
+	}
+	return bProcessed;
+}
+
+bool UParticleModuleEventGenerator::HandleParticleKilled(FParticleEmitterInstance* Owner,
+	FParticleEventInstancePayload* EventPayload, FBaseParticle* DeadParticle)
+{
+	if (!Owner || !Owner->Component || !EventPayload || !DeadParticle || !EventPayload->bDeathEventsPresent)
+	{
+		return false;
+	}
+
+	++EventPayload->DeathTrackingCount;
+	bool bProcessed = false;
+	for (const FParticleEvent_GenerateInfo& EventInfo : Events)
+	{
+		if (EventInfo.Type != EPET_Death || !ShouldGenerateParticleEvent(EventInfo, EventPayload->DeathTrackingCount, DeadParticle))
+		{
+			continue;
+		}
+
+		FVector Direction = DeadParticle->Velocity;
+		Direction.Normalize();
+		Owner->Component->ReportEventDeath(EventInfo.CustomName, Owner->EmitterTime,
+			DeadParticle->Location, DeadParticle->Velocity, DeadParticle->RelativeTime, Direction);
+		bProcessed = true;
+	}
+	return bProcessed;
+}
+
+bool UParticleModuleEventGenerator::HandleParticleCollision(FParticleEmitterInstance* Owner,
+	FParticleEventInstancePayload* EventPayload, FBaseParticle* CollideParticle,
+	const FVector& HitLocation, const FVector& HitNormal, float HitTime)
+{
+	if (!Owner || !Owner->Component || !EventPayload || !CollideParticle || !EventPayload->bCollisionEventsPresent)
+	{
+		return false;
+	}
+
+	++EventPayload->CollisionTrackingCount;
+	bool bProcessed = false;
+	for (const FParticleEvent_GenerateInfo& EventInfo : Events)
+	{
+		if (EventInfo.Type != EPET_Collision || !ShouldGenerateParticleEvent(EventInfo, EventPayload->CollisionTrackingCount, CollideParticle))
+		{
+			continue;
+		}
+		if (EventInfo.FirstTimeOnly && (CollideParticle->Flags & STATE_Particle_CollisionHasOccurred) != 0)
+		{
+			continue;
+		}
+		if (EventInfo.LastTimeOnly && (CollideParticle->RelativeTime < 1.0f))
+		{
+			continue;
+		}
+
+		FVector Direction = EventInfo.UseReflectedImpactVector
+			? CollideParticle->Velocity - HitNormal * (2.0f * CollideParticle->Velocity.Dot(HitNormal))
+			: CollideParticle->Velocity;
+		Direction.Normalize();
+
+		Owner->Component->ReportEventCollision(EventInfo.CustomName, Owner->EmitterTime, HitLocation,
+			Direction, CollideParticle->Velocity, CollideParticle->RelativeTime, HitNormal, HitTime);
+		bProcessed = true;
+	}
+	return bProcessed;
+}
+
+bool UParticleModuleEventGenerator::HandleParticleBurst(FParticleEmitterInstance* Owner,
+	FParticleEventInstancePayload* EventPayload, int32 ParticleCount)
+{
+	if (!Owner || !Owner->Component || !EventPayload || ParticleCount <= 0 || !EventPayload->bBurstEventsPresent)
+	{
+		return false;
+	}
+
+	++EventPayload->BurstTrackingCount;
+	bool bProcessed = false;
+	for (const FParticleEvent_GenerateInfo& EventInfo : Events)
+	{
+		if (EventInfo.Type != EPET_Burst || !ShouldGenerateParticleEvent(EventInfo, EventPayload->BurstTrackingCount, nullptr))
+		{
+			continue;
+		}
+
+		Owner->Component->ReportEventBurst(EventInfo.CustomName, Owner->EmitterTime, ParticleCount, Owner->Location);
+		bProcessed = true;
+	}
+	return bProcessed;
+}
+
 UParticleModule* UParticleModuleRequired::CloneForLOD(UParticleLODLevel* NewOuter) const
 {
 	UParticleModuleRequired* Copy = GUObjectArray.CreateObject<UParticleModuleRequired>(NewOuter);
@@ -608,10 +785,28 @@ void UParticleModuleCollision::FinalUpdate(const FUpdateContext& Context)
 		EventData.Location = Hit.WorldHitLocation;
 		EventData.OldLocation = Particle->OldLocation;
 		EventData.Velocity = Particle->BaseVelocity;
+		EventData.Direction = Particle->BaseVelocity;
+		EventData.Direction.Normalize();
 		EventData.Normal = Normal;
+		EventData.EmitterTime = Owner.EmitterTime;
+		EventData.ParticleRelativeTime = Particle->RelativeTime;
+		EventData.ParticleTime = Particle->RelativeTime;
+		EventData.HitTime = 0.0f;
 		EventData.HitActor = Hit.HitActor;
 		EventData.HitComponent = Hit.HitComponent;
-		Owner.Component->QueueParticleCollisionEvent(EventData);
+
+		bool bEventGenerated = false;
+		if (Owner.CurrentLODLevel && Owner.CurrentLODLevel->EventGenerator)
+		{
+			FParticleEventInstancePayload* EventPayload = reinterpret_cast<FParticleEventInstancePayload*>(
+				Owner.GetModuleInstanceData(Owner.CurrentLODLevel->EventGenerator));
+			bEventGenerated = Owner.CurrentLODLevel->EventGenerator->HandleParticleCollision(&Owner, EventPayload,
+				Particle, Hit.WorldHitLocation, Normal, 0.0f);
+		}
+		if (!bEventGenerated)
+		{
+			Owner.Component->QueueParticleCollisionEvent(EventData);
+		}
 
 		++Payload->CollisionCount;
 		Particle->Flags |= STATE_Particle_CollisionHasOccurred;

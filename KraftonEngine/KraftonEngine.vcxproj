@@ -483,6 +483,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Engine\GameFramework\SkeletalMeshActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\SphereActor.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\StaticMeshActor.cpp" />
+    <ClCompile Include="Source\Engine\GameFramework\Emitter.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\TriggerVolumeBase.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\WaveOscillatorCameraShake.cpp" />
     <ClCompile Include="Source\Engine\GameFramework\World.cpp" />
@@ -521,6 +522,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Engine\Particle\ParticleEmitter.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleEmitterInstances.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleEventCollideData.cpp" />
+    <ClCompile Include="Source\Engine\Particle\ParticleEventManager.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleLODContext.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleLODLevel.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleModules.cpp" />
@@ -829,6 +831,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\GameFramework\SkeletalMeshActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\SphereActor.h" />
     <ClInclude Include="Source\Engine\GameFramework\StaticMeshActor.h" />
+    <ClInclude Include="Source\Engine\GameFramework\Emitter.h" />
     <ClInclude Include="Source\Engine\GameFramework\TriggerVolumeBase.h" />
     <ClInclude Include="Source\Engine\GameFramework\WaveOscillatorCameraShake.h" />
     <ClInclude Include="Source\Engine\GameFramework\World.h" />
@@ -882,6 +885,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\Particle\ParticleEmitterInstances.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEmitterTypes.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEventCollideData.h" />
+    <ClInclude Include="Source\Engine\Particle\ParticleEventManager.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleHelper.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleLODContext.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleLODLevel.h" />

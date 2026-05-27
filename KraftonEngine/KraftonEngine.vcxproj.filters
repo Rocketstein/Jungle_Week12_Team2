@@ -974,6 +974,9 @@
     <ClCompile Include="Source\Engine\GameFramework\StaticMeshActor.cpp">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\GameFramework\Emitter.cpp">
+      <Filter>Source\Engine\GameFramework</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\GameFramework\TriggerVolumeBase.cpp">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClCompile>
@@ -1095,6 +1098,9 @@
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleModules.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleEventManager.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleSpriteEmitter.cpp">
@@ -2006,6 +2012,9 @@
     <ClInclude Include="Source\Engine\GameFramework\StaticMeshActor.h">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\GameFramework\Emitter.h">
+      <Filter>Source\Engine\GameFramework</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\GameFramework\TriggerVolumeBase.h">
       <Filter>Source\Engine\GameFramework</Filter>
     </ClInclude>
@@ -2175,6 +2184,9 @@
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleModule.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleEventManager.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleSpriteEmitter.h">
