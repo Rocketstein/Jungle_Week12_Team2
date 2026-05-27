@@ -2114,6 +2114,130 @@
           "bTickEnable" : true
         }
       }
+    }, {
+      "ClassName" : "AStaticMeshActor",
+      "Name" : "AStaticMeshActor_18",
+      "NonSceneComponents" : [],
+      "Properties" : {
+        "Tags" : [],
+        "bNeedsTick" : true,
+        "bVisible" : true
+      },
+      "RootComponent" : {
+        "Children" : [],
+        "ClassName" : "UStaticMeshComponent",
+        "Properties" : {
+          "Auto Activate" : true,
+          "Cast Shadow" : true,
+          "Cast Shadow as Two-Sided" : false,
+          "Center of Mass" : [0.000000, 0.000000, 0.000000],
+          "Collision Enabled" : 0,
+          "Generate Overlap Events" : false,
+          "Is Visible" : true,
+          "Mass (Kg)" : 1.000000,
+          "Materials" : [{
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Rock_sides.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Lake_Bottom.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_lambert27.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_lambert26.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama__props_Japanese_Grandma_s_House_V1_9_lambert9.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama__props_Japanese_Grandma_s_House_V1_9_Gohei_Texture.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama__props_Japanese_Grandma_s_House_V1_9_lambert5.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_lambert1.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama__props_Japanese_Grandma_s_House_V1_9_lambert10.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_lambert33.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_TeahouseProps_tex.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Planks_Tex.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_lambert7.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_DarkWood.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_lambert6.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_White_Concrete.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_lambert11.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_RoofTexture.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_ConcreteBases.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_lambert8.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_shrine_Upper.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Shrine_Bottom.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Stone_Lantern.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Stone_Lantern_Window.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_standardSurface2.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_leaves_Sakura.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_SakuraTree_01_tex.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_GroundGrasBlender_01_tex.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_GroundPath_01_tex.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_GrassBlender.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Decals_01_tex.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Man_Made.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Blinds_And_Vents.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Stone_Base_House.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Railings.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Door_AndClothes.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Default_Material.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_aiStandardSurface2.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_Material #8966.mat"
+            }, {
+              "Path" : "Asset/Mesh/JapaneseHouse/TestExport_Diorama_standardSurface3.mat"
+            }],
+          "Object Type" : 0,
+          "RelativeTransform" : {
+            "Location" : [-16.900000, 269.954407, 0.000000],
+            "Scale" : [4.000000, 4.000000, 4.000000]
+          },
+          "Response Container" : {
+            "FootIK" : 2,
+            "Pawn" : 2,
+            "Projectile" : 2,
+            "Trigger" : 2,
+            "WorldDynamic" : 2,
+            "WorldStatic" : 2
+          },
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Simulate Physics" : false,
+          "Static Mesh" : "None",
+          "bEditorOnly" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bTickEnable" : true
+        }
+      }
     }],
   "ClassName" : "UWorld",
   "ContextHandle" : "NewScene",
@@ -2122,9 +2246,9 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [-61.344959, -22.012047, 40.280098],
+    "Location" : [81.567314, 49.867325, 58.552998],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, 32.022430, -344.540741]
+    "Rotation" : [0.000000, 20.622503, -137.392227]
   },
   "Version" : 2,
   "WorldSettings" : {

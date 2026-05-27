@@ -376,12 +376,19 @@ void FEditorFbxImportDialog::Reset()
 	SkeletalMeshRows.clear();
 	AnimSequenceRows.clear();
 	SelectedTargetSkeletonIndex = 0;
+	bCombineStaticMeshes = false;
+	CombinedStaticMeshStem[0] = '\0';
+	CombinedStaticMeshPackagePath.clear();
+	CombinedStaticMeshValidationMessage.clear();
+	bCombinedStaticMeshWillOverwrite = false;
 	TargetSkeletonOptions.clear();
 }
 
 void FEditorFbxImportDialog::BuildRows()
 {
 	const FString FbxStem = GetFbxStem(SourcePath);
+	bCombineStaticMeshes = SourceInfo.Meshes.size() > 1;
+	CopyStem(CombinedStaticMeshStem, sizeof(CombinedStaticMeshStem), FbxStem + "_StaticMesh");
 
 	TArray<FString> StaticNames;
 	StaticNames.reserve(SourceInfo.Meshes.size());
@@ -396,6 +403,7 @@ void FEditorFbxImportDialog::BuildRows()
 		const FFbxImportMeshInfo& MeshInfo = SourceInfo.Meshes[Index];
 		FImportRow Row;
 		Row.Type = EFbxImportAssetType::StaticMesh;
+		Row.bImport = !bCombineStaticMeshes;
 		Row.bSkinned = MeshInfo.bSkinned;
 		Row.SourceIndex = MeshInfo.SourceIndex;
 		Row.SourceName = MeshInfo.Name;
@@ -456,8 +464,27 @@ void FEditorFbxImportDialog::ValidateRows()
 {
 	bAnySelected = false;
 	bHasValidationErrors = false;
+	CombinedStaticMeshPackagePath = BuildPackagePath(CombinedStaticMeshStem);
+	CombinedStaticMeshValidationMessage.clear();
+	bCombinedStaticMeshWillOverwrite = false;
 
 	TMap<FString, int32> PackageUseCounts;
+	if (bCombineStaticMeshes && !StaticMeshRows.empty())
+	{
+		bAnySelected = true;
+		FString ValidationMessage;
+		if (!IsValidFileStem(CombinedStaticMeshStem, ValidationMessage))
+		{
+			CombinedStaticMeshValidationMessage = ValidationMessage;
+			bHasValidationErrors = true;
+		}
+		else
+		{
+			++PackageUseCounts[CombinedStaticMeshPackagePath];
+			bCombinedStaticMeshWillOverwrite = std::filesystem::exists(ResolveProjectPath(CombinedStaticMeshPackagePath));
+		}
+	}
+
 	auto ValidateRowSet = [&](TArray<FImportRow>& Rows)
 	{
 		for (FImportRow& Row : Rows)
@@ -466,7 +493,7 @@ void FEditorFbxImportDialog::ValidateRows()
 			Row.ValidationMessage.clear();
 			Row.bWillOverwrite = false;
 
-			if (!IsRowVisible(Row) || !Row.bImport)
+			if ((bCombineStaticMeshes && Row.Type == EFbxImportAssetType::StaticMesh) || !IsRowVisible(Row) || !Row.bImport)
 			{
 				continue;
 			}
@@ -531,12 +558,34 @@ void FEditorFbxImportDialog::RenderSummary() const
 
 void FEditorFbxImportDialog::RenderStaticOptions()
 {
+	if (StaticMeshRows.size() > 1)
+	{
+		ImGui::TextUnformatted("Static import");
+		ImGui::Checkbox("Combine Static Meshes", &bCombineStaticMeshes);
+		if (bCombineStaticMeshes)
+		{
+			ImGui::InputText("Combined Asset Name", CombinedStaticMeshStem, sizeof(CombinedStaticMeshStem));
+			ImGui::TextWrapped("%s", CombinedStaticMeshPackagePath.c_str());
+			if (!CombinedStaticMeshValidationMessage.empty())
+			{
+				ImGui::TextColored(ImVec4(1.0f, 0.35f, 0.25f, 1.0f), "%s", CombinedStaticMeshValidationMessage.c_str());
+			}
+			else if (bCombinedStaticMeshWillOverwrite)
+			{
+				ImGui::TextColored(ImVec4(1.0f, 0.75f, 0.25f, 1.0f), "Overwrite");
+			}
+		}
+	}
+
 	if (!HasSkinnedStaticMeshRows())
 	{
 		return;
 	}
 
-	ImGui::TextUnformatted("Static import");
+	if (StaticMeshRows.size() <= 1)
+	{
+		ImGui::TextUnformatted("Static import");
+	}
 	ImGui::RadioButton("Skip skinned mesh for static import", &PendingStaticFbxSkinnedMeshPolicy, 0);
 	ImGui::SameLine();
 	ImGui::RadioButton("Import bind pose as static mesh", &PendingStaticFbxSkinnedMeshPolicy, 1);
@@ -704,6 +753,8 @@ bool FEditorFbxImportDialog::ExecuteImport(UEditorEngine* EditorEngine)
 	FFbxImportRequest Request;
 	Request.SourcePath = SourcePath;
 	Request.bRefreshAssetLists = true;
+	Request.bCombineStaticMeshes = bCombineStaticMeshes && !StaticMeshRows.empty();
+	Request.CombinedStaticMeshPackagePath = CombinedStaticMeshPackagePath;
 	Request.StaticMeshOptions = FImportOptions::Default();
 	Request.StaticMeshOptions.StaticFbxSkinnedMeshPolicy = PendingStaticFbxSkinnedMeshPolicy == 1
 		? EStaticFbxSkinnedMeshPolicy::ImportBindPoseAsStatic
@@ -732,7 +783,10 @@ bool FEditorFbxImportDialog::ExecuteImport(UEditorEngine* EditorEngine)
 		}
 	};
 
-	AppendRows(StaticMeshRows, Request.StaticMeshes);
+	if (!Request.bCombineStaticMeshes)
+	{
+		AppendRows(StaticMeshRows, Request.StaticMeshes);
+	}
 	AppendRows(SkeletalMeshRows, Request.SkeletalMeshes);
 	AppendRows(AnimSequenceRows, Request.AnimSequences);
 

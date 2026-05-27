@@ -67,6 +67,96 @@ namespace
 		return NormalizeProjectPath(FPaths::ToUtf8(MatPath.generic_wstring()));
 	}
 
+	std::wstring ToLowerWide(std::wstring Value)
+	{
+		std::transform(Value.begin(), Value.end(), Value.begin(), ::towlower);
+		return Value;
+	}
+
+	bool IsSupportedTextureExtension(const std::filesystem::path& Path)
+	{
+		const std::wstring Ext = ToLowerWide(Path.extension().wstring());
+		return Ext == L".png" || Ext == L".jpg" || Ext == L".jpeg" || Ext == L".tga" || Ext == L".bmp";
+	}
+
+	std::wstring CanonicalTextureStem(const std::filesystem::path& Path)
+	{
+		std::wstring Stem = ToLowerWide(Path.stem().wstring());
+		std::wstring Result;
+		for (wchar_t Ch : Stem)
+		{
+			if (std::iswalnum(Ch))
+			{
+				Result.push_back(Ch);
+			}
+		}
+
+		const std::wstring Tokens[] = { L"texture", L"tex", L"color", L"basecolor", L"diffuse", L"bc" };
+		for (const std::wstring& Token : Tokens)
+		{
+			size_t Pos = std::wstring::npos;
+			while ((Pos = Result.find(Token)) != std::wstring::npos)
+			{
+				Result.erase(Pos, Token.length());
+			}
+		}
+		return Result;
+	}
+
+	FString ResolveImportedTexturePath(const FString& FbxFilePath, const FString& RawTexturePath)
+	{
+		if (RawTexturePath.empty())
+		{
+			return FString();
+		}
+
+		const std::filesystem::path RawPath(FPaths::ToWide(RawTexturePath));
+		const std::filesystem::path DirectPath = ResolveProjectPath(RawTexturePath);
+		if (std::filesystem::exists(DirectPath) && std::filesystem::is_regular_file(DirectPath))
+		{
+			return NormalizeProjectPath(FPaths::ToUtf8(DirectPath.generic_wstring()));
+		}
+
+		const std::filesystem::path FbxDirectory = ResolveProjectPath(FbxFilePath).parent_path();
+		if (!std::filesystem::exists(FbxDirectory) || !std::filesystem::is_directory(FbxDirectory))
+		{
+			return NormalizeProjectPath(RawTexturePath);
+		}
+
+		const std::wstring RawFileName = ToLowerWide(RawPath.filename().wstring());
+		const std::wstring RawStem = ToLowerWide(RawPath.stem().wstring());
+		const std::wstring RawCanonicalStem = CanonicalTextureStem(RawPath);
+		std::filesystem::path FallbackMatch;
+
+		for (const std::filesystem::directory_entry& Entry : std::filesystem::recursive_directory_iterator(FbxDirectory))
+		{
+			if (!Entry.is_regular_file() || !IsSupportedTextureExtension(Entry.path()))
+			{
+				continue;
+			}
+
+			const std::filesystem::path CandidatePath = Entry.path();
+			const std::wstring CandidateFileName = ToLowerWide(CandidatePath.filename().wstring());
+			const std::wstring CandidateStem = ToLowerWide(CandidatePath.stem().wstring());
+			if (CandidateFileName == RawFileName || CandidateStem == RawStem)
+			{
+				return NormalizeProjectPath(FPaths::ToUtf8(CandidatePath.generic_wstring()));
+			}
+
+			if (FallbackMatch.empty() && !RawCanonicalStem.empty() && CanonicalTextureStem(CandidatePath) == RawCanonicalStem)
+			{
+				FallbackMatch = CandidatePath;
+			}
+		}
+
+		if (!FallbackMatch.empty())
+		{
+			return NormalizeProjectPath(FPaths::ToUtf8(FallbackMatch.generic_wstring()));
+		}
+
+		return NormalizeProjectPath(RawTexturePath);
+	}
+
 	void CollectFbxNodes(FbxNode* Node, TArray<FbxNode*>& OutNodes)
 	{
 		if (!Node)
@@ -1372,9 +1462,8 @@ void FEditorFbxImporter::CollectMaterials(FbxScene* Scene)
 				FbxFileTexture* Texture = DiffuseProp.GetSrcObject<FbxFileTexture>(0);
 				if (Texture)
 				{
-					// 1차 방어: Texture Path를 상대경로로 수정해서 MatInfo에 넣도록 수정
 					FString RawTexturePath = Texture->GetFileName();
-					MatInfo.TexturePath = FPaths::MakeProjectRelative(RawTexturePath);
+					MatInfo.TexturePath = ResolveImportedTexturePath(CurrentSourcePath, RawTexturePath);
 				}
 			}
 		}
@@ -1389,7 +1478,7 @@ void FEditorFbxImporter::CollectMaterials(FbxScene* Scene)
 					FbxFileTexture* Texture = Property.GetSrcObject<FbxFileTexture>(TextureIndex);
 					if (Texture)
 					{
-						return FPaths::MakeProjectRelative(Texture->GetFileName());
+						return ResolveImportedTexturePath(CurrentSourcePath, Texture->GetFileName());
 					}
 				}
 
@@ -2407,11 +2496,6 @@ FString FEditorFbxImporter::ConvertToMat(const FMaterialInfo* MaterialInfo)
 	const FString SourcePath = CurrentSourcePath.empty() ? FString("Asset") : CurrentSourcePath;
 	FString MatPath = BuildAdjacentMaterialPath(SourcePath, MaterialInfo->Name);
 
-	if (std::filesystem::exists(ResolveProjectPath(MatPath)))
-	{
-		return MatPath;
-	}
-
 	std::filesystem::create_directories(ResolveProjectPath(MatPath).parent_path());
 
 	json::JSON JsonData;
@@ -2422,8 +2506,7 @@ FString FEditorFbxImporter::ConvertToMat(const FMaterialInfo* MaterialInfo)
 
 	if (!MaterialInfo->TexturePath.empty())
 	{
-		// 2차 방어: TexturePath 상대경로로 수정
-		FString TexturePath = FPaths::MakeProjectRelative(MaterialInfo->TexturePath);
+		FString TexturePath = ResolveImportedTexturePath(SourcePath, MaterialInfo->TexturePath);
 		JsonData["Textures"]["DiffuseTexture"] = TexturePath;
 
 		JsonData["Parameters"]["SectionColor"][0] = 1.0f;
@@ -2441,7 +2524,7 @@ FString FEditorFbxImporter::ConvertToMat(const FMaterialInfo* MaterialInfo)
 
 	if (!MaterialInfo->NormalTexturePath.empty())
 	{
-		JsonData["Textures"]["NormalTexture"] = FPaths::MakeProjectRelative(MaterialInfo->NormalTexturePath);
+		JsonData["Textures"]["NormalTexture"] = ResolveImportedTexturePath(SourcePath, MaterialInfo->NormalTexturePath);
 		JsonData["Parameters"]["HasNormalMap"] = 1.0f;
 	}
 	else

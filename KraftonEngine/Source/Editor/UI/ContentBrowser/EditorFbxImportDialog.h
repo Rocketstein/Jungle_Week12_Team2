@@ -65,6 +65,11 @@ private:
 	TArray<FImportRow> AnimSequenceRows;
 
 	int32 PendingStaticFbxSkinnedMeshPolicy = 1;
+	bool bCombineStaticMeshes = false;
+	char CombinedStaticMeshStem[192] = {};
+	FString CombinedStaticMeshPackagePath;
+	FString CombinedStaticMeshValidationMessage;
+	bool bCombinedStaticMeshWillOverwrite = false;
 	int32 SelectedTargetSkeletonIndex = 0;
 	TArray<FMeshAssetListItem> TargetSkeletonOptions;
 };

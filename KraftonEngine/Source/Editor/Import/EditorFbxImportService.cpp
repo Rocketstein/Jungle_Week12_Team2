@@ -983,6 +983,24 @@ bool FEditorFbxImportService::ImportFromRequest(const FFbxImportRequest& Request
 
 	bool bAttemptedImport = false;
 
+	if (Request.bCombineStaticMeshes)
+	{
+		bAttemptedImport = true;
+		UStaticMesh* ImportedStaticMesh = nullptr;
+		if (ImportStaticMeshFromFbxInternal(Request.SourcePath, Request.StaticMeshOptions, Device, ImportedStaticMesh, false, nullptr, Request.CombinedStaticMeshPackagePath))
+		{
+			++OutResult.StaticMeshCount;
+			if (ImportedStaticMesh)
+			{
+				OutResult.ImportedPackagePaths.push_back(ImportedStaticMesh->GetAssetPathFileName());
+			}
+		}
+		else
+		{
+			OutResult.Messages.push_back("Combined Static Mesh import failed.");
+		}
+	}
+
 	for (const FFbxImportItemRequest& Item : Request.StaticMeshes)
 	{
 		if (!Item.bImport)
