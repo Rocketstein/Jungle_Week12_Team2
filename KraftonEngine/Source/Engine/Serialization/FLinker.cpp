@@ -1,28 +1,25 @@
 ﻿#include "FLinker.h"
 #include "Object/Object.h"
+#include <cassert>
 
 //=======================================================
 // FLinkerSave
 //=======================================================
-int32 FLinkerSave::IndexForObject(UObject* Obj)
+
+FLinkerSave::FLinkerSave(FArchive* InInner, TArray<UObject*> PrebuiltTable)
+	: FLinker(InInner)
 {
-	if (!Obj) return 0;
+	bIsSaving = true;
+	ObjectTable = std::move(PrebuiltTable);
 
-	// Dedup: if we've seen this object before, return its existing index.
-	auto It = ObjectToIndex.find(Obj);
-	if (It != ObjectToIndex.end())
+	// Build the inverse map for O(1) IndexForObject lookups.
+	for (int32 i = 0; i < static_cast<int32>(ObjectTable.size()); ++i)
 	{
-		return It->second;
+		ObjectToIndex.insert({ ObjectTable[i], i + 1 });   // 1-based
 	}
-
-	// First sighting: append to table, assign next 1-based index.
-	ObjectTable.push_back(Obj);
-	int32 NewIndex = static_cast<int32>(ObjectTable.size());
-	ObjectToIndex.insert({ Obj, NewIndex });
-	return NewIndex;
 }
 
-void FLinkerSave::Finalize()
+void FLinkerSave::WriteHeader()
 {
 	int32 Count = static_cast<int32>(ObjectTable.size());
 	*Inner << Count;
@@ -32,19 +29,12 @@ void FLinkerSave::Finalize()
 		FString Path = Obj ? Obj->GetPathName() : FString("None");
 		*Inner << Path;
 	}
-
-	if (!SaveBuffer.empty())
-	{
-		Inner->Serialize(SaveBuffer.data(), SaveBuffer.size());
-	}
-
 }
 
 void FLinkerSave::Serialize(void* Data, size_t Num)
 {
-	// All property writes land here. Append to buffer; Finalize flushes later.
-	const uint8* Bytes = static_cast<const uint8*>(Data);
-	SaveBuffer.insert(SaveBuffer.end(), Bytes, Bytes + Num);
+	// Pass 2 writes flow straight to disk; no buffer, no flush.
+	Inner->Serialize(Data, Num);
 }
 
 FArchive& FLinkerSave::operator<<(UObject*& Obj)
@@ -54,10 +44,23 @@ FArchive& FLinkerSave::operator<<(UObject*& Obj)
 	return *this;
 }
 
+int32 FLinkerSave::IndexForObject(UObject* Obj) const
+{
+	if (!Obj) return 0;
+
+	auto It = ObjectToIndex.find(Obj);
+	// Contract: harvester pass should have seen every object that pass 2 references.
+	// A miss means the two passes traversed different references — programming error.
+	assert(It != ObjectToIndex.end() && "Object referenced in Pass 2 missing from harvested table");
+
+	return It->second;
+}
+
 
 //=======================================================
-// FLinkerLoad
+// FLinkerLoad  (unchanged)
 //=======================================================
+
 void FLinkerLoad::ReadTable()
 {
 	int32 Count = 0;
@@ -65,20 +68,17 @@ void FLinkerLoad::ReadTable()
 
 	ObjectTable.clear();
 	ObjectTable.reserve(Count);
-
 	for (int32 i = 0; i < Count; ++i)
 	{
 		FString Path;
 		*Inner << Path;
 		ObjectTable.push_back(FindObjectByPath(Path));
-		// Note: FindObjectByPath returning nullptr is fine. We store nullptr
-		// in that slot, and any property pointing at it deserializes to null.
 	}
 }
 
 UObject* FLinkerLoad::ObjectForIndex(int32 Index) const
 {
-	if (Index <= 0) return nullptr;                              // 0 = null sentinel
+	if (Index <= 0) return nullptr;
 	if (Index > static_cast<int32>(ObjectTable.size())) return nullptr;
 	return ObjectTable[Index - 1];
 }
@@ -95,4 +95,3 @@ FArchive& FLinkerLoad::operator<<(UObject*& Obj)
 	Obj = ObjectForIndex(Idx);
 	return *this;
 }
-

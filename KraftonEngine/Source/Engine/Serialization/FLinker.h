@@ -1,33 +1,39 @@
 ﻿#pragma once
 #include "Archive.h"
 
+class UObject;
+
 class FLinker : public FArchive
 {
 public:
 	explicit FLinker(FArchive* InInner) : Inner(InInner) {}
 
 protected:
-	FArchive* Inner;				 // real byte stream underneath
+	FArchive* Inner;
 	TArray<UObject*> ObjectTable;    // 1-based; index 0 reserved for null
 };
 
 class FLinkerSave final : public FLinker
 {
 public:
-	explicit FLinkerSave(FArchive* InInner) : FLinker(InInner) { bIsSaving = true; }
+	// Caller supplies the table (typically from FPackageHarvester::TakeTable()).
+	// The save linker is then a pure write-through — no buffer, no Finalize.
+	FLinkerSave(FArchive* InInner, TArray<UObject*> PrebuiltTable);
 
-	// TODO: Promote to MapObject when UPackage is a thing
-	int32 IndexForObject(UObject* Obj);         // 0 = null; adds on first sight
-	void  Finalize();                           // writes [Count][Path*Count][Buffer] to Inner
+	using FArchive::operator<<;                          // template re-export
 
-	void      Serialize(void* Data, size_t Num) override;     // appends to SaveBuffer
+	// Writes [Count][Path×Count] to Inner. Call once before serializing properties.
+	void WriteHeader();
 
-	using FArchive::operator<<;
-	FArchive& operator<<(UObject*& Obj) override;             // writes int32 index
+	void      Serialize(void* Data, size_t Num) override;
+	FArchive& operator<<(UObject*& Obj) override;
 
 private:
-	TArray<uint8>          SaveBuffer;
-	TMap<UObject*, int32>  ObjectToIndex;
+	// Lookup-only. Asserts on miss: every object referenced in Pass 2 should
+	// have been seen in Pass 1's harvester.
+	int32 IndexForObject(UObject* Obj) const;
+
+	TMap<UObject*, int32> ObjectToIndex;
 };
 
 class FLinkerLoad final : public FLinker
@@ -35,11 +41,11 @@ class FLinkerLoad final : public FLinker
 public:
 	explicit FLinkerLoad(FArchive* InInner) : FLinker(InInner) { bIsLoading = true; }
 
-	void     ReadTable();                                       // populates ObjectTable from Inner
-	UObject* ObjectForIndex(int32 Index) const;                 // bounds-checked, 0 = null
-
-	void      Serialize(void* Data, size_t Num) override;       // forwards to Inner
-
 	using FArchive::operator<<;
-	FArchive& operator<<(UObject*& Obj) override;               // reads int32 index, looks up
+
+	void     ReadTable();
+	UObject* ObjectForIndex(int32 Index) const;
+
+	void      Serialize(void* Data, size_t Num) override;
+	FArchive& operator<<(UObject*& Obj) override;
 };
