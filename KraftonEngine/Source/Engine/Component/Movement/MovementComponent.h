@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Component/ActorComponent.h"
+#include "Core/UObject/TObjectPtr.h"
 #include "MovementComponent.generated.h"
 
 class USceneComponent;

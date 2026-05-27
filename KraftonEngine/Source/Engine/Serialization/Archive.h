@@ -5,6 +5,8 @@
 #include <type_traits>
 #include <string>
 
+class UObject;
+
 // 언리얼 엔진의 핵심 직렬화 베이스 클래스
 class FArchive
 {
@@ -41,6 +43,8 @@ public:
 		this->Serialize(&Value, sizeof(T));
 		return *this;
 	}
+
+	virtual FArchive& operator<<(UObject*& Obj);
 };
 
 inline FArchive& operator<<(FArchive& Ar, std::string& Str)

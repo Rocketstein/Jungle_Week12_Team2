@@ -139,6 +139,9 @@
     <Filter Include="Source\Engine\Particle">
       <UniqueIdentifier>{1613146e-ae48-8d4a-1d6a-1540318e1782}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source\Engine\Particle\BeamModule">
+      <UniqueIdentifier>{b68173b4-47d4-c63f-c3f5-3d4fb9a9f142}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Source\Engine\Particle\TypeData">
       <UniqueIdentifier>{93f42f96-b34c-0bcb-fc67-360ed85e628d}</UniqueIdentifier>
     </Filter>
@@ -352,9 +355,6 @@
     <Filter Include="ThirdParty\sol2\include\sol\utility">
       <UniqueIdentifier>{9665cc4b-2b87-76ba-7eb3-a148e4c5a694}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Engine\Particle\BeamModule">
-      <UniqueIdentifier>{83c632dd-bc82-43d4-8263-cd7c1d339e9f}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shaders\Common\ConstantBuffers.hlsli">
@@ -432,6 +432,9 @@
     <FxCompile Include="Shaders\Particle\ParticleMesh.hlsl">
       <Filter>Shaders\Particle</Filter>
     </FxCompile>
+    <FxCompile Include="Shaders\Particle\ParticleRibbon.hlsl">
+      <Filter>Shaders\Particle</Filter>
+    </FxCompile>
     <FxCompile Include="Shaders\Particle\ParticleSprite.hlsl">
       <Filter>Shaders\Particle</Filter>
     </FxCompile>
@@ -488,9 +491,6 @@
     </FxCompile>
     <FxCompile Include="Shaders\UI\SubUV.hlsl">
       <Filter>Shaders\UI</Filter>
-    </FxCompile>
-    <FxCompile Include="Shaders\Particle\ParticleRibbon.hlsl">
-      <Filter>Shaders\Particle</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
@@ -878,8 +878,14 @@
     <ClCompile Include="Source\Engine\Core\Property\PropertyTypes.cpp">
       <Filter>Source\Engine\Core\Property</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Core\Property\FObjectPropertyBase\FObjectProperty.cpp">
+      <Filter>Source\Engine\Core\Property\FObjectPropertyBase</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Core\Property\FObjectPropertyBase\FSoftObjectProperty.cpp">
       <Filter>Source\Engine\Core\Property\FObjectPropertyBase</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Core\UObject\FObjectPtr.cpp">
+      <Filter>Source\Engine\Core\UObject</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Core\UObject\FSoftObjectPath.cpp">
       <Filter>Source\Engine\Core\UObject</Filter>
@@ -1079,6 +1085,9 @@
     <ClCompile Include="Source\Engine\Particle\ParticleEmitterInstances.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\ParticleEventCollideData.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleLODContext.cpp">
       <Filter>Source\Engine\Particle</Filter>
     </ClCompile>
@@ -1096,6 +1105,24 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Particle\ParticleSystemManager.cpp">
       <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\RibbonEmitterInstance.cpp">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamBase.cpp">
+      <Filter>Source\Engine\Particle\BeamModule</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamNoise.cpp">
+      <Filter>Source\Engine\Particle\BeamModule</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamSource.cpp">
+      <Filter>Source\Engine\Particle\BeamModule</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamTarget.cpp">
+      <Filter>Source\Engine\Particle\BeamModule</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Particle\TypeData\ParticleModuleTypeDataBeam2.cpp">
+      <Filter>Source\Engine\Particle\TypeData</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Physics\NativePhysicsScene.cpp">
       <Filter>Source\Engine\Physics</Filter>
@@ -1355,6 +1382,18 @@
     <ClCompile Include="Source\Engine\Runtime\WindowsWindow.cpp">
       <Filter>Source\Engine\Runtime</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Serialization\Archive.cpp">
+      <Filter>Source\Engine\Serialization</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Serialization\FLinker.cpp">
+      <Filter>Source\Engine\Serialization</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Serialization\FPackageHarvester.cpp">
+      <Filter>Source\Engine\Serialization</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Serialization\PackageSave.cpp">
+      <Filter>Source\Engine\Serialization</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Serialization\SceneSaveManager.cpp">
       <Filter>Source\Engine\Serialization</Filter>
     </ClCompile>
@@ -1398,21 +1437,6 @@
       <Filter>ThirdParty\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamBase.cpp">
-      <Filter>Source\Engine\Particle\BeamModule</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamSource.cpp">
-      <Filter>Source\Engine\Particle\BeamModule</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamTarget.cpp">
-      <Filter>Source\Engine\Particle\BeamModule</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamNoise.cpp">
-      <Filter>Source\Engine\Particle\BeamModule</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Particle\TypeData\ParticleModuleTypeDataBeam2.cpp">
-      <Filter>Source\Engine\Particle\TypeData</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -1880,6 +1904,12 @@
     <ClInclude Include="Source\Engine\Core\Property\FObjectPropertyBase\FSoftObjectProperty.h">
       <Filter>Source\Engine\Core\Property\FObjectPropertyBase</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Core\UObject\FObjectHandle.h">
+      <Filter>Source\Engine\Core\UObject</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Core\UObject\FObjectPtr.h">
+      <Filter>Source\Engine\Core\UObject</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Core\UObject\FSoftObjectPath.h">
       <Filter>Source\Engine\Core\UObject</Filter>
     </ClInclude>
@@ -1887,6 +1917,9 @@
       <Filter>Source\Engine\Core\UObject</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Core\UObject\FWeakObjectPtr.h">
+      <Filter>Source\Engine\Core\UObject</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Core\UObject\TObjectPtr.h">
       <Filter>Source\Engine\Core\UObject</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Core\UObject\TSoftObjectPtr.h">
@@ -2123,10 +2156,13 @@
     <ClInclude Include="Source\Engine\Particle\ParticleEmitter.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\ParticleEmitterInstances.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleEmitterTypes.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Particle\ParticleEmitterInstances.h">
+    <ClInclude Include="Source\Engine\Particle\ParticleEventCollideData.h">
       <Filter>Source\Engine\Particle</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleHelper.h">
@@ -2149,6 +2185,21 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\ParticleSystemManager.h">
       <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\RibbonEmitterInstance.h">
+      <Filter>Source\Engine\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamBase.h">
+      <Filter>Source\Engine\Particle\BeamModule</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamNoise.h">
+      <Filter>Source\Engine\Particle\BeamModule</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamSource.h">
+      <Filter>Source\Engine\Particle\BeamModule</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamTarget.h">
+      <Filter>Source\Engine\Particle\BeamModule</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Particle\TypeData\ParticleModuleTypeDataBeam2.h">
       <Filter>Source\Engine\Particle\TypeData</Filter>
@@ -2480,7 +2531,16 @@
     <ClInclude Include="Source\Engine\Serialization\Archive.h">
       <Filter>Source\Engine\Serialization</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Serialization\FLinker.h">
+      <Filter>Source\Engine\Serialization</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Serialization\FPackageHarvester.h">
+      <Filter>Source\Engine\Serialization</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Engine\Serialization\MemoryArchive.h">
+      <Filter>Source\Engine\Serialization</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Serialization\PackageSave.h">
       <Filter>Source\Engine\Serialization</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Serialization\SceneSaveManager.h">
@@ -4168,18 +4228,6 @@
     </ClInclude>
     <ClInclude Include="ThirdParty\sol2\include\sol\utility\to_string.hpp">
       <Filter>ThirdParty\sol2\include\sol\utility</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamBase.h">
-      <Filter>Source\Engine\Particle\BeamModule</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamSource.h">
-      <Filter>Source\Engine\Particle\BeamModule</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamTarget.h">
-      <Filter>Source\Engine\Particle\BeamModule</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamNoise.h">
-      <Filter>Source\Engine\Particle\BeamModule</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

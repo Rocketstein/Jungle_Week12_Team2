@@ -300,6 +300,13 @@ def classify_type(
             f"unknown pointer type '{t}' — add to POINTER_TYPE_MAP or use UPROPERTY(Type=...)"
         )
 
+    if t.startswith("TObjectPtr<") and t.endswith(">"):
+        inner = t[len("TObjectPtr<"):-1].strip()
+        # Inner type is carried in the third slot; parse_property routes it to
+        # PropertyInfo.property_class so the FObjectProperty constructor gets
+        # `InnerType::StaticClass()` as its PropertyClass argument.
+        return "EPropertyType::Object", None, inner
+
     if t.startswith("TArray<") and t.endswith(">"):
         inner = t[len("TArray<"):-1].strip()
         return "EPropertyType::Array", None, inner
@@ -459,6 +466,7 @@ def parse_property(
     enum_type = None
     enum_expr = None
     struct_type = None
+    inferred_property_class = None   # only the else-branch (auto-classify) infers from TObjectPtr<T>
 
     # Explicit Type= override bypasses classify_type.
     if "Type" in kvs:
@@ -471,7 +479,12 @@ def parse_property(
         if prop_type == "EPropertyType::Struct":
             struct_type = kvs.get("Struct", cpp_type)
     else:
-        prop_type, _, array_inner = classify_type(cpp_type, known_enums, known_structs)
+        prop_type, _, inner = classify_type(cpp_type, known_enums, known_structs)
+        # The third slot from classify_type is multipurpose: array element type
+        # for TArray, pointee class for TObjectPtr. Route it to the right slot
+        # based on prop_type.
+        array_inner = inner if prop_type == "EPropertyType::Array" else None
+        inferred_property_class = inner if prop_type == "EPropertyType::Object" else None
         if cpp_type in known_enums:
             enum_type = cpp_type
         if cpp_type in known_structs:
@@ -493,7 +506,7 @@ def parse_property(
         enum_expr=enum_expr,
         struct_type=struct_type,
         array_inner_type=array_inner,
-        property_class=kvs.get("Class"),
+        property_class=kvs.get("Class") or inferred_property_class,
     )
 
 
@@ -782,6 +795,7 @@ def property_ctor_name(prop_type: str) -> str:
         "EPropertyType::Script": "FScriptProperty",
         "EPropertyType::Array": "FArrayProperty",
         "EPropertyType::SoftObject": "FSoftObjectProperty",
+        "EPropertyType::Object": "FObjectProperty",
     }.get(prop_type) or (_ for _ in ()).throw(CodegenError(f"unknown property type {prop_type}"))
 
 
@@ -803,6 +817,7 @@ PROPERTY_HEADER_BY_TYPE = {
     "EPropertyType::Script": "Core/Property/PropertyTypes.h",
     "EPropertyType::Array": "Core/Property/FArrayProperty.h",
     "EPropertyType::SoftObject": "Core/Property/FObjectPropertyBase/FSoftObjectProperty.h",
+    "EPropertyType::Object": "Core/Property/FObjectPropertyBase/FObjectProperty.h",
 }
 
 
@@ -856,6 +871,14 @@ def emit_property_constructor_args(
         if not p.property_class:
             raise CodegenError(
                 f"soft object {error_context} {p.name}: v1 requires Class="
+            )
+        return [f"{p.property_class}::StaticClass()"]
+    if p.prop_type == "EPropertyType::Object":
+        # PropertyClass is normally auto-inferred from TObjectPtr<T>, but Class=
+        # override still works (e.g. for legacy raw-pointer fields someday).
+        if not p.property_class:
+            raise CodegenError(
+                f"object {error_context} {p.name}: use TObjectPtr<T> or specify Class="
             )
         return [f"{p.property_class}::StaticClass()"]
     return []
