@@ -6,6 +6,7 @@
 #include "Particle/TypeData/ParticleModuleTypeDataBeam2.h"
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <random>
 
@@ -44,6 +45,10 @@ bool EnsureArenaSize(FParticleBeam2EmitterInstance& Beam, int32 Frequency)
 	{
 		Beam.NoiseOffsetArena.resize(Required);
 	}
+	if (static_cast<int32>(Beam.NoiseTargetOffsetArena.size()) < Required)
+	{
+		Beam.NoiseTargetOffsetArena.resize(Required);
+	}
 	if (static_cast<int32>(Beam.NoiseTimeArena.size()) < Required)
 	{
 		Beam.NoiseTimeArena.resize(Required);
@@ -51,16 +56,69 @@ bool EnsureArenaSize(FParticleBeam2EmitterInstance& Beam, int32 Frequency)
 	return true;
 }
 
-float NoisePointAlpha(int32 PointIndex, int32 NumPoints, float BeamLength, float FrequencyDistance)
+int32 CalculateDistanceFrequencyCount(int32 MaxFrequency, float BeamLength, float FrequencyDistance, bool bIncludeTarget)
+{
+	if (MaxFrequency <= 0 || FrequencyDistance <= 1e-6f || BeamLength <= 1e-6f)
+	{
+		return 0;
+	}
+
+	int32 Count = static_cast<int32>(std::floor(BeamLength / FrequencyDistance));
+	if (!bIncludeTarget)
+	{
+		const float LastDistance = static_cast<float>(Count) * FrequencyDistance;
+		if (Count > 0 && std::abs(LastDistance - BeamLength) <= 1e-4f)
+		{
+			--Count;
+		}
+	}
+	return std::clamp(Count, 0, MaxFrequency);
+}
+
+float EvenNoisePointAlpha(int32 PointIndex, int32 NumPoints, bool bIncludeTarget)
+{
+	if (bIncludeTarget && NumPoints > 0)
+	{
+		return static_cast<float>(PointIndex + 1) / static_cast<float>(NumPoints);
+	}
+	return static_cast<float>(PointIndex + 1) / static_cast<float>(NumPoints + 1);
+}
+
+float NoisePointAlpha(int32 PointIndex, int32 NumPoints, int32 MaxFrequency,
+	float BeamLength, float FrequencyDistance, bool bIncludeTarget)
 {
 	if (FrequencyDistance > 1e-6f && BeamLength > 1e-6f)
 	{
-		return std::clamp(
-			(FrequencyDistance * static_cast<float>(PointIndex + 1)) / BeamLength,
-			0.0f,
-			1.0f);
+		const int32 DistanceCount = CalculateDistanceFrequencyCount(
+			MaxFrequency, BeamLength, FrequencyDistance, bIncludeTarget);
+		if (DistanceCount > 0 && DistanceCount < MaxFrequency)
+		{
+			return std::clamp(
+				(FrequencyDistance * static_cast<float>(PointIndex + 1)) / BeamLength,
+				0.0f,
+				1.0f);
+		}
 	}
-	return static_cast<float>(PointIndex + 1) / static_cast<float>(NumPoints + 1);
+
+	return EvenNoisePointAlpha(PointIndex, NumPoints, bIncludeTarget);
+}
+
+int32 CalculateNoisePointCount(int32 MaxFrequency, float FrequencyDistance,
+	bool bIncludeTarget, const FBeam2TypeDataPayload& BeamPayload)
+{
+	MaxFrequency = std::max(0, MaxFrequency);
+	if (MaxFrequency <= 0)
+	{
+		return 0;
+	}
+
+	if (FrequencyDistance <= 1e-6f)
+	{
+		return MaxFrequency;
+	}
+
+	const float BeamLength = (BeamPayload.TargetPoint - BeamPayload.SourcePoint).Length();
+	return CalculateDistanceFrequencyCount(MaxFrequency, BeamLength, FrequencyDistance, bIncludeTarget);
 }
 
 float NextRollTime(float CurrentTime, float LockTime, float NoiseSpeed)
@@ -69,9 +127,8 @@ float NextRollTime(float CurrentTime, float LockTime, float NoiseSpeed)
 	{
 		return CurrentTime + LockTime;
 	}
-	return NoiseSpeed > 1e-6f
-		? CurrentTime + (1.0f / NoiseSpeed)
-		: std::numeric_limits<float>::max();
+	(void)NoiseSpeed;
+	return std::numeric_limits<float>::max();
 }
 }
 
@@ -110,6 +167,34 @@ void UParticleModuleBeamNoise::BuildNoiseOffsets(FVector* OutOffsets, float* Out
 	}
 }
 
+void UParticleModuleBeamNoise::MoveNoiseOffsets(FVector* CurrentOffsets, const FVector* TargetOffsets,
+	int32 NumPoints, float DeltaTime) const
+{
+	if (!CurrentOffsets || !TargetOffsets || NumPoints <= 0)
+	{
+		return;
+	}
+
+	if (NoiseSpeed <= 1e-6f || DeltaTime <= 0.0f)
+	{
+		for (int32 i = 0; i < NumPoints; ++i)
+		{
+			CurrentOffsets[i] = TargetOffsets[i];
+		}
+		return;
+	}
+
+	const float MaxStep = NoiseSpeed * DeltaTime;
+	for (int32 i = 0; i < NumPoints; ++i)
+	{
+		const FVector Delta = TargetOffsets[i] - CurrentOffsets[i];
+		const float Distance = Delta.Length();
+		CurrentOffsets[i] = (Distance <= MaxStep || Distance <= 1e-6f)
+			? TargetOffsets[i]
+			: CurrentOffsets[i] + Delta * (MaxStep / Distance);
+	}
+}
+
 void UParticleModuleBeamNoise::ApplyNoiseOffsets(FVector* OutPoints, const FVector* Offsets,
 	int32 NumPoints, const FBeam2TypeDataPayload& BeamPayload) const
 {
@@ -130,14 +215,13 @@ void UParticleModuleBeamNoise::ApplyNoiseOffsets(FVector* OutPoints, const FVect
 
 	for (int32 i = 0; i < NumPoints; ++i)
 	{
-		const float T = NoisePointAlpha(i, NumPoints, BeamLength, FrequencyDistance);
+		const float T = NoisePointAlpha(i, NumPoints, Frequency, BeamLength, FrequencyDistance, bTargetNoise);
 		const float InvT = 1.0f - T;
 		const FVector Center = SourceLocal * (InvT * InvT * InvT)
 			+ SourceControl * (3.0f * InvT * InvT * T)
 			+ TargetControl * (3.0f * InvT * T * T)
 			+ TargetLocal * (T * T * T);
-		const float TargetScale = bTargetNoise ? 1.0f : (1.0f - T);
-		OutPoints[i] = Center + Offsets[i] * TargetScale;
+		OutPoints[i] = Center + Offsets[i];
 	}
 }
 
@@ -173,6 +257,7 @@ void UParticleModuleBeamNoise::Spawn(const FSpawnContext& Context)
 	Payload->NoisePoints   = &Beam.NoisePointArena[Slot * Frequency];
 	Payload->NoiseTimes    = &Beam.NoiseTimeArena[Slot * Frequency];
 	Payload->NoiseIndex    = 0;
+	Payload->NoiseCount    = 0;
 	const float CurrentTime = Beam.BeamTravelTime + Context.SpawnTime;
 	Payload->NextNoiseTime = NextRollTime(CurrentTime, NoiseLockTime, NoiseSpeed);
 
@@ -180,8 +265,11 @@ void UParticleModuleBeamNoise::Spawn(const FSpawnContext& Context)
 	FBeam2TypeDataPayload* BeamPayload = reinterpret_cast<FBeam2TypeDataPayload*>(
 		reinterpret_cast<uint8*>(Context.ParticleBase) + Context.Offset);
 	FVector* Offsets = &Beam.NoiseOffsetArena[Slot * Frequency];
-	BuildNoiseOffsets(Offsets, Payload->NoiseTimes, Frequency, CurrentTime);
-	ApplyNoiseOffsets(Payload->NoisePoints, Offsets, Frequency, *BeamPayload);
+	FVector* TargetOffsets = &Beam.NoiseTargetOffsetArena[Slot * Frequency];
+	Payload->NoiseCount = CalculateNoisePointCount(Frequency, FrequencyDistance, bTargetNoise, *BeamPayload);
+	BuildNoiseOffsets(Offsets, Payload->NoiseTimes, Payload->NoiseCount, CurrentTime);
+	std::copy(Offsets, Offsets + Payload->NoiseCount, TargetOffsets);
+	ApplyNoiseOffsets(Payload->NoisePoints, Offsets, Payload->NoiseCount, *BeamPayload);
 }
 
 void UParticleModuleBeamNoise::Update(const FUpdateContext& UpdateContext)
@@ -223,17 +311,28 @@ void UParticleModuleBeamNoise::Update(const FUpdateContext& UpdateContext)
 		Payload->NoisePoints = NoisePoints;
 		Payload->NoiseTimes = NoiseTimes;
 		FVector* Offsets = &Beam.NoiseOffsetArena[Slot * Frequency];
+		FVector* TargetOffsets = &Beam.NoiseTargetOffsetArena[Slot * Frequency];
 
 		const float CurrentTime = Beam.BeamTravelTime;
-		if (bArenaChanged || CurrentTime >= Payload->NextNoiseTime)
+		FBeam2TypeDataPayload* BeamPayload = reinterpret_cast<FBeam2TypeDataPayload*>(
+			reinterpret_cast<uint8*>(Particle) + UpdateContext.Offset);
+		const int32 PreviousNoiseCount = Payload->NoiseCount;
+		Payload->NoiseCount = CalculateNoisePointCount(Frequency, FrequencyDistance, bTargetNoise, *BeamPayload);
+
+		if (bArenaChanged || PreviousNoiseCount != Payload->NoiseCount)
+		{
+			BuildNoiseOffsets(Offsets, Payload->NoiseTimes, Payload->NoiseCount, CurrentTime);
+			std::copy(Offsets, Offsets + Payload->NoiseCount, TargetOffsets);
+			Payload->NextNoiseTime = NextRollTime(CurrentTime, NoiseLockTime, NoiseSpeed);
+		}
+		else if (CurrentTime >= Payload->NextNoiseTime)
 		{
 			++Payload->NoiseIndex;
 			Payload->NextNoiseTime = NextRollTime(CurrentTime, NoiseLockTime, NoiseSpeed);
-			BuildNoiseOffsets(Offsets, Payload->NoiseTimes, Frequency, CurrentTime);
+			BuildNoiseOffsets(TargetOffsets, Payload->NoiseTimes, Payload->NoiseCount, CurrentTime);
 		}
 
-		FBeam2TypeDataPayload* BeamPayload = reinterpret_cast<FBeam2TypeDataPayload*>(
-			reinterpret_cast<uint8*>(Particle) + UpdateContext.Offset);
-		ApplyNoiseOffsets(Payload->NoisePoints, Offsets, Frequency, *BeamPayload);
+		MoveNoiseOffsets(Offsets, TargetOffsets, Payload->NoiseCount, UpdateContext.DeltaTime);
+		ApplyNoiseOffsets(Payload->NoisePoints, Offsets, Payload->NoiseCount, *BeamPayload);
 	}
 }
