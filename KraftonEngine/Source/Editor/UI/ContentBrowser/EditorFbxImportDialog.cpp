@@ -420,6 +420,7 @@ void FEditorFbxImportDialog::BuildRows()
 		const FFbxImportSkeletalMeshInfo& MeshInfo = SourceInfo.SkeletalMeshes[Index];
 		FImportRow Row;
 		Row.Type = EFbxImportAssetType::SkeletalMesh;
+		Row.bImport = false;
 		Row.SourceIndex = MeshInfo.SourceIndex;
 		Row.SourceName = MeshInfo.Name;
 		Row.DetailText = std::to_string(MeshInfo.MaterialCount) + " materials";
@@ -441,6 +442,7 @@ void FEditorFbxImportDialog::BuildRows()
 		const FFbxImportAnimStackInfo& StackInfo = SourceInfo.AnimStacks[Index];
 		FImportRow Row;
 		Row.Type = EFbxImportAssetType::AnimSequence;
+		Row.bImport = false;
 		Row.SourceIndex = StackInfo.SourceIndex;
 		Row.SourceName = StackInfo.Name;
 		Row.DetailText = "AnimStack";

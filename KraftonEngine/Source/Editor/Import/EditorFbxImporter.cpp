@@ -986,8 +986,6 @@ bool FEditorFbxImporter::ImportStatic(const FString& FilePath, const FImportOpti
 	FbxAxisSystem UnrealAxisSystem(FbxAxisSystem::eZAxis, FbxAxisSystem::eParityEven, FbxAxisSystem::eLeftHanded);
 	UnrealAxisSystem.DeepConvertScene(Scene);
 
-	TriangulateScene(Scene);
-
 	FbxNode* RootNode = Scene->GetRootNode();
 	if (!RootNode)
 	{
@@ -1070,7 +1068,8 @@ bool FEditorFbxImporter::ImportStatic(const FString& FilePath, const FImportOpti
 
 		for (int32 PolygonIndex = 0; PolygonIndex < Mesh->GetPolygonCount(); ++PolygonIndex)
 		{
-			if (Mesh->GetPolygonSize(PolygonIndex) != 3)
+			const int32 PolygonSize = Mesh->GetPolygonSize(PolygonIndex);
+			if (PolygonSize < 3)
 			{
 				continue;
 			}
@@ -1082,17 +1081,13 @@ bool FEditorFbxImporter::ImportStatic(const FString& FilePath, const FImportOpti
 				GlobalMaterialIndex = LocalToGlobalMaterialIndex[LocalMaterialIndex];
 			}
 
-			uint32 TriIndices[3] = {};
-			uint32 PendingSectionIndices[3] = {};
-			bool bValidTriangle = true;
-			for (int32 CornerIndex = 0; CornerIndex < 3; ++CornerIndex)
+			auto BuildStaticVertex = [&](int32 CornerIndex, uint32& OutVertexIndex) -> bool
 			{
 				FNormalVertex Vertex;
 				const int32 CPIndex = Mesh->GetPolygonVertex(PolygonIndex, CornerIndex);
 				if (!IsValidControlPointIndex(Mesh, CPIndex))
 				{
-					bValidTriangle = false;
-					break;
+					return false;
 				}
 
 				FbxVector4 CP = Mesh->GetControlPointAt(CPIndex);
@@ -1128,55 +1123,68 @@ bool FEditorFbxImporter::ImportStatic(const FString& FilePath, const FImportOpti
 				Key.UVX = Vertex.tex.X;
 				Key.UVY = Vertex.tex.Y;
 
-				uint32 VertexIndex = 0;
 				auto It = VertexMap.find(Key);
 				if (It != VertexMap.end())
 				{
-					VertexIndex = It->second;
+					OutVertexIndex = It->second;
 				}
 				else
 				{
-					VertexIndex = static_cast<uint32>(OutMesh.Vertices.size());
+					OutVertexIndex = static_cast<uint32>(OutMesh.Vertices.size());
 					OutMesh.Vertices.push_back(Vertex);
 					StaticTangentSums.push_back(FVector::ZeroVector);
 					StaticBitangentSums.push_back(FVector::ZeroVector);
-					VertexMap[Key] = VertexIndex;
+					VertexMap[Key] = OutVertexIndex;
 				}
 
-				TriIndices[CornerIndex] = VertexIndex;
-				PendingSectionIndices[CornerIndex] = VertexIndex;
-			}
+				return true;
+			};
 
-			if (!bValidTriangle)
+			for (int32 FanIndex = 1; FanIndex + 1 < PolygonSize; ++FanIndex)
 			{
-				continue;
-			}
-
-			for (uint32 VertexIndex : PendingSectionIndices)
-			{
-				SectionIndicesMap[GlobalMaterialIndex].push_back(VertexIndex);
-			}
-
-			const FNormalVertex& V0 = OutMesh.Vertices[TriIndices[0]];
-			const FNormalVertex& V1 = OutMesh.Vertices[TriIndices[1]];
-			const FNormalVertex& V2 = OutMesh.Vertices[TriIndices[2]];
-
-			FVector Edge1 = V1.pos - V0.pos;
-			FVector Edge2 = V2.pos - V0.pos;
-			FVector2 DeltaUV1 = V1.tex - V0.tex;
-			FVector2 DeltaUV2 = V2.tex - V0.tex;
-
-			float Det = DeltaUV1.X * DeltaUV2.Y - DeltaUV1.Y * DeltaUV2.X;
-			if (std::abs(Det) >= 1e-8f)
-			{
-				float InvDet = 1.0f / Det;
-				FVector Tangent = (Edge1 * DeltaUV2.Y - Edge2 * DeltaUV1.Y) * InvDet;
-				FVector Bitangent = (Edge2 * DeltaUV1.X - Edge1 * DeltaUV2.X) * InvDet;
-
-				for (uint32 TriIndex : TriIndices)
+				const int32 CornerIndices[3] = { 0, FanIndex, FanIndex + 1 };
+				uint32 TriIndices[3] = {};
+				bool bValidTriangle = true;
+				for (int32 TriangleCornerIndex = 0; TriangleCornerIndex < 3; ++TriangleCornerIndex)
 				{
-					StaticTangentSums[TriIndex] += Tangent;
-					StaticBitangentSums[TriIndex] += Bitangent;
+					if (!BuildStaticVertex(CornerIndices[TriangleCornerIndex], TriIndices[TriangleCornerIndex]))
+					{
+						bValidTriangle = false;
+						break;
+					}
+				}
+
+				if (!bValidTriangle)
+				{
+					continue;
+				}
+
+				for (uint32 VertexIndex : TriIndices)
+				{
+					SectionIndicesMap[GlobalMaterialIndex].push_back(VertexIndex);
+				}
+
+				const FNormalVertex& V0 = OutMesh.Vertices[TriIndices[0]];
+				const FNormalVertex& V1 = OutMesh.Vertices[TriIndices[1]];
+				const FNormalVertex& V2 = OutMesh.Vertices[TriIndices[2]];
+
+				FVector Edge1 = V1.pos - V0.pos;
+				FVector Edge2 = V2.pos - V0.pos;
+				FVector2 DeltaUV1 = V1.tex - V0.tex;
+				FVector2 DeltaUV2 = V2.tex - V0.tex;
+
+				float Det = DeltaUV1.X * DeltaUV2.Y - DeltaUV1.Y * DeltaUV2.X;
+				if (std::abs(Det) >= 1e-8f)
+				{
+					float InvDet = 1.0f / Det;
+					FVector Tangent = (Edge1 * DeltaUV2.Y - Edge2 * DeltaUV1.Y) * InvDet;
+					FVector Bitangent = (Edge2 * DeltaUV1.X - Edge1 * DeltaUV2.X) * InvDet;
+
+					for (uint32 TriIndex : TriIndices)
+					{
+						StaticTangentSums[TriIndex] += Tangent;
+						StaticBitangentSums[TriIndex] += Bitangent;
+					}
 				}
 			}
 		}
@@ -2338,9 +2346,60 @@ int32 FEditorFbxImporter::FindBoneIndexByName(const FSkeletonAsset& SkeletonAsse
 
 void FEditorFbxImporter::TriangulateScene(FbxScene* Scene)
 {
-	FbxGeometryConverter Converter(Scene->GetFbxManager());
+	if (!Scene)
+	{
+		return;
+	}
 
-	Converter.Triangulate(Scene, true);
+	FbxGeometryConverter Converter(Scene->GetFbxManager());
+	Converter.RemoveBadPolygonsFromMeshes(Scene);
+
+	FbxNode* RootNode = Scene->GetRootNode();
+	if (!RootNode)
+	{
+		return;
+	}
+
+	TArray<FbxNode*> Nodes;
+	CollectNodes(RootNode, 0, Nodes);
+
+	TArray<FbxNodeAttribute*> MeshAttributes;
+	for (FbxNode* Node : Nodes)
+	{
+		if (!Node)
+		{
+			continue;
+		}
+
+		const int32 AttributeCount = Node->GetNodeAttributeCount();
+		for (int32 AttributeIndex = 0; AttributeIndex < AttributeCount; ++AttributeIndex)
+		{
+			FbxNodeAttribute* Attribute = Node->GetNodeAttributeByIndex(AttributeIndex);
+			if (!Attribute || Attribute->GetAttributeType() != FbxNodeAttribute::eMesh)
+			{
+				continue;
+			}
+
+			if (std::find(MeshAttributes.begin(), MeshAttributes.end(), Attribute) == MeshAttributes.end())
+			{
+				MeshAttributes.push_back(Attribute);
+			}
+		}
+	}
+
+	for (FbxNodeAttribute* Attribute : MeshAttributes)
+	{
+		FbxMesh* Mesh = static_cast<FbxMesh*>(Attribute);
+		if (Mesh->IsTriangleMesh())
+		{
+			continue;
+		}
+
+		if (!Converter.Triangulate(Attribute, true))
+		{
+			UE_LOG("Warning: FBX triangulation skipped invalid mesh attribute. Name=%s", Attribute->GetName());
+		}
+	}
 }
 
 FString FEditorFbxImporter::ConvertToMat(const FMaterialInfo* MaterialInfo)

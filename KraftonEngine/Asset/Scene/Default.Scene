@@ -538,6 +538,16 @@
             "bIsActive" : true,
             "bTickEnable" : true
           }
+        }, {
+          "ClassName" : "ULuaScriptComponent",
+          "Properties" : {
+            "Auto Activate" : true,
+            "ScriptFile" : "DefaultBGMPlayer.lua",
+            "bEditorOnly" : false,
+            "bHiddenInComponentTree" : false,
+            "bIsActive" : true,
+            "bTickEnable" : true
+          }
         }],
       "Properties" : {
         "Tags" : [],
@@ -559,7 +569,7 @@
               "Collision Enabled" : 0,
               "Enable Two Bone IK" : true,
               "Generate Overlap Events" : false,
-              "Is Visible" : true,
+              "Is Visible" : false,
               "Mass (Kg)" : 1.000000,
               "Materials" : [{
                   "Path" : "Asset/Mesh/Manny/Meshes/SKM_Manny_Simple_MI_Manny_01_New.mat"
@@ -600,7 +610,7 @@
               "bEditorOnly" : false,
               "bHiddenInComponentTree" : false,
               "bIsActive" : true,
-              "bTickEnable" : true
+              "bTickEnable" : false
             }
           }, {
             "Children" : [{
@@ -619,7 +629,7 @@
                     "Location" : [0.000000, 0.000000, 0.000000],
                     "Scale" : [1.000000, 1.000000, 1.000000]
                   },
-                  "Rotation" : [45.000000, 0.000000, 0.000000],
+                  "Rotation" : [0.000000, 0.000000, 0.000000],
                   "bEditorOnly" : false,
                   "bHiddenInComponentTree" : false,
                   "bIsActive" : true,
@@ -644,8 +654,8 @@
               },
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Socket Offset" : [0.000000, 0.000000, 0.000000],
-              "Target Arm Length" : 10.000000,
-              "Target Offset" : [0.000000, 0.000000, 10.000000],
+              "Target Arm Length" : 0.000000,
+              "Target Offset" : [0.000000, 0.000000, 2.400000],
               "bEditorOnly" : false,
               "bHiddenInComponentTree" : false,
               "bIsActive" : true,
@@ -663,7 +673,7 @@
           "Collision Enabled" : 0,
           "Draw Only If Selected" : false,
           "Generate Overlap Events" : false,
-          "Is Visible" : true,
+          "Is Visible" : false,
           "Mass (Kg)" : 1.000000,
           "Object Type" : 0,
           "RelativeTransform" : {
@@ -2084,7 +2094,7 @@
           "Object Type" : 0,
           "Particle System Priority" : 0,
           "RelativeTransform" : {
-            "Location" : [-27.116293, -15.332172, 8.895893],
+            "Location" : [-17.893829, -40.576649, 18.170403],
             "Scale" : [1.000000, 1.000000, 1.000000]
           },
           "Response Container" : {
@@ -2112,9 +2122,9 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [-53.646076, -1.973221, 18.172714],
+    "Location" : [-61.344959, -22.012047, 40.280098],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, 25.122395, -392.088379]
+    "Rotation" : [0.000000, 32.022430, -344.540741]
   },
   "Version" : 2,
   "WorldSettings" : {

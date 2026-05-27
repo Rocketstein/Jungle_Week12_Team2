@@ -768,9 +768,9 @@ void FLuaScriptManager::RegisterCoreBindings(sol::state& Lua)
 	{
 		FAudioManager::Get().PlayAudio(SoundName, Volume);
 	});
-	AudioManager.set_function("PlayBGM", [](const FString& SoundName, float Volume)
+	AudioManager.set_function("PlayBGM", [](const FString& SoundName, float Volume, sol::optional<float> StartTimeSeconds)
 	{
-		FAudioManager::Get().PlayBGM(SoundName, Volume);
+		FAudioManager::Get().PlayBGM(SoundName, Volume, StartTimeSeconds.value_or(0.0f));
 	});
 	AudioManager.set_function("StopBGM", []()
 	{
