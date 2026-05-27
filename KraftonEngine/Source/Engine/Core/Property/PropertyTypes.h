@@ -68,6 +68,7 @@ enum EPropertyFlags : uint32 {
 
 struct FMaterialSlot
 {
+	std::string SlotName;
 	std::string Path;
 };
 

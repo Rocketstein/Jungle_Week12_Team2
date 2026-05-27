@@ -22,7 +22,8 @@
               "Is Visible" : true,
               "Mass (Kg)" : 1.000000,
               "Material" : {
-                "Path" : "Asset/Materials/Editor/DirectionalLight.mat"
+                "Path" : "Asset/Materials/Editor/DirectionalLight.mat",
+                "SlotName" : ""
               },
               "Object Type" : 0,
               "RelativeTransform" : {
@@ -53,7 +54,7 @@
           "Color" : [0.420000, 0.520000, 0.900000, 1.000000],
           "Intensity" : 0.180000,
           "RelativeTransform" : {
-            "Location" : [8.050000, -8.050001, 11.384422],
+            "Location" : [8.050000, -8.050001, 58.106476],
             "Scale" : [1.000000, 1.000000, 1.000000]
           },
           "Rotation" : [45.000000, -45.000000, 0.000000],
@@ -92,7 +93,8 @@
               "Is Visible" : true,
               "Mass (Kg)" : 1.000000,
               "Material" : {
-                "Path" : "Asset/Materials/Editor/AmbientLight.mat"
+                "Path" : "Asset/Materials/Editor/AmbientLight.mat",
+                "SlotName" : ""
               },
               "Object Type" : 0,
               "RelativeTransform" : {
@@ -120,10 +122,10 @@
         "Properties" : {
           "Auto Activate" : true,
           "Cast Shadows" : true,
-          "Color" : [0.180000, 0.220000, 0.420000, 1.000000],
+          "Color" : [0.180392, 0.219608, 0.419608, 1.000000],
           "Intensity" : 0.030000,
           "RelativeTransform" : {
-            "Location" : [-4.000000, 0.000000, 9.300000],
+            "Location" : [-4.000000, 0.207918, 9.300000],
             "Scale" : [1.000000, 1.000000, 1.000000]
           },
           "Rotation" : [0.000000, 0.000000, 0.000000],
@@ -162,7 +164,8 @@
               "Is Visible" : true,
               "Mass (Kg)" : 1.000000,
               "Material" : {
-                "Path" : "Asset/Materials/Editor/PointLight.mat"
+                "Path" : "Asset/Materials/Editor/PointLight.mat",
+                "SlotName" : ""
               },
               "Object Type" : 0,
               "RelativeTransform" : {
@@ -234,7 +237,8 @@
               "Is Visible" : true,
               "Mass (Kg)" : 1.000000,
               "Material" : {
-                "Path" : "Asset/Materials/Editor/SpotLight.mat"
+                "Path" : "Asset/Materials/Editor/SpotLight.mat",
+                "SlotName" : ""
               },
               "Object Type" : 0,
               "RelativeTransform" : {
@@ -263,16 +267,16 @@
           "AttenuationRadius" : 20.000000,
           "Auto Activate" : true,
           "Cast Shadows" : true,
-          "Color" : [0.000000, 0.734177, 1.000000, 1.000000],
+          "Color" : [1.000000, 0.803130, 0.181435, 1.000000],
           "InnerConeAngle" : 8.500000,
-          "Intensity" : 3.000000,
+          "Intensity" : 1.000000,
           "LightFalloffExponent" : 0.050000,
           "OuterConeAngle" : 36.500000,
           "RelativeTransform" : {
-            "Location" : [0.000000, 0.000000, 8.890461],
+            "Location" : [-21.742725, -24.122120, 20.505783],
             "Scale" : [1.000000, 1.000000, 1.000000]
           },
-          "Rotation" : [61.853668, -89.514763, -43.256897],
+          "Rotation" : [89.899994, 0.000000, 0.000000],
           "Shadow Bias" : -0.000100,
           "Shadow Normal Bias" : -0.002000,
           "Shadow Resolution Scale" : 1.000000,
@@ -308,7 +312,8 @@
               "Is Visible" : true,
               "Mass (Kg)" : 1.000000,
               "Material" : {
-                "Path" : "Asset/Materials/Editor/SpotLight.mat"
+                "Path" : "Asset/Materials/Editor/SpotLight.mat",
+                "SlotName" : ""
               },
               "Object Type" : 0,
               "RelativeTransform" : {
@@ -382,7 +387,8 @@
               "Is Visible" : true,
               "Mass (Kg)" : 1.000000,
               "Material" : {
-                "Path" : "Asset/Materials/Editor/AmbientLight.mat"
+                "Path" : "Asset/Materials/Editor/AmbientLight.mat",
+                "SlotName" : ""
               },
               "Object Type" : 0,
               "RelativeTransform" : {
@@ -452,7 +458,8 @@
               "Is Visible" : true,
               "Mass (Kg)" : 1.000000,
               "Material" : {
-                "Path" : "Asset/Materials/Editor/HeightFog.mat"
+                "Path" : "Asset/Materials/Editor/HeightFog.mat",
+                "SlotName" : ""
               },
               "Object Type" : 0,
               "RelativeTransform" : {
@@ -482,7 +489,7 @@
           "Cutoff Distance" : 0.000000,
           "Fog Density" : 0.001500,
           "Height Falloff" : 0.100000,
-          "Inscattering Color" : [0.015000, 0.025000, 0.070000, 1.000000],
+          "Inscattering Color" : [0.001745, 0.003068, 0.029536, 1.000000],
           "Max Opacity" : 0.850000,
           "RelativeTransform" : {
             "Location" : [0.000000, 0.000000, 11.200000],
@@ -538,6 +545,16 @@
             "bIsActive" : true,
             "bTickEnable" : true
           }
+        }, {
+          "ClassName" : "ULuaScriptComponent",
+          "Properties" : {
+            "Auto Activate" : true,
+            "ScriptFile" : "DefaultBGMPlayer.lua",
+            "bEditorOnly" : false,
+            "bHiddenInComponentTree" : false,
+            "bIsActive" : true,
+            "bTickEnable" : true
+          }
         }],
       "Properties" : {
         "Tags" : [],
@@ -559,12 +576,14 @@
               "Collision Enabled" : 0,
               "Enable Two Bone IK" : true,
               "Generate Overlap Events" : false,
-              "Is Visible" : true,
+              "Is Visible" : false,
               "Mass (Kg)" : 1.000000,
               "Materials" : [{
-                  "Path" : "Asset/Mesh/Manny/Meshes/SKM_Manny_Simple_MI_Manny_01_New.mat"
+                  "Path" : "Asset/Mesh/Manny/Meshes/SKM_Manny_Simple_MI_Manny_01_New.mat",
+                  "SlotName" : ""
                 }, {
-                  "Path" : "Asset/Mesh/Manny/Meshes/SKM_Manny_Simple_MI_Manny_02_New.mat"
+                  "Path" : "Asset/Mesh/Manny/Meshes/SKM_Manny_Simple_MI_Manny_02_New.mat",
+                  "SlotName" : ""
                 }],
               "Object Type" : 0,
               "RelativeTransform" : {
@@ -600,7 +619,7 @@
               "bEditorOnly" : false,
               "bHiddenInComponentTree" : false,
               "bIsActive" : true,
-              "bTickEnable" : true
+              "bTickEnable" : false
             }
           }, {
             "Children" : [{
@@ -619,7 +638,7 @@
                     "Location" : [0.000000, 0.000000, 0.000000],
                     "Scale" : [1.000000, 1.000000, 1.000000]
                   },
-                  "Rotation" : [45.000000, 0.000000, 0.000000],
+                  "Rotation" : [0.000000, 0.000000, 0.000000],
                   "bEditorOnly" : false,
                   "bHiddenInComponentTree" : false,
                   "bIsActive" : true,
@@ -644,8 +663,8 @@
               },
               "Rotation" : [0.000000, 0.000000, 0.000000],
               "Socket Offset" : [0.000000, 0.000000, 0.000000],
-              "Target Arm Length" : 10.000000,
-              "Target Offset" : [0.000000, 0.000000, 10.000000],
+              "Target Arm Length" : 0.000000,
+              "Target Offset" : [0.000000, 0.000000, 2.400000],
               "bEditorOnly" : false,
               "bHiddenInComponentTree" : false,
               "bIsActive" : true,
@@ -663,7 +682,7 @@
           "Collision Enabled" : 0,
           "Draw Only If Selected" : false,
           "Generate Overlap Events" : false,
-          "Is Visible" : true,
+          "Is Visible" : false,
           "Mass (Kg)" : 1.000000,
           "Object Type" : 0,
           "RelativeTransform" : {
@@ -717,7 +736,8 @@
                                           "Is Visible" : true,
                                           "Mass (Kg)" : 1.000000,
                                           "Materials" : [{
-                                              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+                                              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+                                              "SlotName" : "BasicShapeMaterial"
                                             }],
                                           "Object Type" : 5,
                                           "RelativeTransform" : {
@@ -752,7 +772,8 @@
                                       "Is Visible" : true,
                                       "Mass (Kg)" : 1.000000,
                                       "Materials" : [{
-                                          "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+                                          "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+                                          "SlotName" : "BasicShapeMaterial"
                                         }],
                                       "Object Type" : 5,
                                       "RelativeTransform" : {
@@ -787,7 +808,8 @@
                                   "Is Visible" : true,
                                   "Mass (Kg)" : 1.000000,
                                   "Materials" : [{
-                                      "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+                                      "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+                                      "SlotName" : "BasicShapeMaterial"
                                     }],
                                   "Object Type" : 5,
                                   "RelativeTransform" : {
@@ -822,7 +844,8 @@
                               "Is Visible" : true,
                               "Mass (Kg)" : 1.000000,
                               "Materials" : [{
-                                  "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+                                  "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+                                  "SlotName" : "BasicShapeMaterial"
                                 }],
                               "Object Type" : 5,
                               "RelativeTransform" : {
@@ -857,7 +880,8 @@
                           "Is Visible" : true,
                           "Mass (Kg)" : 1.000000,
                           "Materials" : [{
-                              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+                              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+                              "SlotName" : "BasicShapeMaterial"
                             }],
                           "Object Type" : 5,
                           "RelativeTransform" : {
@@ -892,7 +916,8 @@
                       "Is Visible" : true,
                       "Mass (Kg)" : 1.000000,
                       "Materials" : [{
-                          "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+                          "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+                          "SlotName" : "BasicShapeMaterial"
                         }],
                       "Object Type" : 5,
                       "RelativeTransform" : {
@@ -927,7 +952,8 @@
                   "Is Visible" : true,
                   "Mass (Kg)" : 1.000000,
                   "Materials" : [{
-                      "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+                      "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+                      "SlotName" : "BasicShapeMaterial"
                     }],
                   "Object Type" : 5,
                   "RelativeTransform" : {
@@ -962,7 +988,8 @@
               "Is Visible" : true,
               "Mass (Kg)" : 1.000000,
               "Materials" : [{
-                  "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+                  "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+                  "SlotName" : "BasicShapeMaterial"
                 }],
               "Object Type" : 5,
               "RelativeTransform" : {
@@ -1032,11 +1059,12 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+              "SlotName" : "BasicShapeMaterial"
             }],
           "Object Type" : 5,
           "RelativeTransform" : {
-            "Location" : [30.387091, -2.706437, -0.697434],
+            "Location" : [30.387091, 82.735962, -0.697434],
             "Scale" : [1.000000, 19.873184, 1.000000]
           },
           "Response Container" : {
@@ -1078,11 +1106,12 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat"
+              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat",
+              "SlotName" : "MI_DefaultColorway"
             }],
           "Object Type" : 0,
           "RelativeTransform" : {
-            "Location" : [0.000000, 5.000000, 0.000000],
+            "Location" : [0.000000, 95.959145, 0.000000],
             "Scale" : [100.000000, 100.000000, 1.000000]
           },
           "Response Container" : {
@@ -1124,11 +1153,12 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Materials/Auto/BasicShapeMaterial.mat"
+              "Path" : "Asset/Materials/Auto/BasicShapeMaterial.mat",
+              "SlotName" : "MI_PrototypeGrid_Gray"
             }],
           "Object Type" : 0,
           "RelativeTransform" : {
-            "Location" : [0.000000, 0.000000, -4.717308],
+            "Location" : [0.000000, 70.564537, -4.717308],
             "Scale" : [15.000000, 15.000000, 10.000000]
           },
           "Response Container" : {
@@ -1170,11 +1200,12 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat"
+              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat",
+              "SlotName" : "MI_PrototypeGrid_Gray"
             }],
           "Object Type" : 0,
           "RelativeTransform" : {
-            "Location" : [-5.000000, -10.000000, 0.000000],
+            "Location" : [-5.000000, 102.243629, 0.000000],
             "Scale" : [10.000000, 20.000000, 5.000000]
           },
           "Response Container" : {
@@ -1216,11 +1247,12 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat"
+              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat",
+              "SlotName" : "MI_PrototypeGrid_Gray"
             }],
           "Object Type" : 5,
           "RelativeTransform" : {
-            "Location" : [5.000000, -10.000000, 0.000000],
+            "Location" : [5.000000, 145.103653, 0.000000],
             "Scale" : [10.000000, 10.000000, 5.000000]
           },
           "Response Container" : {
@@ -1262,11 +1294,12 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat"
+              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat",
+              "SlotName" : "MI_PrototypeGrid_Gray"
             }],
           "Object Type" : 5,
           "RelativeTransform" : {
-            "Location" : [10.000000, 5.000000, 0.000000],
+            "Location" : [10.000000, 82.470329, 0.000000],
             "Scale" : [10.000000, 10.000000, 5.000000]
           },
           "Response Container" : {
@@ -1308,11 +1341,12 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat"
+              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat",
+              "SlotName" : "MI_PrototypeGrid_Gray"
             }],
           "Object Type" : 0,
           "RelativeTransform" : {
-            "Location" : [5.000000, 5.000000, 0.000000],
+            "Location" : [5.000000, 84.155029, 0.000000],
             "Scale" : [10.000000, 10.000000, 5.000000]
           },
           "Response Container" : {
@@ -1354,11 +1388,12 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat"
+              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat",
+              "SlotName" : "MI_PrototypeGrid_Gray"
             }],
           "Object Type" : 0,
           "RelativeTransform" : {
-            "Location" : [-10.000000, -5.000000, 0.000000],
+            "Location" : [-10.000000, 123.670586, 0.000000],
             "Scale" : [20.000000, 10.000000, 5.000000]
           },
           "Response Container" : {
@@ -1400,11 +1435,12 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat"
+              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat",
+              "SlotName" : "MI_PrototypeGrid_Gray"
             }],
           "Object Type" : 0,
           "RelativeTransform" : {
-            "Location" : [5.100000, -5.000000, 0.000000],
+            "Location" : [5.100000, 61.278015, 0.000000],
             "Scale" : [10.000000, 10.000000, 5.000000]
           },
           "Response Container" : {
@@ -1446,11 +1482,12 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat"
+              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat",
+              "SlotName" : "MI_PrototypeGrid_Gray"
             }],
           "Object Type" : 0,
           "RelativeTransform" : {
-            "Location" : [-5.000000, -5.000000, 0.000000],
+            "Location" : [-5.000000, 62.423306, 0.000000],
             "Scale" : [10.000000, 10.000000, 5.000000]
           },
           "Response Container" : {
@@ -1492,11 +1529,12 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat"
+              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat",
+              "SlotName" : "MI_PrototypeGrid_Gray"
             }],
           "Object Type" : 0,
           "RelativeTransform" : {
-            "Location" : [-5.000000, 5.000000, 0.000000],
+            "Location" : [-5.000000, 80.990730, 0.000000],
             "Scale" : [10.000000, 10.000000, 5.000000]
           },
           "Response Container" : {
@@ -1538,11 +1576,12 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat"
+              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat",
+              "SlotName" : "MI_PrototypeGrid_Gray"
             }],
           "Object Type" : 5,
           "RelativeTransform" : {
-            "Location" : [-5.000000, 10.000000, 0.000000],
+            "Location" : [-5.000000, 90.649719, 0.000000],
             "Scale" : [10.000000, 10.000000, 5.000000]
           },
           "Response Container" : {
@@ -1584,11 +1623,12 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat"
+              "Path" : "Asset/Materials/Auto/M_PrototypeGrid.mat",
+              "SlotName" : "MI_PrototypeGrid_Gray"
             }],
           "Object Type" : 5,
           "RelativeTransform" : {
-            "Location" : [-10.000000, -5.000000, 0.000000],
+            "Location" : [-10.000000, 96.923370, 0.000000],
             "Scale" : [10.000000, 10.000000, 5.000000]
           },
           "Response Container" : {
@@ -1665,11 +1705,12 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+              "SlotName" : "BasicShapeMaterial"
             }],
           "Object Type" : 0,
           "RelativeTransform" : {
-            "Location" : [23.196688, 9.697133, 9.551189],
+            "Location" : [23.196688, 93.360481, 9.551189],
             "Scale" : [1.000000, 1.000000, 1.000000]
           },
           "Response Container" : {
@@ -1746,11 +1787,12 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+              "SlotName" : "BasicShapeMaterial"
             }],
           "Object Type" : 0,
           "RelativeTransform" : {
-            "Location" : [23.915081, 9.699351, 13.667409],
+            "Location" : [23.915081, 93.175262, 13.667409],
             "Scale" : [14.711411, 4.049036, 0.212567]
           },
           "Response Container" : {
@@ -1827,11 +1869,12 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+              "SlotName" : "BasicShapeMaterial"
             }],
           "Object Type" : 0,
           "RelativeTransform" : {
-            "Location" : [24.015081, 9.799352, 7.015851],
+            "Location" : [24.015081, 94.033897, 7.015851],
             "Scale" : [16.482145, 10.361485, 0.212567]
           },
           "Response Container" : {
@@ -1922,11 +1965,93 @@
           "Is Visible" : true,
           "Mass (Kg)" : 1.000000,
           "Materials" : [{
-              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat"
+              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+              "SlotName" : "BasicShapeMaterial"
             }],
           "Object Type" : 0,
           "RelativeTransform" : {
-            "Location" : [-0.582663, -32.212265, 1.632000],
+            "Location" : [-0.582663, 53.505898, 1.632000],
+            "Scale" : [1.000000, 1.000000, 1.000000]
+          },
+          "Response Container" : {
+            "FootIK" : 2,
+            "Pawn" : 2,
+            "Projectile" : 2,
+            "Trigger" : 2,
+            "WorldDynamic" : 2,
+            "WorldStatic" : 2
+          },
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Simulate Physics" : false,
+          "Static Mesh" : "Asset/Mesh/BasicShape/Cube_StaticMesh.uasset",
+          "bEditorOnly" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bTickEnable" : true
+        }
+      }
+    }, {
+      "ClassName" : "AStaticMeshActor",
+      "Name" : "AStaticMeshActor_34",
+      "NonSceneComponents" : [],
+      "Properties" : {
+        "Tags" : [],
+        "bNeedsTick" : true,
+        "bVisible" : true
+      },
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UParticleSystemComponent",
+            "Properties" : {
+              "Auto Activate" : true,
+              "Cast Shadow" : true,
+              "Cast Shadow as Two-Sided" : false,
+              "Center of Mass" : [0.000000, 0.000000, 0.000000],
+              "Collision Enabled" : 0,
+              "Generate Overlap Events" : false,
+              "Is Visible" : true,
+              "Mass (Kg)" : 1.000000,
+              "Object Type" : 0,
+              "Particle System Priority" : 0,
+              "RelativeTransform" : {
+                "Location" : [0.000000, 0.000000, 0.603184],
+                "Scale" : [1.000000, 1.000000, 1.000000]
+              },
+              "Response Container" : {
+                "FootIK" : 2,
+                "Pawn" : 2,
+                "Projectile" : 2,
+                "Trigger" : 2,
+                "WorldDynamic" : 2,
+                "WorldStatic" : 2
+              },
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Simulate Physics" : false,
+              "Template" : "Asset/Particle/P_Collision_Test_Mesh.uasset",
+              "bEditorOnly" : false,
+              "bHiddenInComponentTree" : false,
+              "bIsActive" : true,
+              "bTickEnable" : true
+            }
+          }],
+        "ClassName" : "UStaticMeshComponent",
+        "Properties" : {
+          "Auto Activate" : true,
+          "Cast Shadow" : true,
+          "Cast Shadow as Two-Sided" : false,
+          "Center of Mass" : [0.000000, 0.000000, 0.000000],
+          "Collision Enabled" : 0,
+          "Generate Overlap Events" : false,
+          "Is Visible" : true,
+          "Mass (Kg)" : 1.000000,
+          "Materials" : [{
+              "Path" : "Asset/Mesh/BasicShape/Cube_BasicShapeMaterial.mat",
+              "SlotName" : "BasicShapeMaterial"
+            }],
+          "Object Type" : 0,
+          "RelativeTransform" : {
+            "Location" : [13.761161, 92.510193, 9.651190],
             "Scale" : [1.000000, 1.000000, 1.000000]
           },
           "Response Container" : {
@@ -1969,7 +2094,8 @@
               "Is Visible" : true,
               "Mass (Kg)" : 1.000000,
               "Material" : {
-                "Path" : "Asset/Materials/Editor/Emitter.mat"
+                "Path" : "Asset/Materials/Editor/Emitter.mat",
+                "SlotName" : ""
               },
               "Object Type" : 0,
               "RelativeTransform" : {
@@ -2006,7 +2132,7 @@
           "Object Type" : 0,
           "Particle System Priority" : 0,
           "RelativeTransform" : {
-            "Location" : [-27.116293, -15.332172, 8.895893],
+            "Location" : [5.464251, 25.316002, 27.196953],
             "Scale" : [1.000000, 1.000000, 1.000000]
           },
           "Response Container" : {
@@ -2021,6 +2147,304 @@
           "Show Particles" : true,
           "Simulate Physics" : false,
           "Template" : "Asset/Particle/CherryBlossom.uasset",
+          "bEditorOnly" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bTickEnable" : true
+        }
+      }
+    }, {
+      "ClassName" : "ASpotLightActor",
+      "Name" : "ASpotLightActor_5",
+      "NonSceneComponents" : [],
+      "Properties" : {
+        "Tags" : [],
+        "bNeedsTick" : true,
+        "bVisible" : true
+      },
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UBillboardComponent",
+            "Properties" : {
+              "Auto Activate" : true,
+              "Cast Shadow" : true,
+              "Cast Shadow as Two-Sided" : false,
+              "Center of Mass" : [0.000000, 0.000000, 0.000000],
+              "Collision Enabled" : 0,
+              "Generate Overlap Events" : false,
+              "Is Visible" : true,
+              "Mass (Kg)" : 1.000000,
+              "Material" : {
+                "Path" : "Asset/Materials/Editor/SpotLight.mat",
+                "SlotName" : ""
+              },
+              "Object Type" : 0,
+              "RelativeTransform" : {
+                "Location" : [0.000000, 0.000000, 0.000000],
+                "Scale" : [1.000000, 1.000000, 1.000000]
+              },
+              "Response Container" : {
+                "FootIK" : 2,
+                "Pawn" : 2,
+                "Projectile" : 2,
+                "Trigger" : 2,
+                "WorldDynamic" : 2,
+                "WorldStatic" : 2
+              },
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Simulate Physics" : false,
+              "bEditorOnly" : true,
+              "bHiddenInComponentTree" : true,
+              "bIsActive" : true,
+              "bTickEnable" : true
+            },
+            "bHiddenInComponentTree" : true
+          }],
+        "ClassName" : "USpotLightComponent",
+        "Properties" : {
+          "AttenuationRadius" : 20.000000,
+          "Auto Activate" : true,
+          "Cast Shadows" : true,
+          "Color" : [1.000000, 0.803130, 0.181435, 1.000000],
+          "InnerConeAngle" : 8.500000,
+          "Intensity" : 1.000000,
+          "LightFalloffExponent" : 0.050000,
+          "OuterConeAngle" : 36.500000,
+          "RelativeTransform" : {
+            "Location" : [-21.642725, -41.160042, 18.671841],
+            "Scale" : [1.000000, 1.000000, 1.000000]
+          },
+          "Rotation" : [89.899994, 0.000000, 0.000000],
+          "Shadow Bias" : -0.000100,
+          "Shadow Normal Bias" : -0.002000,
+          "Shadow Resolution Scale" : 1.000000,
+          "Shadow Sharpen" : 0.670000,
+          "Shadow Slope Bias" : 0.000100,
+          "Visible" : true,
+          "bEditorOnly" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bTickEnable" : true
+        }
+      }
+    }, {
+      "ClassName" : "ASpotLightActor",
+      "Name" : "ASpotLightActor_6",
+      "NonSceneComponents" : [],
+      "Properties" : {
+        "Tags" : [],
+        "bNeedsTick" : true,
+        "bVisible" : true
+      },
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UBillboardComponent",
+            "Properties" : {
+              "Auto Activate" : true,
+              "Cast Shadow" : true,
+              "Cast Shadow as Two-Sided" : false,
+              "Center of Mass" : [0.000000, 0.000000, 0.000000],
+              "Collision Enabled" : 0,
+              "Generate Overlap Events" : false,
+              "Is Visible" : true,
+              "Mass (Kg)" : 1.000000,
+              "Material" : {
+                "Path" : "Asset/Materials/Editor/SpotLight.mat",
+                "SlotName" : ""
+              },
+              "Object Type" : 0,
+              "RelativeTransform" : {
+                "Location" : [0.000000, 0.000000, 0.000000],
+                "Scale" : [1.000000, 1.000000, 1.000000]
+              },
+              "Response Container" : {
+                "FootIK" : 2,
+                "Pawn" : 2,
+                "Projectile" : 2,
+                "Trigger" : 2,
+                "WorldDynamic" : 2,
+                "WorldStatic" : 2
+              },
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Simulate Physics" : false,
+              "bEditorOnly" : true,
+              "bHiddenInComponentTree" : true,
+              "bIsActive" : true,
+              "bTickEnable" : true
+            },
+            "bHiddenInComponentTree" : true
+          }],
+        "ClassName" : "USpotLightComponent",
+        "Properties" : {
+          "AttenuationRadius" : 20.000000,
+          "Auto Activate" : true,
+          "Cast Shadows" : true,
+          "Color" : [1.000000, 0.803130, 0.181435, 1.000000],
+          "InnerConeAngle" : 8.500000,
+          "Intensity" : 1.000000,
+          "LightFalloffExponent" : 0.050000,
+          "OuterConeAngle" : 36.500000,
+          "RelativeTransform" : {
+            "Location" : [-20.935131, -50.176746, 18.527569],
+            "Scale" : [1.000000, 1.000000, 1.000000]
+          },
+          "Rotation" : [89.899994, 0.000000, 0.000000],
+          "Shadow Bias" : -0.000100,
+          "Shadow Normal Bias" : -0.002000,
+          "Shadow Resolution Scale" : 1.000000,
+          "Shadow Sharpen" : 0.670000,
+          "Shadow Slope Bias" : 0.000100,
+          "Visible" : true,
+          "bEditorOnly" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bTickEnable" : true
+        }
+      }
+    }, {
+      "ClassName" : "ASpotLightActor",
+      "Name" : "ASpotLightActor_12",
+      "NonSceneComponents" : [],
+      "Properties" : {
+        "Tags" : [],
+        "bNeedsTick" : true,
+        "bVisible" : true
+      },
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UBillboardComponent",
+            "Properties" : {
+              "Auto Activate" : true,
+              "Cast Shadow" : true,
+              "Cast Shadow as Two-Sided" : false,
+              "Center of Mass" : [0.000000, 0.000000, 0.000000],
+              "Collision Enabled" : 0,
+              "Generate Overlap Events" : false,
+              "Is Visible" : true,
+              "Mass (Kg)" : 1.000000,
+              "Material" : {
+                "Path" : "Asset/Materials/Editor/SpotLight.mat",
+                "SlotName" : ""
+              },
+              "Object Type" : 0,
+              "RelativeTransform" : {
+                "Location" : [0.000000, 0.000000, 0.000000],
+                "Scale" : [1.000000, 1.000000, 1.000000]
+              },
+              "Response Container" : {
+                "FootIK" : 2,
+                "Pawn" : 2,
+                "Projectile" : 2,
+                "Trigger" : 2,
+                "WorldDynamic" : 2,
+                "WorldStatic" : 2
+              },
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Simulate Physics" : false,
+              "bEditorOnly" : true,
+              "bHiddenInComponentTree" : true,
+              "bIsActive" : true,
+              "bTickEnable" : true
+            },
+            "bHiddenInComponentTree" : true
+          }],
+        "ClassName" : "USpotLightComponent",
+        "Properties" : {
+          "AttenuationRadius" : 20.000000,
+          "Auto Activate" : true,
+          "Cast Shadows" : true,
+          "Color" : [1.000000, 0.803130, 0.181435, 1.000000],
+          "InnerConeAngle" : 8.500000,
+          "Intensity" : 1.000000,
+          "LightFalloffExponent" : 0.050000,
+          "OuterConeAngle" : 36.500000,
+          "RelativeTransform" : {
+            "Location" : [-8.384560, -22.003880, 19.267721],
+            "Scale" : [1.000000, 1.000000, 1.000000]
+          },
+          "Rotation" : [89.899994, 0.000000, 0.000000],
+          "Shadow Bias" : -0.000100,
+          "Shadow Normal Bias" : -0.002000,
+          "Shadow Resolution Scale" : 1.000000,
+          "Shadow Sharpen" : 0.670000,
+          "Shadow Slope Bias" : 0.000100,
+          "Visible" : true,
+          "bEditorOnly" : false,
+          "bHiddenInComponentTree" : false,
+          "bIsActive" : true,
+          "bTickEnable" : true
+        }
+      }
+    }, {
+      "ClassName" : "APointLightActor",
+      "Name" : "APointLightActor_1",
+      "NonSceneComponents" : [],
+      "Properties" : {
+        "Tags" : [],
+        "bNeedsTick" : true,
+        "bVisible" : true
+      },
+      "RootComponent" : {
+        "Children" : [{
+            "Children" : [],
+            "ClassName" : "UBillboardComponent",
+            "Properties" : {
+              "Auto Activate" : true,
+              "Cast Shadow" : true,
+              "Cast Shadow as Two-Sided" : false,
+              "Center of Mass" : [0.000000, 0.000000, 0.000000],
+              "Collision Enabled" : 0,
+              "Generate Overlap Events" : false,
+              "Is Visible" : true,
+              "Mass (Kg)" : 1.000000,
+              "Material" : {
+                "Path" : "Asset/Materials/Editor/PointLight.mat",
+                "SlotName" : ""
+              },
+              "Object Type" : 0,
+              "RelativeTransform" : {
+                "Location" : [0.000000, 0.000000, 0.000000],
+                "Scale" : [1.000000, 1.000000, 1.000000]
+              },
+              "Response Container" : {
+                "FootIK" : 2,
+                "Pawn" : 2,
+                "Projectile" : 2,
+                "Trigger" : 2,
+                "WorldDynamic" : 2,
+                "WorldStatic" : 2
+              },
+              "Rotation" : [0.000000, 0.000000, 0.000000],
+              "Simulate Physics" : false,
+              "bEditorOnly" : true,
+              "bHiddenInComponentTree" : true,
+              "bIsActive" : true,
+              "bTickEnable" : true
+            },
+            "bHiddenInComponentTree" : true
+          }],
+        "ClassName" : "UPointLightComponent",
+        "Properties" : {
+          "AttenuationRadius" : 10.000000,
+          "Auto Activate" : true,
+          "Cast Shadows" : true,
+          "Color" : [0.578059, 0.170735, 0.170735, 1.000000],
+          "Intensity" : 2.400000,
+          "LightFalloffExponent" : 0.840000,
+          "RelativeTransform" : {
+            "Location" : [2.977293, -7.637098, 8.818834],
+            "Scale" : [1.000000, 1.000000, 1.000000]
+          },
+          "Rotation" : [0.000000, 0.000000, 0.000000],
+          "Shadow Bias" : -0.000100,
+          "Shadow Normal Bias" : -0.002000,
+          "Shadow Resolution Scale" : 1.000000,
+          "Shadow Sharpen" : 0.670000,
+          "Shadow Slope Bias" : 0.000100,
+          "Visible" : true,
           "bEditorOnly" : false,
           "bHiddenInComponentTree" : false,
           "bIsActive" : true,

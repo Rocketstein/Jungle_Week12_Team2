@@ -67,6 +67,109 @@ namespace
 		return NormalizeProjectPath(FPaths::ToUtf8(MatPath.generic_wstring()));
 	}
 
+	FString MakeUniqueMaterialSlotName(const FString& InName, TMap<FString, int32>& NameCounts)
+	{
+		const FString BaseName = InName.empty() ? FString("None") : InName;
+		int32& Count = NameCounts[BaseName];
+		++Count;
+		if (Count == 1)
+		{
+			return BaseName;
+		}
+
+		return BaseName + " Slot #" + std::to_string(Count);
+	}
+
+	std::wstring ToLowerWide(std::wstring Value)
+	{
+		std::transform(Value.begin(), Value.end(), Value.begin(), ::towlower);
+		return Value;
+	}
+
+	bool IsSupportedTextureExtension(const std::filesystem::path& Path)
+	{
+		const std::wstring Ext = ToLowerWide(Path.extension().wstring());
+		return Ext == L".png" || Ext == L".jpg" || Ext == L".jpeg" || Ext == L".tga" || Ext == L".bmp";
+	}
+
+	std::wstring CanonicalTextureStem(const std::filesystem::path& Path)
+	{
+		std::wstring Stem = ToLowerWide(Path.stem().wstring());
+		std::wstring Result;
+		for (wchar_t Ch : Stem)
+		{
+			if (std::iswalnum(Ch))
+			{
+				Result.push_back(Ch);
+			}
+		}
+
+		const std::wstring Tokens[] = { L"texture", L"tex", L"color", L"basecolor", L"diffuse", L"bc" };
+		for (const std::wstring& Token : Tokens)
+		{
+			size_t Pos = std::wstring::npos;
+			while ((Pos = Result.find(Token)) != std::wstring::npos)
+			{
+				Result.erase(Pos, Token.length());
+			}
+		}
+		return Result;
+	}
+
+	FString ResolveImportedTexturePath(const FString& FbxFilePath, const FString& RawTexturePath)
+	{
+		if (RawTexturePath.empty())
+		{
+			return FString();
+		}
+
+		const std::filesystem::path RawPath(FPaths::ToWide(RawTexturePath));
+		const std::filesystem::path DirectPath = ResolveProjectPath(RawTexturePath);
+		if (std::filesystem::exists(DirectPath) && std::filesystem::is_regular_file(DirectPath))
+		{
+			return NormalizeProjectPath(FPaths::ToUtf8(DirectPath.generic_wstring()));
+		}
+
+		const std::filesystem::path FbxDirectory = ResolveProjectPath(FbxFilePath).parent_path();
+		if (!std::filesystem::exists(FbxDirectory) || !std::filesystem::is_directory(FbxDirectory))
+		{
+			return NormalizeProjectPath(RawTexturePath);
+		}
+
+		const std::wstring RawFileName = ToLowerWide(RawPath.filename().wstring());
+		const std::wstring RawStem = ToLowerWide(RawPath.stem().wstring());
+		const std::wstring RawCanonicalStem = CanonicalTextureStem(RawPath);
+		std::filesystem::path FallbackMatch;
+
+		for (const std::filesystem::directory_entry& Entry : std::filesystem::recursive_directory_iterator(FbxDirectory))
+		{
+			if (!Entry.is_regular_file() || !IsSupportedTextureExtension(Entry.path()))
+			{
+				continue;
+			}
+
+			const std::filesystem::path CandidatePath = Entry.path();
+			const std::wstring CandidateFileName = ToLowerWide(CandidatePath.filename().wstring());
+			const std::wstring CandidateStem = ToLowerWide(CandidatePath.stem().wstring());
+			if (CandidateFileName == RawFileName || CandidateStem == RawStem)
+			{
+				return NormalizeProjectPath(FPaths::ToUtf8(CandidatePath.generic_wstring()));
+			}
+
+			if (FallbackMatch.empty() && !RawCanonicalStem.empty() && CanonicalTextureStem(CandidatePath) == RawCanonicalStem)
+			{
+				FallbackMatch = CandidatePath;
+			}
+		}
+
+		if (!FallbackMatch.empty())
+		{
+			return NormalizeProjectPath(FPaths::ToUtf8(FallbackMatch.generic_wstring()));
+		}
+
+		return NormalizeProjectPath(RawTexturePath);
+	}
+
 	void CollectFbxNodes(FbxNode* Node, TArray<FbxNode*>& OutNodes)
 	{
 		if (!Node)
@@ -986,8 +1089,6 @@ bool FEditorFbxImporter::ImportStatic(const FString& FilePath, const FImportOpti
 	FbxAxisSystem UnrealAxisSystem(FbxAxisSystem::eZAxis, FbxAxisSystem::eParityEven, FbxAxisSystem::eLeftHanded);
 	UnrealAxisSystem.DeepConvertScene(Scene);
 
-	TriangulateScene(Scene);
-
 	FbxNode* RootNode = Scene->GetRootNode();
 	if (!RootNode)
 	{
@@ -1070,7 +1171,8 @@ bool FEditorFbxImporter::ImportStatic(const FString& FilePath, const FImportOpti
 
 		for (int32 PolygonIndex = 0; PolygonIndex < Mesh->GetPolygonCount(); ++PolygonIndex)
 		{
-			if (Mesh->GetPolygonSize(PolygonIndex) != 3)
+			const int32 PolygonSize = Mesh->GetPolygonSize(PolygonIndex);
+			if (PolygonSize < 3)
 			{
 				continue;
 			}
@@ -1082,17 +1184,13 @@ bool FEditorFbxImporter::ImportStatic(const FString& FilePath, const FImportOpti
 				GlobalMaterialIndex = LocalToGlobalMaterialIndex[LocalMaterialIndex];
 			}
 
-			uint32 TriIndices[3] = {};
-			uint32 PendingSectionIndices[3] = {};
-			bool bValidTriangle = true;
-			for (int32 CornerIndex = 0; CornerIndex < 3; ++CornerIndex)
+			auto BuildStaticVertex = [&](int32 CornerIndex, uint32& OutVertexIndex) -> bool
 			{
 				FNormalVertex Vertex;
 				const int32 CPIndex = Mesh->GetPolygonVertex(PolygonIndex, CornerIndex);
 				if (!IsValidControlPointIndex(Mesh, CPIndex))
 				{
-					bValidTriangle = false;
-					break;
+					return false;
 				}
 
 				FbxVector4 CP = Mesh->GetControlPointAt(CPIndex);
@@ -1128,55 +1226,68 @@ bool FEditorFbxImporter::ImportStatic(const FString& FilePath, const FImportOpti
 				Key.UVX = Vertex.tex.X;
 				Key.UVY = Vertex.tex.Y;
 
-				uint32 VertexIndex = 0;
 				auto It = VertexMap.find(Key);
 				if (It != VertexMap.end())
 				{
-					VertexIndex = It->second;
+					OutVertexIndex = It->second;
 				}
 				else
 				{
-					VertexIndex = static_cast<uint32>(OutMesh.Vertices.size());
+					OutVertexIndex = static_cast<uint32>(OutMesh.Vertices.size());
 					OutMesh.Vertices.push_back(Vertex);
 					StaticTangentSums.push_back(FVector::ZeroVector);
 					StaticBitangentSums.push_back(FVector::ZeroVector);
-					VertexMap[Key] = VertexIndex;
+					VertexMap[Key] = OutVertexIndex;
 				}
 
-				TriIndices[CornerIndex] = VertexIndex;
-				PendingSectionIndices[CornerIndex] = VertexIndex;
-			}
+				return true;
+			};
 
-			if (!bValidTriangle)
+			for (int32 FanIndex = 1; FanIndex + 1 < PolygonSize; ++FanIndex)
 			{
-				continue;
-			}
-
-			for (uint32 VertexIndex : PendingSectionIndices)
-			{
-				SectionIndicesMap[GlobalMaterialIndex].push_back(VertexIndex);
-			}
-
-			const FNormalVertex& V0 = OutMesh.Vertices[TriIndices[0]];
-			const FNormalVertex& V1 = OutMesh.Vertices[TriIndices[1]];
-			const FNormalVertex& V2 = OutMesh.Vertices[TriIndices[2]];
-
-			FVector Edge1 = V1.pos - V0.pos;
-			FVector Edge2 = V2.pos - V0.pos;
-			FVector2 DeltaUV1 = V1.tex - V0.tex;
-			FVector2 DeltaUV2 = V2.tex - V0.tex;
-
-			float Det = DeltaUV1.X * DeltaUV2.Y - DeltaUV1.Y * DeltaUV2.X;
-			if (std::abs(Det) >= 1e-8f)
-			{
-				float InvDet = 1.0f / Det;
-				FVector Tangent = (Edge1 * DeltaUV2.Y - Edge2 * DeltaUV1.Y) * InvDet;
-				FVector Bitangent = (Edge2 * DeltaUV1.X - Edge1 * DeltaUV2.X) * InvDet;
-
-				for (uint32 TriIndex : TriIndices)
+				const int32 CornerIndices[3] = { 0, FanIndex, FanIndex + 1 };
+				uint32 TriIndices[3] = {};
+				bool bValidTriangle = true;
+				for (int32 TriangleCornerIndex = 0; TriangleCornerIndex < 3; ++TriangleCornerIndex)
 				{
-					StaticTangentSums[TriIndex] += Tangent;
-					StaticBitangentSums[TriIndex] += Bitangent;
+					if (!BuildStaticVertex(CornerIndices[TriangleCornerIndex], TriIndices[TriangleCornerIndex]))
+					{
+						bValidTriangle = false;
+						break;
+					}
+				}
+
+				if (!bValidTriangle)
+				{
+					continue;
+				}
+
+				for (uint32 VertexIndex : TriIndices)
+				{
+					SectionIndicesMap[GlobalMaterialIndex].push_back(VertexIndex);
+				}
+
+				const FNormalVertex& V0 = OutMesh.Vertices[TriIndices[0]];
+				const FNormalVertex& V1 = OutMesh.Vertices[TriIndices[1]];
+				const FNormalVertex& V2 = OutMesh.Vertices[TriIndices[2]];
+
+				FVector Edge1 = V1.pos - V0.pos;
+				FVector Edge2 = V2.pos - V0.pos;
+				FVector2 DeltaUV1 = V1.tex - V0.tex;
+				FVector2 DeltaUV2 = V2.tex - V0.tex;
+
+				float Det = DeltaUV1.X * DeltaUV2.Y - DeltaUV1.Y * DeltaUV2.X;
+				if (std::abs(Det) >= 1e-8f)
+				{
+					float InvDet = 1.0f / Det;
+					FVector Tangent = (Edge1 * DeltaUV2.Y - Edge2 * DeltaUV1.Y) * InvDet;
+					FVector Bitangent = (Edge2 * DeltaUV1.X - Edge1 * DeltaUV2.X) * InvDet;
+
+					for (uint32 TriIndex : TriIndices)
+					{
+						StaticTangentSums[TriIndex] += Tangent;
+						StaticBitangentSums[TriIndex] += Bitangent;
+					}
 				}
 			}
 		}
@@ -1342,6 +1453,7 @@ void FEditorFbxImporter::CollectMaterials(FbxScene* Scene)
 	MaterialToSlotIndex.clear();
 
 	int32 MaterialCount = Scene->GetMaterialCount();
+	TMap<FString, int32> MaterialNameCounts;
 
 	for (int32 i = 0; i < MaterialCount; ++i)
 	{
@@ -1349,7 +1461,7 @@ void FEditorFbxImporter::CollectMaterials(FbxScene* Scene)
 		if (!Material) continue;
 
 		FMaterialInfo MatInfo;
-		MatInfo.Name = Material->GetName();
+		MatInfo.Name = MakeUniqueMaterialSlotName(Material->GetName(), MaterialNameCounts);
 		MatInfo.DiffuseColor = { 1.0f, 1.0f, 1.0f };
 
 		FbxProperty DiffuseProp = Material->FindProperty(FbxSurfaceMaterial::sDiffuse);
@@ -1364,9 +1476,8 @@ void FEditorFbxImporter::CollectMaterials(FbxScene* Scene)
 				FbxFileTexture* Texture = DiffuseProp.GetSrcObject<FbxFileTexture>(0);
 				if (Texture)
 				{
-					// 1차 방어: Texture Path를 상대경로로 수정해서 MatInfo에 넣도록 수정
 					FString RawTexturePath = Texture->GetFileName();
-					MatInfo.TexturePath = FPaths::MakeProjectRelative(RawTexturePath);
+					MatInfo.TexturePath = ResolveImportedTexturePath(CurrentSourcePath, RawTexturePath);
 				}
 			}
 		}
@@ -1381,7 +1492,7 @@ void FEditorFbxImporter::CollectMaterials(FbxScene* Scene)
 					FbxFileTexture* Texture = Property.GetSrcObject<FbxFileTexture>(TextureIndex);
 					if (Texture)
 					{
-						return FPaths::MakeProjectRelative(Texture->GetFileName());
+						return ResolveImportedTexturePath(CurrentSourcePath, Texture->GetFileName());
 					}
 				}
 
@@ -2338,20 +2449,66 @@ int32 FEditorFbxImporter::FindBoneIndexByName(const FSkeletonAsset& SkeletonAsse
 
 void FEditorFbxImporter::TriangulateScene(FbxScene* Scene)
 {
-	FbxGeometryConverter Converter(Scene->GetFbxManager());
+	if (!Scene)
+	{
+		return;
+	}
 
-	Converter.Triangulate(Scene, true);
+	FbxGeometryConverter Converter(Scene->GetFbxManager());
+	Converter.RemoveBadPolygonsFromMeshes(Scene);
+
+	FbxNode* RootNode = Scene->GetRootNode();
+	if (!RootNode)
+	{
+		return;
+	}
+
+	TArray<FbxNode*> Nodes;
+	CollectNodes(RootNode, 0, Nodes);
+
+	TArray<FbxNodeAttribute*> MeshAttributes;
+	for (FbxNode* Node : Nodes)
+	{
+		if (!Node)
+		{
+			continue;
+		}
+
+		const int32 AttributeCount = Node->GetNodeAttributeCount();
+		for (int32 AttributeIndex = 0; AttributeIndex < AttributeCount; ++AttributeIndex)
+		{
+			FbxNodeAttribute* Attribute = Node->GetNodeAttributeByIndex(AttributeIndex);
+			if (!Attribute || Attribute->GetAttributeType() != FbxNodeAttribute::eMesh)
+			{
+				continue;   
+			}
+
+			if (std::find(MeshAttributes.begin(), MeshAttributes.end(), Attribute) == MeshAttributes.end())
+			{
+				MeshAttributes.push_back(Attribute);
+			}
+		}
+	}
+
+	for (FbxNodeAttribute* Attribute : MeshAttributes)
+	{
+		FbxMesh* Mesh = static_cast<FbxMesh*>(Attribute);
+		if (Mesh->IsTriangleMesh())
+		{
+			continue;
+		}
+
+		if (!Converter.Triangulate(Attribute, true))
+		{
+			UE_LOG("Warning: FBX triangulation skipped invalid mesh attribute. Name=%s", Attribute->GetName());
+		}
+	}
 }
 
 FString FEditorFbxImporter::ConvertToMat(const FMaterialInfo* MaterialInfo)
 {
 	const FString SourcePath = CurrentSourcePath.empty() ? FString("Asset") : CurrentSourcePath;
 	FString MatPath = BuildAdjacentMaterialPath(SourcePath, MaterialInfo->Name);
-
-	if (std::filesystem::exists(ResolveProjectPath(MatPath)))
-	{
-		return MatPath;
-	}
 
 	std::filesystem::create_directories(ResolveProjectPath(MatPath).parent_path());
 
@@ -2363,8 +2520,7 @@ FString FEditorFbxImporter::ConvertToMat(const FMaterialInfo* MaterialInfo)
 
 	if (!MaterialInfo->TexturePath.empty())
 	{
-		// 2차 방어: TexturePath 상대경로로 수정
-		FString TexturePath = FPaths::MakeProjectRelative(MaterialInfo->TexturePath);
+		FString TexturePath = ResolveImportedTexturePath(SourcePath, MaterialInfo->TexturePath);
 		JsonData["Textures"]["DiffuseTexture"] = TexturePath;
 
 		JsonData["Parameters"]["SectionColor"][0] = 1.0f;
@@ -2382,7 +2538,7 @@ FString FEditorFbxImporter::ConvertToMat(const FMaterialInfo* MaterialInfo)
 
 	if (!MaterialInfo->NormalTexturePath.empty())
 	{
-		JsonData["Textures"]["NormalTexture"] = FPaths::MakeProjectRelative(MaterialInfo->NormalTexturePath);
+		JsonData["Textures"]["NormalTexture"] = ResolveImportedTexturePath(SourcePath, MaterialInfo->NormalTexturePath);
 		JsonData["Parameters"]["HasNormalMap"] = 1.0f;
 	}
 	else

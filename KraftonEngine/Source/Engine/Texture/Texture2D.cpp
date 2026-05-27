@@ -94,9 +94,13 @@ UTexture2D* UTexture2D::LoadFromCached(const FString& FilePath, ETextureColorSpa
 
 bool UTexture2D::LoadInternal(const FString& FilePath, ID3D11Device* Device, ETextureColorSpace InColorSpace)
 {
-	//std::filesystem::path TexPath(FilePath);
-	//std::wstring WidePath = TexPath.wstring();
-	std::wstring WidePath = FPaths::ToWide(FilePath);
+	std::filesystem::path TexturePath(FPaths::ToWide(FilePath));
+	if (!TexturePath.is_absolute())
+	{
+		TexturePath = std::filesystem::path(FPaths::RootDir()) / TexturePath;
+	}
+	TexturePath = TexturePath.lexically_normal();
+	std::wstring WidePath = TexturePath.wstring();
 
 	const auto LoadFlags = (InColorSpace == ETextureColorSpace::SRGB)
 		? DirectX::WIC_LOADER_FORCE_SRGB
@@ -115,7 +119,7 @@ bool UTexture2D::LoadInternal(const FString& FilePath, ID3D11Device* Device, ETe
 
 	if (FAILED(hr))
 	{
-		UE_LOG("Failed to load texture: %s", FilePath.c_str());
+		UE_LOG("Failed to load texture: %s", FPaths::ToUtf8(TexturePath.wstring()).c_str());
 		return false;
 	}
 

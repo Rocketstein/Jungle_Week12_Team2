@@ -18,6 +18,7 @@ public:
 	void ToggleSelect(AActor* Actor);
 	void Deselect(AActor* Actor);
 	void ClearSelection();
+	int32 DeleteSelection();
 	int32 DeleteSelectedActors();
 	void Tick();
 

@@ -63,6 +63,8 @@ struct FFbxImportRequest
 	FString SourcePath;
 	FImportOptions StaticMeshOptions = FImportOptions::Default();
 	FString TargetSkeletonPath;
+	bool bCombineStaticMeshes = false;
+	FString CombinedStaticMeshPackagePath;
 	TArray<FFbxImportItemRequest> StaticMeshes;
 	TArray<FFbxImportItemRequest> SkeletalMeshes;
 	TArray<FFbxImportItemRequest> AnimSequences;

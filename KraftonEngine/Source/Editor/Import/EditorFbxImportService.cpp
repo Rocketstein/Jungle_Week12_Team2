@@ -929,7 +929,18 @@ bool FEditorFbxImportService::InspectFbxSource(const FString& FbxFilePath, FFbxI
 
 	SdkManager->Destroy();
 
-	if (FEditorFbxImporter::Import(OutInfo.SourcePath))
+	bool bHasSkinnedMesh = false;
+	for (const FFbxImportMeshInfo& MeshInfo : OutInfo.Meshes)
+	{
+		if (MeshInfo.bSkinned)
+		{
+			bHasSkinnedMesh = true;
+			break;
+		}
+	}
+
+	const bool bMayContainSkeletalData = OutInfo.SkeletonNodeCount > 0 || bHasSkinnedMesh;
+	if (bMayContainSkeletalData && FEditorFbxImporter::Import(OutInfo.SourcePath))
 	{
 		for (int32 MeshIndex = 0; MeshIndex < static_cast<int32>(FEditorFbxImporter::ImportedSkeletalMeshes.size()); ++MeshIndex)
 		{
@@ -943,7 +954,7 @@ bool FEditorFbxImportService::InspectFbxSource(const FString& FbxFilePath, FFbxI
 		CopySkeletonBoneNames(FEditorFbxImporter::Bones, OutInfo);
 	}
 
-	if (OutInfo.SkeletonBoneNames.empty() && !OutInfo.AnimStacks.empty())
+	if (bMayContainSkeletalData && OutInfo.SkeletonBoneNames.empty() && !OutInfo.AnimStacks.empty())
 	{
 		FSkeletonAsset ParsedSkeleton;
 		TArray<FEditorFbxImporter::FImportedAnimSequence> IgnoredSequences;
@@ -971,6 +982,24 @@ bool FEditorFbxImportService::ImportFromRequest(const FFbxImportRequest& Request
 	}
 
 	bool bAttemptedImport = false;
+
+	if (Request.bCombineStaticMeshes)
+	{
+		bAttemptedImport = true;
+		UStaticMesh* ImportedStaticMesh = nullptr;
+		if (ImportStaticMeshFromFbxInternal(Request.SourcePath, Request.StaticMeshOptions, Device, ImportedStaticMesh, false, nullptr, Request.CombinedStaticMeshPackagePath))
+		{
+			++OutResult.StaticMeshCount;
+			if (ImportedStaticMesh)
+			{
+				OutResult.ImportedPackagePaths.push_back(ImportedStaticMesh->GetAssetPathFileName());
+			}
+		}
+		else
+		{
+			OutResult.Messages.push_back("Combined Static Mesh import failed.");
+		}
+	}
 
 	for (const FFbxImportItemRequest& Item : Request.StaticMeshes)
 	{

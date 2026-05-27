@@ -154,6 +154,24 @@ FStaticMesh* UStaticMesh::GetStaticMeshAsset() const
 void UStaticMesh::SetStaticMaterials(TArray<FStaticMaterial>&& InMaterials)
 {
 	StaticMaterials = InMaterials;
+
+	if (!StaticMeshAsset)
+	{
+		return;
+	}
+
+	for (FStaticMeshSection& Section : StaticMeshAsset->Sections)
+	{
+		Section.MaterialIndex = -1;
+		for (int32 MaterialIndex = 0; MaterialIndex < static_cast<int32>(StaticMaterials.size()); ++MaterialIndex)
+		{
+			if (StaticMaterials[MaterialIndex].MaterialSlotName == Section.MaterialSlotName)
+			{
+				Section.MaterialIndex = MaterialIndex;
+				break;
+			}
+		}
+	}
 }
 
 const TArray<FStaticMaterial>& UStaticMesh::GetStaticMaterials() const

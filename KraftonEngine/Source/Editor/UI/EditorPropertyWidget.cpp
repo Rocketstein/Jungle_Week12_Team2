@@ -84,6 +84,24 @@ namespace
 			&& !(bShowEditorOnlyComponents && Component->IsEditorOnlyComponent());
 	}
 
+	bool DoesActorOwnComponent(const AActor* Actor, const UActorComponent* Component)
+	{
+		if (!Actor || !Component)
+		{
+			return false;
+		}
+
+		for (UActorComponent* OwnedComponent : Actor->GetComponents())
+		{
+			if (OwnedComponent == Component)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	enum class EIKBonePickerRole
 	{
 		None,
@@ -491,6 +509,13 @@ void FEditorPropertyWidget::Render(float DeltaTime, bool* bOpen)
 		bShowRenameWarning = false;
 		RenameWarningMessage.clear();
 		SyncRenameBufferFromActor(PrimaryActor);
+	}
+
+	if (SelectedComponent && !DoesActorOwnComponent(PrimaryActor, SelectedComponent))
+	{
+		USceneComponent* SelectionComponent = Selection.GetSelectedComponent();
+		SelectedComponent = DoesActorOwnComponent(PrimaryActor, SelectionComponent) ? SelectionComponent : nullptr;
+		bActorSelected = (SelectedComponent == nullptr);
 	}
 
 	const TArray<AActor*>& SelectedActors = Selection.GetSelectedActors();

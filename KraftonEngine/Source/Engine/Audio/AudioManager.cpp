@@ -162,7 +162,7 @@ void FAudioManager::PlayAudio(const FString& Key, float Volume)
 	}
 }
 
-void FAudioManager::PlayBGM(const FString& Key, float Volume)
+void FAudioManager::PlayBGM(const FString& Key, float Volume, float StartTimeSeconds)
 {
 	if (!System || !Audios.contains(Key))
 	{
@@ -174,6 +174,10 @@ void FAudioManager::PlayBGM(const FString& Key, float Volume)
 
 	if (BGMChannel)
 	{
+		if (StartTimeSeconds > 0.0f)
+		{
+			BGMChannel->setPosition(static_cast<unsigned int>(StartTimeSeconds * 1000.0f), FMOD_TIMEUNIT_MS);
+		}
 		BGMChannel->setVolume(Volume);
 	}
 }
@@ -289,6 +293,7 @@ void FAudioManager::SetMasterVolume(float Volume)
 void FAudioManager::LoadDefaultAudios()
 {
 	LoadAudio("CityBgm", "city_bgm.mp3", true);
+	LoadAudio("TanjiroNoUta", "TanjiroNoUta.mp3", true);
 	LoadAudio("Phase_EscapePolice", "phase_escapepolice.wav", true);
 	LoadAudio("Phase_Meteor", "phase_meteor.mp3", true);
 	LoadAudio("Click", "pop.mp3");
@@ -303,5 +308,4 @@ void FAudioManager::LoadDefaultAudios()
 	LoadAudio("MeteorBoom", "meteor_boom.mp3");
 	LoadAudio("MeteorFall", "meteor_fall.mp3");
 	LoadAudio("Whoosh", "whoosh.mp3");
-	LoadAudio("Walk", "walk.mp3");
 }

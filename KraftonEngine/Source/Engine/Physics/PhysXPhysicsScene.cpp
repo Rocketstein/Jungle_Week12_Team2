@@ -290,8 +290,122 @@ static FQuat ToFQuat(const PxQuat& Q)
 static PxTransform GetPxTransform(UPrimitiveComponent* Comp)
 {
 	FVector Pos = Comp->GetWorldLocation();
-	FQuat Rot = Comp->GetWorldMatrix().ToQuat();
+	FQuat Rot = Comp->GetWorldRotation().ToQuaternion();
 	return PxTransform(ToPxVec3(Pos), ToPxQuat(Rot));
+}
+
+static bool BuildPxGeometryForComponent(UPrimitiveComponent* Comp, PxGeometryHolder& OutGeom, PxQuat& OutShapeAxisRot)
+{
+	OutShapeAxisRot = PxQuat(PxIdentity);
+
+	if (auto* Box = Cast<UBoxComponent>(Comp))
+	{
+		const FVector Ext = Box->GetScaledBoxExtent();
+		OutGeom = PxBoxGeometry(Ext.X, Ext.Y, Ext.Z);
+		return true;
+	}
+
+	if (auto* Sphere = Cast<USphereComponent>(Comp))
+	{
+		OutGeom = PxSphereGeometry(Sphere->GetScaledSphereRadius());
+		return true;
+	}
+
+	if (auto* Capsule = Cast<UCapsuleComponent>(Comp))
+	{
+		const float Radius = Capsule->GetScaledCapsuleRadius();
+		const float HalfHeight = Capsule->GetScaledCapsuleHalfHeight();
+		OutGeom = PxCapsuleGeometry(Radius, HalfHeight - Radius);
+		OutShapeAxisRot = PxQuat(PxHalfPi, PxVec3(0.0f, 0.0f, 1.0f));
+		return true;
+	}
+
+	return false;
+}
+
+static PxTransform BuildShapeLocalPose(UPrimitiveComponent* RootComp, UPrimitiveComponent* Comp, const PxQuat& ShapeAxisRot)
+{
+	PxTransform LocalPose = PxTransform(PxIdentity);
+
+	if (Comp != RootComp && RootComp)
+	{
+		const FVector RootPos = RootComp->GetWorldLocation();
+		const FQuat RootRot = RootComp->GetWorldRotation().ToQuaternion();
+		const FVector CompPos = Comp->GetWorldLocation();
+		const FQuat CompRot = Comp->GetWorldRotation().ToQuaternion();
+
+		const FQuat InvRootRot = RootRot.Inverse();
+		const FVector LocalPos = InvRootRot.RotateVector(CompPos - RootPos);
+		const FQuat LocalRot = InvRootRot * CompRot;
+
+		LocalPose = PxTransform(ToPxVec3(LocalPos), ToPxQuat(LocalRot));
+	}
+
+	LocalPose.q = LocalPose.q * ShapeAxisRot;
+	return LocalPose;
+}
+
+static PxShape* FindShapeForComponent(PxRigidActor* Actor, UPrimitiveComponent* Comp)
+{
+	if (!Actor || !Comp)
+	{
+		return nullptr;
+	}
+
+	const PxU32 NumShapes = Actor->getNbShapes();
+	if (NumShapes == 0)
+	{
+		return nullptr;
+	}
+
+	std::vector<PxShape*> Shapes(NumShapes);
+	Actor->getShapes(Shapes.data(), NumShapes);
+
+	for (PxShape* Shape : Shapes)
+	{
+		if (Shape && Shape->userData == Comp)
+		{
+			return Shape;
+		}
+	}
+
+	return nullptr;
+}
+
+static void ConfigureShapeContactDistance(PxShape* Shape)
+{
+	if (!Shape)
+	{
+		return;
+	}
+
+	// PhysX default contact offset can make contacts start outside the visible
+	// debug shape. Keep it small so gameplay collision matches Box/Sphere/Capsule
+	// wire visualization more closely.
+	constexpr float ContactOffset = 0.001f;
+	constexpr float RestOffset = 0.0f;
+	Shape->setRestOffset(RestOffset);
+	Shape->setContactOffset(ContactOffset);
+}
+
+static void SyncShapeForComponent(PxRigidActor* Actor, UPrimitiveComponent* RootComp, UPrimitiveComponent* Comp)
+{
+	PxShape* Shape = FindShapeForComponent(Actor, Comp);
+	if (!Shape)
+	{
+		return;
+	}
+
+	PxGeometryHolder Geom;
+	PxQuat ShapeAxisRot;
+	if (!BuildPxGeometryForComponent(Comp, Geom, ShapeAxisRot))
+	{
+		return;
+	}
+
+	Shape->setGeometry(Geom.any());
+	Shape->setLocalPose(BuildShapeLocalPose(RootComp, Comp, ShapeAxisRot));
+	ConfigureShapeContactDistance(Shape);
 }
 
 // Compound body의 mass와 center-of-mass를 RootComponent의 값으로 갱신.
@@ -615,6 +729,11 @@ void FPhysXPhysicsScene::Tick(float DeltaTime)
 	{
 		if (!Mapping.RootComp || !Mapping.Actor) continue;
 
+		for (UPrimitiveComponent* Comp : Mapping.Components)
+		{
+			SyncShapeForComponent(Mapping.Actor, Mapping.RootComp, Comp);
+		}
+
 		PxTransform NewPose = GetPxTransform(Mapping.RootComp);
 
 		if (PxRigidDynamic* Dynamic = Mapping.Actor->is<PxRigidDynamic>())
@@ -686,58 +805,17 @@ PxShape* FPhysXPhysicsScene::AddShapeForComponent(FBodyMapping& Mapping, UPrimit
 {
 	if (!Mapping.Actor || !DefaultMaterial || !Comp) return nullptr;
 
-	// Shape Component 타입에 따라 PxGeometry 결정
 	PxGeometryHolder Geom;
-	bool bHasGeom = false;
-
-	// Capsule은 PhysX에서 X축 기준이므로 로컬 회전 보정 필요
-	PxQuat ShapeAxisRot = PxQuat(PxIdentity);
-
-	if (auto* Box = Cast<UBoxComponent>(Comp))
-	{
-		FVector Ext = Box->GetScaledBoxExtent();
-		Geom = PxBoxGeometry(Ext.X, Ext.Y, Ext.Z);
-		bHasGeom = true;
-	}
-	else if (auto* Sphere = Cast<USphereComponent>(Comp))
-	{
-		Geom = PxSphereGeometry(Sphere->GetScaledSphereRadius());
-		bHasGeom = true;
-	}
-	else if (auto* Capsule = Cast<UCapsuleComponent>(Comp))
-	{
-		float Radius = Capsule->GetScaledCapsuleRadius();
-		float HalfHeight = Capsule->GetScaledCapsuleHalfHeight();
-		Geom = PxCapsuleGeometry(Radius, HalfHeight - Radius);
-		ShapeAxisRot = PxQuat(PxHalfPi, PxVec3(0.0f, 0.0f, 1.0f));
-		bHasGeom = true;
-	}
-
-	if (!bHasGeom) return nullptr;
+	PxQuat ShapeAxisRot;
+	if (!BuildPxGeometryForComponent(Comp, Geom, ShapeAxisRot)) return nullptr;
 
 	PxShape* Shape = PxRigidActorExt::createExclusiveShape(*Mapping.Actor, Geom.any(), *DefaultMaterial);
 	if (!Shape) return nullptr;
+	ConfigureShapeContactDistance(Shape);
 
 	// Local pose: Comp의 RootComp 대비 상대 transform.
 	// Compound shape에서 자식 컴포넌트가 부모(=PxActor 기준)에 정확히 박혀있도록.
-	PxTransform LocalPose = PxTransform(PxIdentity);
-	if (Comp != Mapping.RootComp && Mapping.RootComp)
-	{
-		FVector RootPos = Mapping.RootComp->GetWorldLocation();
-		FQuat RootRot = Mapping.RootComp->GetWorldMatrix().ToQuat();
-		FVector CompPos = Comp->GetWorldLocation();
-		FQuat CompRot = Comp->GetWorldMatrix().ToQuat();
-
-		FQuat InvRootRot = RootRot.Inverse();
-		FVector LocalPos = InvRootRot.RotateVector(CompPos - RootPos);
-		FQuat LocalRot = InvRootRot * CompRot;
-
-		LocalPose = PxTransform(ToPxVec3(LocalPos), ToPxQuat(LocalRot));
-	}
-
-	// Capsule 등 축 보정을 LocalPose의 회전 부분에 합성
-	LocalPose.q = LocalPose.q * ShapeAxisRot;
-	Shape->setLocalPose(LocalPose);
+	Shape->setLocalPose(BuildShapeLocalPose(Mapping.RootComp, Comp, ShapeAxisRot));
 
 	SetupFilterData(Shape, Comp);
 
