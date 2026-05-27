@@ -164,6 +164,7 @@ struct FDynamicRibbonEmitterReplayData : public FDynamicRenderableEmitterReplayD
 	int32 SheetsPerTrail = 1;
 	int32 MaxTessellationBetweenParticles = 1;
 	ETrailsRenderAxisOption RenderAxisOption = Trails_CameraUp;
+	FVector SourceUpVector = FVector::UpVector;
 	float TilingDistance = 0.0f;
 	float DistanceTessellationStepSize = 0.0f;
 	bool bRenderGeometry = true;

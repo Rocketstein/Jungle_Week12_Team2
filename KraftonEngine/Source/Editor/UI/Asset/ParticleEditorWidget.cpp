@@ -2033,7 +2033,7 @@ void FParticleEditorWidget::Render(float DeltaTime)
 	}
 
 	bool bWindowOpen = true;
-	FString VisibleTitle = "Particle Editor";
+	FString VisibleTitle = "Particle System Editor";
 	const FString AssetName = EditingParticleSystem->GetName();
 	if (!AssetName.empty())
 	{

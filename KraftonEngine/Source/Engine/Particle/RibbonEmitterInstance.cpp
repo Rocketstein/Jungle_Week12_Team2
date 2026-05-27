@@ -1,5 +1,6 @@
 #include "RibbonEmitterInstance.h"
 
+#include "Component/ParticleSystemComponent.h"
 #include "Materials/Material.h"
 #include "Particle/ParticleLODLevel.h"
 #include "Particle/TypeData/ParticleModuleTypeDataRibbon.h"
@@ -97,6 +98,7 @@ FDynamicEmitterReplayDataBase* FRibbonEmitterInstance::GetReplayData()
 	ReplayData->SheetsPerTrail = std::max(1, RibbonModule->SheetsPerTrail);
 	ReplayData->MaxTessellationBetweenParticles = std::max(0, RibbonModule->MaxTessellationBetweenParticles);
 	ReplayData->RenderAxisOption = RibbonModule->RenderAxis;
+	ReplayData->SourceUpVector = Component ? Component->GetUpVector() : FVector::UpVector;
 	ReplayData->TilingDistance = std::max(0.0f, RibbonModule->TilingDistance);
 	ReplayData->DistanceTessellationStepSize = std::max(0.0f, RibbonModule->DistanceTessellationStepSize);
 	ReplayData->bRenderGeometry = RibbonModule->bRenderGeometry;

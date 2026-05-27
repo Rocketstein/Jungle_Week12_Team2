@@ -44,9 +44,14 @@ namespace {
 	}
 
 	FVector BuildRibbonSideAxis(const FFrameContext& Frame, ETrailsRenderAxisOption RenderAxis,
-		const FVector& Position, const FVector& Tangent, const FVector& Fallback)
+		const FVector& Position, const FVector& Tangent, const FVector& SourceUpVector, const FVector& Fallback)
 	{
-		if (RenderAxis == Trails_WorldUp || RenderAxis == Trails_SourceUp)
+		if (RenderAxis == Trails_SourceUp)
+		{
+			return SafeNormalizeBeam(SourceUpVector, Fallback);
+		}
+
+		if (RenderAxis == Trails_WorldUp)
 		{
 			return SafeNormalizeBeam(FVector::UpVector, Fallback);
 		}
@@ -97,8 +102,11 @@ namespace {
 	uint64 EstimateRibbonPackedBytes(const FDynamicRibbonEmitterReplayData& Source)
 	{
 		constexpr int32 MaxSheetsPerTrail = 16;
+		constexpr int32 MaxTessellationBetweenParticles = 32;
 		const int32 SheetCount = std::clamp(Source.SheetsPerTrail,
 			1, MaxSheetsPerTrail);
+		const int32 MaxTessellation = std::clamp(Source.MaxTessellationBetweenParticles,
+			0, MaxTessellationBetweenParticles);
 		uint64 VertexCount = 0;
 		uint64 IndexCount = 0;
 		for (const FRibbonTrailSection& Trail : Source.Trails)
@@ -107,10 +115,74 @@ namespace {
 			{
 				continue;
 			}
-			VertexCount += static_cast<uint64>(Trail.PointCount) * 2ull * static_cast<uint64>(SheetCount);
-			IndexCount += static_cast<uint64>(Trail.PointCount - 1) * 6ull * static_cast<uint64>(SheetCount);
+			const uint64 PointCount = 1ull + static_cast<uint64>(Trail.PointCount - 1)
+				* static_cast<uint64>(MaxTessellation + 1);
+			VertexCount += PointCount * 2ull * static_cast<uint64>(SheetCount);
+			IndexCount += (PointCount - 1ull) * 6ull * static_cast<uint64>(SheetCount);
 		}
 		return VertexCount * sizeof(FRibbonParticleInstanceVertex) + IndexCount * sizeof(uint32);
+	}
+
+	FRibbonPointData InterpolateRibbonPoint(const FRibbonPointData& A, const FRibbonPointData& B, float Alpha)
+	{
+		const float T = std::clamp(Alpha, 0.0f, 1.0f);
+		FRibbonPointData Result;
+		Result.Position = A.Position + (B.Position - A.Position) * T;
+		Result.Color = FLinearColor(
+			A.Color.R + (B.Color.R - A.Color.R) * T,
+			A.Color.G + (B.Color.G - A.Color.G) * T,
+			A.Color.B + (B.Color.B - A.Color.B) * T,
+			A.Color.A + (B.Color.A - A.Color.A) * T);
+		Result.Width = A.Width + (B.Width - A.Width) * T;
+		Result.DistanceFromStart = A.DistanceFromStart + (B.DistanceFromStart - A.DistanceFromStart) * T;
+		Result.SpawnSequence = T < 0.5f ? A.SpawnSequence : B.SpawnSequence;
+		return Result;
+	}
+
+	int32 GetRibbonSegmentStepCount(const FDynamicRibbonEmitterReplayData& Source,
+		const FRibbonPointData& A, const FRibbonPointData& B)
+	{
+		constexpr int32 MaxTessellationBetweenParticles = 32;
+		const int32 MaxTessellation = std::clamp(Source.MaxTessellationBetweenParticles,
+			0, MaxTessellationBetweenParticles);
+		const int32 MaxSteps = MaxTessellation + 1;
+		int32 StepCount = MaxSteps;
+		if (Source.DistanceTessellationStepSize > 1e-6f)
+		{
+			const float SegmentLength = (B.Position - A.Position).Length();
+			StepCount = static_cast<int32>(std::ceil(SegmentLength / Source.DistanceTessellationStepSize));
+			StepCount = std::clamp(StepCount, 1, MaxSteps);
+		}
+		return std::max(1, StepCount);
+	}
+
+	void BuildRibbonTessellatedPoints(const FDynamicRibbonEmitterReplayData& Source,
+		const FRibbonTrailSection& Trail, TArray<FRibbonPointData>& OutPoints)
+	{
+		OutPoints.clear();
+		if (Trail.PointCount < 2 || Trail.FirstPoint < 0)
+		{
+			return;
+		}
+
+		const int32 TrailEnd = Trail.FirstPoint + Trail.PointCount;
+		if (TrailEnd > static_cast<int32>(Source.Points.size()))
+		{
+			return;
+		}
+
+		OutPoints.push_back(Source.Points[Trail.FirstPoint]);
+		for (int32 PointIdx = 0; PointIdx < Trail.PointCount - 1; ++PointIdx)
+		{
+			const FRibbonPointData& A = Source.Points[Trail.FirstPoint + PointIdx];
+			const FRibbonPointData& B = Source.Points[Trail.FirstPoint + PointIdx + 1];
+			const int32 StepCount = GetRibbonSegmentStepCount(Source, A, B);
+			for (int32 StepIdx = 1; StepIdx <= StepCount; ++StepIdx)
+			{
+				const float Alpha = static_cast<float>(StepIdx) / static_cast<float>(StepCount);
+				OutPoints.push_back(InterpolateRibbonPoint(A, B, Alpha));
+			}
+		}
 	}
 
 	FVector EvaluateBeamCurve(const FBeamInstanceData& Beam, float Alpha)
@@ -1083,14 +1155,19 @@ void FParticleSystemSceneProxy::FRibbonParticlePacker::PackEmitter(const FFrameC
 
 	uint32 ReserveVertexCount = 0;
 	uint32 ReserveIndexCount = 0;
-	//계산을 모르겠누
+	TArray<FRibbonPointData> TessellatedPoints;
 	for (const FRibbonTrailSection& Trail : Source.Trails)
 	{
 		if (Trail.PointCount < 2)
 		{
 			continue;
 		}
-		const uint32 PointCount = Trail.PointCount;
+		BuildRibbonTessellatedPoints(Source, Trail, TessellatedPoints);
+		if (TessellatedPoints.size() < 2)
+		{
+			continue;
+		}
+		const uint32 PointCount = static_cast<uint32>(TessellatedPoints.size());
 		ReserveVertexCount += PointCount * 2u * static_cast<uint32>(SheetCount);
 		ReserveIndexCount += (PointCount - 1u) * 6u * static_cast<uint32>(SheetCount);
 	}
@@ -1114,23 +1191,28 @@ void FParticleSystemSceneProxy::FRibbonParticlePacker::PackEmitter(const FFrameC
 			continue;
 		}
 
+		BuildRibbonTessellatedPoints(Source, Trail, TessellatedPoints);
+		if (TessellatedPoints.size() < 2)
+		{
+			continue;
+		}
+
 		for (int32 SheetIdx = 0; SheetIdx < SheetCount; ++SheetIdx)
 		{
 			const uint32 SheetVertexBase = static_cast<uint32>(PackedVertices.size());
 			FVector PreviousTangent = FVector::ForwardVector;
 			FVector PreviousSideAxis = FVector::RightVector;
 
-			for (int32 PointIdx = 0; PointIdx < Trail.PointCount; ++PointIdx)
+			for (int32 PointIdx = 0; PointIdx < static_cast<int32>(TessellatedPoints.size()); ++PointIdx)
 			{
-				const int32 SourcePointIndex = Trail.FirstPoint + PointIdx;
-				const FRibbonPointData& Point = Source.Points[SourcePointIndex];
-				const FRibbonPointData& PrevPoint = Source.Points[Trail.FirstPoint + std::max(PointIdx - 1, 0)];
-				const FRibbonPointData& NextPoint = Source.Points[Trail.FirstPoint + std::min(PointIdx + 1, Trail.PointCount - 1)];
+				const FRibbonPointData& Point = TessellatedPoints[PointIdx];
+				const FRibbonPointData& PrevPoint = TessellatedPoints[std::max(PointIdx - 1, 0)];
+				const FRibbonPointData& NextPoint = TessellatedPoints[std::min(PointIdx + 1, static_cast<int32>(TessellatedPoints.size()) - 1)];
 
 				FVector Tangent = SafeNormalizeBeam(NextPoint.Position - PrevPoint.Position, PreviousTangent);
 				PreviousTangent = Tangent;
 
-				FVector SideAxis = BuildRibbonSideAxis(Frame, Source.RenderAxisOption, Point.Position, Tangent, PreviousSideAxis);
+				FVector SideAxis = BuildRibbonSideAxis(Frame, Source.RenderAxisOption, Point.Position, Tangent, Source.SourceUpVector, PreviousSideAxis);
 				if (SheetIdx > 0)
 				{
 					const float SheetAngle = Pi * static_cast<float>(SheetIdx) / static_cast<float>(SheetCount);
@@ -1145,7 +1227,7 @@ void FParticleSystemSceneProxy::FRibbonParticlePacker::PackEmitter(const FFrameC
 				const float HalfWidth = std::max(0.0f, Point.Width) * 0.5f;
 				const float U = (Source.TilingDistance > 0.0f)
 					? Point.DistanceFromStart / Source.TilingDistance
-					: static_cast<float>(PointIdx) / static_cast<float>(std::max(Trail.PointCount - 1, 1));
+					: static_cast<float>(PointIdx) / static_cast<float>(std::max(static_cast<int32>(TessellatedPoints.size()) - 1, 1));
 				const FVector4 PackedColor = Point.Color.ToVector4();
 
 				FRibbonParticleInstanceVertex Left;
@@ -1161,7 +1243,7 @@ void FParticleSystemSceneProxy::FRibbonParticlePacker::PackEmitter(const FFrameC
 				PackedVertices.push_back(Right);
 			}
 
-			const int32 SegmentCount = Trail.PointCount - 1;
+			const int32 SegmentCount = static_cast<int32>(TessellatedPoints.size()) - 1;
 			for (int32 SegIdx = 0; SegIdx < SegmentCount; ++SegIdx)
 			{
 				const uint32 P0Left = SheetVertexBase + static_cast<uint32>(SegIdx) * 2u;
