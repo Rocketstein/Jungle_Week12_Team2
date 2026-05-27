@@ -109,7 +109,12 @@ void FStaticMeshEditorViewportClient::TickShortcuts()
 
 void FStaticMeshEditorViewportClient::TickInput(float DeltaTime)
 {
-	if (!FSlateApplication::Get().DoesClientOwnMouseInput(this)) return;
+	// 마우스를 꽉 잡고 있거나, 키보드 포커스를 가지고 있을 때만 입력 처리
+	const bool bOwnsInput = FSlateApplication::Get().GetCapturedViewportClient() == this || 
+	                        FSlateApplication::Get().DoesClientOwnKeyboardInput(this);
+	
+	if (!bOwnsInput) return;
+
 	if (InputSystem::Get().GetGuiInputState().bUsingKeyboard) return;
 
 	FViewportCameraControlSettings& ControlSettings = FEditorSettings::Get().MeshEditorViewportSettings.CameraControls;
