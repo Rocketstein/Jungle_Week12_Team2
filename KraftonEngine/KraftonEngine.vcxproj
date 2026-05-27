@@ -621,6 +621,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Engine\Runtime\WindowsWindow.cpp" />
     <ClCompile Include="Source\Engine\Serialization\Archive.cpp" />
     <ClCompile Include="Source\Engine\Serialization\FLinker.cpp" />
+    <ClCompile Include="Source\Engine\Serialization\FPackageHarvester.cpp" />
     <ClCompile Include="Source\Engine\Serialization\SceneSaveManager.cpp" />
     <ClCompile Include="Source\Engine\Texture\Texture2D.cpp" />
     <ClCompile Include="Source\Engine\UI\UIManager.cpp" />
@@ -1003,6 +1004,7 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\Runtime\resource.h" />
     <ClInclude Include="Source\Engine\Serialization\Archive.h" />
     <ClInclude Include="Source\Engine\Serialization\FLinker.h" />
+    <ClInclude Include="Source\Engine\Serialization\FPackageHarvester.h" />
     <ClInclude Include="Source\Engine\Serialization\MemoryArchive.h" />
     <ClInclude Include="Source\Engine\Serialization\SceneSaveManager.h" />
     <ClInclude Include="Source\Engine\Serialization\WindowsArchive.h" />

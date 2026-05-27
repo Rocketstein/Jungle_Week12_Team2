@@ -1431,6 +1431,9 @@
     <ClCompile Include="Source\Engine\Serialization\FLinker.cpp">
       <Filter>Source\Engine\Serialization</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Serialization\FPackageHarvester.cpp">
+      <Filter>Source\Engine\Serialization</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorEngine.h">
@@ -4215,6 +4218,9 @@
       <Filter>ThirdParty\sol2\include\sol\utility</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Serialization\FLinker.h">
+      <Filter>Source\Engine\Serialization</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Serialization\FPackageHarvester.h">
       <Filter>Source\Engine\Serialization</Filter>
     </ClInclude>
   </ItemGroup>
