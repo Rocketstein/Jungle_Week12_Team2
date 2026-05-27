@@ -451,7 +451,9 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Engine\Core\Property\FFieldClass.cpp" />
     <ClCompile Include="Source\Engine\Core\Property\FFieldVariant.cpp" />
     <ClCompile Include="Source\Engine\Core\Property\PropertyTypes.cpp" />
+    <ClCompile Include="Source\Engine\Core\Property\FObjectPropertyBase\FObjectProperty.cpp" />
     <ClCompile Include="Source\Engine\Core\Property\FObjectPropertyBase\FSoftObjectProperty.cpp" />
+    <ClCompile Include="Source\Engine\Core\UObject\FObjectPtr.cpp" />
     <ClCompile Include="Source\Engine\Core\UObject\FSoftObjectPath.cpp" />
     <ClCompile Include="Source\Engine\Core\UObject\FSoftObjectPtr.cpp" />
     <ClCompile Include="Source\Engine\Core\UObject\FWeakObjectPtr.cpp" />
@@ -515,10 +517,6 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Engine\Object\UField.cpp" />
     <ClCompile Include="Source\Engine\Object\UStruct.cpp" />
     <ClCompile Include="Source\Engine\Object\UUIDGenerator.cpp" />
-    <ClCompile Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamBase.cpp" />
-    <ClCompile Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamNoise.cpp" />
-    <ClCompile Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamSource.cpp" />
-    <ClCompile Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamTarget.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleBeamInstances.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleEmitter.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleEmitterInstances.cpp" />
@@ -531,6 +529,10 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Engine\Particle\ParticleSystem.cpp" />
     <ClCompile Include="Source\Engine\Particle\ParticleSystemManager.cpp" />
     <ClCompile Include="Source\Engine\Particle\RibbonEmitterInstance.cpp" />
+    <ClCompile Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamBase.cpp" />
+    <ClCompile Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamNoise.cpp" />
+    <ClCompile Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamSource.cpp" />
+    <ClCompile Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamTarget.cpp" />
     <ClCompile Include="Source\Engine\Particle\TypeData\ParticleModuleTypeDataBeam2.cpp" />
     <ClCompile Include="Source\Engine\Physics\NativePhysicsScene.cpp" />
     <ClCompile Include="Source\Engine\Physics\PhysXPhysicsScene.cpp" />
@@ -618,6 +620,10 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClCompile Include="Source\Engine\Runtime\Launch.cpp" />
     <ClCompile Include="Source\Engine\Runtime\WindowsApplication.cpp" />
     <ClCompile Include="Source\Engine\Runtime\WindowsWindow.cpp" />
+    <ClCompile Include="Source\Engine\Serialization\Archive.cpp" />
+    <ClCompile Include="Source\Engine\Serialization\FLinker.cpp" />
+    <ClCompile Include="Source\Engine\Serialization\FPackageHarvester.cpp" />
+    <ClCompile Include="Source\Engine\Serialization\PackageSave.cpp" />
     <ClCompile Include="Source\Engine\Serialization\SceneSaveManager.cpp" />
     <ClCompile Include="Source\Engine\Texture\Texture2D.cpp" />
     <ClCompile Include="Source\Engine\UI\UIManager.cpp" />
@@ -790,9 +796,12 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\Core\Property\FObjectPropertyBase\FObjectProperty.h" />
     <ClInclude Include="Source\Engine\Core\Property\FObjectPropertyBase\FObjectPropertyBase.h" />
     <ClInclude Include="Source\Engine\Core\Property\FObjectPropertyBase\FSoftObjectProperty.h" />
+    <ClInclude Include="Source\Engine\Core\UObject\FObjectHandle.h" />
+    <ClInclude Include="Source\Engine\Core\UObject\FObjectPtr.h" />
     <ClInclude Include="Source\Engine\Core\UObject\FSoftObjectPath.h" />
     <ClInclude Include="Source\Engine\Core\UObject\FSoftObjectPtr.h" />
     <ClInclude Include="Source\Engine\Core\UObject\FWeakObjectPtr.h" />
+    <ClInclude Include="Source\Engine\Core\UObject\TObjectPtr.h" />
     <ClInclude Include="Source\Engine\Core\UObject\TSoftObjectPtr.h" />
     <ClInclude Include="Source\Engine\Core\UObject\TWeakObjectPtr.h" />
     <ClInclude Include="Source\Engine\Debug\DebugDrawQueue.h" />
@@ -869,14 +878,10 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\Object\UField.h" />
     <ClInclude Include="Source\Engine\Object\UStruct.h" />
     <ClInclude Include="Source\Engine\Object\UUIDGenerator.h" />
-    <ClInclude Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamBase.h" />
-    <ClInclude Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamNoise.h" />
-    <ClInclude Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamSource.h" />
-    <ClInclude Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamTarget.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleBeamInstances.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEmitter.h" />
-    <ClInclude Include="Source\Engine\Particle\ParticleEmitterTypes.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEmitterInstances.h" />
+    <ClInclude Include="Source\Engine\Particle\ParticleEmitterTypes.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEventCollideData.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleEventManager.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleHelper.h" />
@@ -887,6 +892,10 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\Particle\ParticleSystem.h" />
     <ClInclude Include="Source\Engine\Particle\ParticleSystemManager.h" />
     <ClInclude Include="Source\Engine\Particle\RibbonEmitterInstance.h" />
+    <ClInclude Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamBase.h" />
+    <ClInclude Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamNoise.h" />
+    <ClInclude Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamSource.h" />
+    <ClInclude Include="Source\Engine\Particle\BeamModule\ParticleModuleBeamTarget.h" />
     <ClInclude Include="Source\Engine\Particle\TypeData\ParticleModuleTypeDataBeam2.h" />
     <ClInclude Include="Source\Engine\Particle\TypeData\ParticleModuleTypeDataRibbon.h" />
     <ClInclude Include="Source\Engine\Physics\IPhysicsScene.h" />
@@ -997,7 +1006,10 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
     <ClInclude Include="Source\Engine\Runtime\WindowsWindow.h" />
     <ClInclude Include="Source\Engine\Runtime\resource.h" />
     <ClInclude Include="Source\Engine\Serialization\Archive.h" />
+    <ClInclude Include="Source\Engine\Serialization\FLinker.h" />
+    <ClInclude Include="Source\Engine\Serialization\FPackageHarvester.h" />
     <ClInclude Include="Source\Engine\Serialization\MemoryArchive.h" />
+    <ClInclude Include="Source\Engine\Serialization\PackageSave.h" />
     <ClInclude Include="Source\Engine\Serialization\SceneSaveManager.h" />
     <ClInclude Include="Source\Engine\Serialization\WindowsArchive.h" />
     <ClInclude Include="Source\Engine\Texture\Texture2D.h" />
@@ -1700,12 +1712,6 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Game|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
     </FxCompile>
-    <FxCompile Include="Shaders\Particle\ParticleRibbon.hlsl">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Game|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
-    </FxCompile>
     <FxCompile Include="Shaders\Particle\ParticleCommon.hlsli">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -1713,6 +1719,12 @@ xcopy /Y "$(ProjectDir)ThirdParty\lua\bin\lua51.dll" "$(OutDir)"</Command>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
     </FxCompile>
     <FxCompile Include="Shaders\Particle\ParticleMesh.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Game|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">true</ExcludedFromBuild>
+    </FxCompile>
+    <FxCompile Include="Shaders\Particle\ParticleRibbon.hlsl">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Game|x64'">true</ExcludedFromBuild>

@@ -171,6 +171,15 @@ public:
 	FName GetFName() const { return ObjectName; }
 	FString GetName() const { return ObjectName.ToString(); }
 	void SetFName(const FName& InName) { ObjectName = InName; }
+	FString GetPathName() const
+	{
+		FString Path = GetName();
+		for (UObject* O = Outer; IsValid(O); O = O->Outer)
+		{
+			Path = O->GetName() + "." + Path;
+		}
+		return Path;
+	}
 
 	// RTTI
 	virtual UClass* GetClass() const { return StaticClass(); }
@@ -196,6 +205,18 @@ private:
 inline bool IsValid(const UObject* Object)
 {
 	return GUObjectArray.IsAlive(Object);
+}
+
+inline UObject* FindObjectByPath(const FString& Path)
+{
+	if (Path.empty() || Path == FString("None")) return nullptr;
+	for (const FUObjectItem& Item : GUObjectArray.GetItems())
+	{
+		UObject* Obj = Item.Object;
+		if (!Obj) continue;
+		if (Obj->GetPathName() == Path) return Obj;
+	}
+	return nullptr;
 }
 
 inline bool IsAliveObject(const UObject* Object)

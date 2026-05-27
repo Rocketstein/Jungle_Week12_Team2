@@ -6,7 +6,6 @@
 #include "Core/Property/FArrayProperty.h"
 #include "Core/Property/FEnumProperty.h"
 #include "Core/Property/FStructProperty.h"
-#include "Core/Property/FObjectPropertyBase/FSoftObjectProperty.h"
 #include "Object/FName.h"
 #include "SimpleJSON/json.hpp"
 #include "Serialization/Archive.h"
