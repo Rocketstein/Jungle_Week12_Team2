@@ -69,8 +69,10 @@ FVector UParticleModuleBeamTarget::ResolveTarget(const FBeamResolveContext& Cont
 
 FVector UParticleModuleBeamTarget::ResolveTargetTangent(const FVector& ResolvedSource, const FVector& ResolvedTarget) const
 {
+	// Hermite default: tangent at target equals the source→target direction, so
+	// a zero-tangent setup yields a straight line.
 	return TargetTangent.IsNearlyZero()
-		? (ResolvedTarget - ResolvedSource) * -1.0f
+		? (ResolvedTarget - ResolvedSource)
 		: TargetTangent;
 }
 

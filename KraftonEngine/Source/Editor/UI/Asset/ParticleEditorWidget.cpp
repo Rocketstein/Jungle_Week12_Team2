@@ -1141,10 +1141,10 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 	{
 		UParticleModuleBeamNoise* Noise = GUObjectArray.CreateObject<UParticleModuleBeamNoise>(Outer);
 		Noise->bEnabled = true;
-		Noise->bLowFreq_Enabled = true;
 		Noise->Frequency = 10;
 		Noise->FrequencyDistance = 0.0f;
 		Noise->NoiseRange = FVector(0.0f, 30.0f, 30.0f);
+		Noise->NoiseSpeed = 10.0f;
 		Noise->NoiseLockTime = 0.0f;
 		Noise->bTargetNoise = false;
 		return Noise;
@@ -3794,13 +3794,6 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 	}
 	else if (UParticleModuleBeamNoise* Noise = Cast<UParticleModuleBeamNoise>(Module))
 	{
-		bool bLowFreqEnabled = Noise->bLowFreq_Enabled;
-		if (ImGui::Checkbox("Low Freq Enabled", &bLowFreqEnabled))
-		{
-			Noise->bLowFreq_Enabled = bLowFreqEnabled;
-			bChanged = true;
-		}
-
 		int Frequency = Noise->Frequency;
 		if (ImGui::SliderInt("Frequency", &Frequency, 0, 64))
 		{
@@ -3819,6 +3812,13 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		if (ImGui::DragFloat3("Noise Range", &NoiseRange.X, 0.25f))
 		{
 			Noise->NoiseRange = NoiseRange;
+			bChanged = true;
+		}
+
+		float NoiseSpeed = Noise->NoiseSpeed;
+		if (ImGui::DragFloat("Noise Speed", &NoiseSpeed, 0.05f, 0.0f, 1000.0f))
+		{
+			Noise->NoiseSpeed = (std::max)(0.0f, NoiseSpeed);
 			bChanged = true;
 		}
 

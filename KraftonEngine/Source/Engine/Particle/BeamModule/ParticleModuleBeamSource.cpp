@@ -114,7 +114,7 @@ void UParticleModuleBeamSource::Update(const FUpdateContext& UpdateContext)
 		if (!BeamOwner.BeamTargetModule || !BeamOwner.BeamTargetModule->bEnabled)
 		{
 			const FVector BeamDelta = Payload->TargetPoint - Payload->SourcePoint;
-			Payload->TargetTangent = BeamDelta * -1.0f;
+			Payload->TargetTangent = BeamDelta;
 			Payload->TargetStrength = 1.0f;
 		}
 	}
@@ -156,7 +156,7 @@ void UParticleModuleBeamSource::Spawn(const FSpawnContext& Context)
 	if (!BeamOwner.BeamTargetModule || !BeamOwner.BeamTargetModule->bEnabled)
 	{
 		const FVector BeamDelta = Payload->TargetPoint - Payload->SourcePoint;
-		Payload->TargetTangent = BeamDelta * -1.0f;
+		Payload->TargetTangent = BeamDelta;
 		Payload->TargetStrength = 1.0f;
 	}
 }

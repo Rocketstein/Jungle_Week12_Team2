@@ -33,7 +33,7 @@ void FBlendStateManager::Create(ID3D11Device* InDevice)
 
 	// No Color Write
 	Desc = {};
-	Desc.AlphaToCoverageEnable = FALSE;
+	Desc.AlphaToCoverageEnable = FALSE;  
 	Desc.IndependentBlendEnable = FALSE;
 	Desc.RenderTarget[0].BlendEnable = FALSE;
 	Desc.RenderTarget[0].SrcBlend = D3D11_BLEND_ONE;
