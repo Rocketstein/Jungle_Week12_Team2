@@ -60,22 +60,39 @@ FArchive& FLinkerSave::operator<<(UObject*& Obj)
 //=======================================================
 void FLinkerLoad::ReadTable()
 {
+	int32 Count = 0;
+	*Inner << Count;
 
+	ObjectTable.clear();
+	ObjectTable.reserve(Count);
+
+	for (int32 i = 0; i < Count; ++i)
+	{
+		FString Path;
+		*Inner << Path;
+		ObjectTable.push_back(FindObjectByPath(Path));
+		// Note: FindObjectByPath returning nullptr is fine. We store nullptr
+		// in that slot, and any property pointing at it deserializes to null.
+	}
 }
 
 UObject* FLinkerLoad::ObjectForIndex(int32 Index) const
 {
-	if (Index >= ObjectTable.size()) return nullptr;
-	return ObjectTable[Index];
+	if (Index <= 0) return nullptr;                              // 0 = null sentinel
+	if (Index > static_cast<int32>(ObjectTable.size())) return nullptr;
+	return ObjectTable[Index - 1];
 }
 
 void FLinkerLoad::Serialize(void* Data, size_t Num)
 {
-
+	Inner->Serialize(Data, Num);
 }
 
 FArchive& FLinkerLoad::operator<<(UObject*& Obj)
 {
-
+	int32 Idx = 0;
+	*this << Idx;
+	Obj = ObjectForIndex(Idx);
+	return *this;
 }
 
