@@ -87,12 +87,27 @@ void FEditorMainPanel::Create(FWindowsWindow* InWindow, FRenderer& InRenderer, U
 	}
 
 	ImVec4* Colors = Style.Colors;
+	const ImVec4 EditorChrome = ImVec4(20.0f / 255.0f, 20.0f / 255.0f, 20.0f / 255.0f, 1.0f);
+	const ImVec4 EditorChromeHovered = ImVec4(34.0f / 255.0f, 34.0f / 255.0f, 36.0f / 255.0f, 1.0f);
+	const ImVec4 EditorChromeActive = ImVec4(46.0f / 255.0f, 46.0f / 255.0f, 50.0f / 255.0f, 1.0f);
 	
 	Colors[ImGuiCol_FrameBg] = ImVec4(0.14f, 0.14f, 0.14f, 1.0f);
 	Colors[ImGuiCol_FrameBgHovered] = ImVec4(0.20f, 0.20f, 0.20f, 1.0f);
 	Colors[ImGuiCol_FrameBgActive] = ImVec4(0.24f, 0.24f, 0.24f, 1.0f);
 	Colors[ImGuiCol_CheckMark] = ImVec4(0.82f, 0.82f, 0.82f, 1.0f);
 	Colors[ImGuiCol_Border] = ImVec4(0.28f, 0.28f, 0.28f, 1.0f);
+	Colors[ImGuiCol_MenuBarBg] = EditorChrome;
+	Colors[ImGuiCol_TitleBg] = EditorChrome;
+	Colors[ImGuiCol_TitleBgActive] = EditorChrome;
+	Colors[ImGuiCol_TitleBgCollapsed] = EditorChrome;
+	Colors[ImGuiCol_Tab] = EditorChrome;
+	Colors[ImGuiCol_TabHovered] = EditorChromeHovered;
+	Colors[ImGuiCol_TabActive] = EditorChromeActive;
+	Colors[ImGuiCol_TabUnfocused] = EditorChrome;
+	Colors[ImGuiCol_TabUnfocusedActive] = EditorChromeActive;
+	Colors[ImGuiCol_Header] = EditorChrome;
+	Colors[ImGuiCol_HeaderHovered] = EditorChromeHovered;
+	Colors[ImGuiCol_HeaderActive] = EditorChromeActive;
 
 	ConsoleWidget.Initialize(InEditorEngine);
 	ControlWidget.Initialize(InEditorEngine);
@@ -262,37 +277,43 @@ void FEditorMainPanel::RenderMainMenuBar()
 		ImGui::EndMenu();
 	}
 
-	if (ImGui::MenuItem("Windows"))
+	if (ImGui::BeginMenu("Windows"))
 	{
 		bShowWidgetList = true;
-		ImGui::OpenPopup("##WidgetListPopup");
-	}
-	if (ImGui::BeginPopup("##WidgetListPopup"))
-	{
-		ImGui::Checkbox("Control", &Settings.UI.bControl);
-		ImGui::Checkbox("Property", &Settings.UI.bProperty);
-		ImGui::Checkbox("Scene", &Settings.UI.bScene);
-		ImGui::Checkbox("Stat", &Settings.UI.bStat);
-		ImGui::Checkbox("ContentBrowser", &Settings.UI.bContentBrowser);
-		ImGui::Checkbox("Editor Debug", &Settings.UI.bEditorDebug);
-		ImGui::Checkbox("Shadow Map Debug", &Settings.UI.bShadowMapDebug);
-		ImGui::Separator();
-		ImGui::Checkbox("IMGUI_Setting", &Settings.UI.bImGUISettings);
-		ImGui::EndPopup();
+		ImGui::MenuItem("Property", nullptr, &Settings.UI.bProperty);
+		ImGui::MenuItem("Scene", nullptr, &Settings.UI.bScene);
+		ImGui::MenuItem("Stat", nullptr, &Settings.UI.bStat);
+		ImGui::MenuItem("Content Browser", nullptr, &Settings.UI.bContentBrowser);
+		ImGui::MenuItem("Shadow Map Debug", nullptr, &Settings.UI.bShadowMapDebug);
+		ImGui::EndMenu();
 	}
 	else
 	{
 		bShowWidgetList = false;
 	}
 
-	if (ImGui::MenuItem("Project Settings"))
+	if (ImGui::BeginMenu("Developer Tools"))
 	{
-		ProjectSettingsWidget.bOpen = true;
+		ImGui::MenuItem("Control Panel", nullptr, &Settings.UI.bControl);
+		ImGui::MenuItem("Editor Debug", nullptr, &Settings.UI.bEditorDebug);
+		ImGui::Separator();
+		ImGui::MenuItem("ImGui Settings", nullptr, &Settings.UI.bImGUISettings);
+		ImGui::EndMenu();
 	}
 
-	if (ImGui::MenuItem("World Settings"))
+	if (ImGui::BeginMenu("Settings"))
 	{
-		WorldSettingsWidget.bOpen = true;
+		if (ImGui::MenuItem("Project Settings"))
+		{
+			ProjectSettingsWidget.bOpen = true;
+		}
+
+		if (ImGui::MenuItem("World Settings"))
+		{
+			WorldSettingsWidget.bOpen = true;
+		}
+
+		ImGui::EndMenu();
 	}
 
 	if (ImGui::MenuItem("Shortcut"))
