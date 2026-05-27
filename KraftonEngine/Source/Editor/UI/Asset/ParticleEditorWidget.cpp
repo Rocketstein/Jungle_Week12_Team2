@@ -688,6 +688,12 @@ namespace
 		{
 			AddVectorDistributionTracks(Tracks, "Acceleration", Acceleration->AccelerationDistribution);
 		}
+		else if (UParticleModuleOrbit* Orbit = Cast<UParticleModuleOrbit>(Module))
+		{
+			AddVectorDistributionTracks(Tracks, "Orbit Offset", Orbit->OffsetDistribution);
+			AddVectorDistributionTracks(Tracks, "Orbit Rotation", Orbit->RotationDistribution);
+			AddVectorDistributionTracks(Tracks, "Orbit Rotation Rate", Orbit->RotationRateDistribution);
+		}
 		else if (UParticleModuleColor* Color = Cast<UParticleModuleColor>(Module))
 		{
 			AddVectorDistributionTracks(Tracks, "Start Color", Color->StartColorDistribution);
@@ -750,6 +756,12 @@ namespace
 		else if (UParticleModuleAcceleration* Acceleration = Cast<UParticleModuleAcceleration>(Module))
 		{
 			Acceleration->Acceleration = Acceleration->AccelerationDistribution.Evaluate(1.0f);
+		}
+		else if (UParticleModuleOrbit* Orbit = Cast<UParticleModuleOrbit>(Module))
+		{
+			Orbit->Offset = Orbit->OffsetDistribution.Evaluate(0.0f);
+			Orbit->RotationDegrees = Orbit->RotationDistribution.Evaluate(0.0f);
+			Orbit->RotationRateDegrees = Orbit->RotationRateDistribution.Evaluate(0.0f);
 		}
 		else if (UParticleModuleColor* Color = Cast<UParticleModuleColor>(Module))
 		{
@@ -1074,6 +1086,18 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 		Acceleration->Acceleration = FVector(0.0f, 0.0f, -35.0f);
 		Acceleration->AccelerationDistribution.SetConstant(Acceleration->Acceleration);
 		return Acceleration;
+	}
+	case EAddableModuleType::Orbit:
+	{
+		UParticleModuleOrbit* Orbit = GUObjectArray.CreateObject<UParticleModuleOrbit>(Outer);
+		Orbit->bEnabled = true;
+		Orbit->Offset = FVector(50.0f, 0.0f, 0.0f);
+		Orbit->RotationDegrees = FVector::ZeroVector;
+		Orbit->RotationRateDegrees = FVector(0.0f, 0.0f, 90.0f);
+		Orbit->OffsetDistribution.SetConstant(Orbit->Offset);
+		Orbit->RotationDistribution.SetConstant(Orbit->RotationDegrees);
+		Orbit->RotationRateDistribution.SetConstant(Orbit->RotationRateDegrees);
+		return Orbit;
 	}
 	case EAddableModuleType::Location:
 	{
@@ -1923,6 +1947,10 @@ FString FParticleEditorWidget::GetModuleDisplayName(UParticleModule* Module) con
 	{
 		return "Acceleration";
 	}
+	if (Module->IsA<UParticleModuleOrbit>())
+	{
+		return "Orbit";
+	}
 	if (Module->IsA<UParticleModuleLocation>())
 	{
 		return "Initial Location";
@@ -2411,6 +2439,10 @@ void FParticleEditorWidget::RenderEmitterList()
 			if (ImGui::MenuItem("Acceleration"))
 			{
 				QueueAddModule(EmitterIndex, EAddableModuleType::Acceleration);
+			}
+			if (ImGui::MenuItem("Orbit"))
+			{
+				QueueAddModule(EmitterIndex, EAddableModuleType::Orbit);
 			}
 			if (ImGui::MenuItem("Initial Location"))
 			{
@@ -3462,6 +3494,56 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 		}
 
 		if (RenderVectorDistributionControls("Acceleration Distribution", Acceleration->AccelerationDistribution, 0.5f, -10000.0f, 10000.0f))
+		{
+			SyncModuleLegacyFromDistributions(Module);
+			bChanged = true;
+		}
+	}
+	else if (UParticleModuleOrbit* Orbit = Cast<UParticleModuleOrbit>(Module))
+	{
+		FVector Offset = Orbit->Offset;
+		if (ImGui::DragFloat3("Offset", &Offset.X, 0.25f, -100000.0f, 100000.0f))
+		{
+			Orbit->Offset = Offset;
+			if (!Orbit->OffsetDistribution.UsesCurve())
+			{
+				Orbit->OffsetDistribution.SetConstant(Orbit->Offset);
+			}
+			bChanged = true;
+		}
+		if (RenderVectorDistributionControls("Offset Distribution", Orbit->OffsetDistribution, 0.25f, -100000.0f, 100000.0f))
+		{
+			SyncModuleLegacyFromDistributions(Module);
+			bChanged = true;
+		}
+
+		FVector RotationDegrees = Orbit->RotationDegrees;
+		if (ImGui::DragFloat3("Rotation (deg)", &RotationDegrees.X, 1.0f, -36000.0f, 36000.0f))
+		{
+			Orbit->RotationDegrees = RotationDegrees;
+			if (!Orbit->RotationDistribution.UsesCurve())
+			{
+				Orbit->RotationDistribution.SetConstant(Orbit->RotationDegrees);
+			}
+			bChanged = true;
+		}
+		if (RenderVectorDistributionControls("Rotation Distribution", Orbit->RotationDistribution, 1.0f, -36000.0f, 36000.0f))
+		{
+			SyncModuleLegacyFromDistributions(Module);
+			bChanged = true;
+		}
+
+		FVector RotationRateDegrees = Orbit->RotationRateDegrees;
+		if (ImGui::DragFloat3("Rotation Rate (deg/s)", &RotationRateDegrees.X, 1.0f, -36000.0f, 36000.0f))
+		{
+			Orbit->RotationRateDegrees = RotationRateDegrees;
+			if (!Orbit->RotationRateDistribution.UsesCurve())
+			{
+				Orbit->RotationRateDistribution.SetConstant(Orbit->RotationRateDegrees);
+			}
+			bChanged = true;
+		}
+		if (RenderVectorDistributionControls("Rotation Rate Distribution", Orbit->RotationRateDistribution, 1.0f, -36000.0f, 36000.0f))
 		{
 			SyncModuleLegacyFromDistributions(Module);
 			bChanged = true;

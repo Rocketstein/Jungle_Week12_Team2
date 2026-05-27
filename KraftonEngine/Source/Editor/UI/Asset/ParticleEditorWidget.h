@@ -41,6 +41,7 @@ private:
 		InitialRotation,
 		InitialRotationRate,
 		Acceleration,
+		Orbit,
 		Location,
 		Color,
 		ColorOverLife,

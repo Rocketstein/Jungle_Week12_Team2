@@ -79,7 +79,7 @@ void FParticleEmitterInstance::InitParameters(UParticleEmitter* InTemplate)
 
 	PayloadOffset = ParticleSize;
 	ParticleSize += static_cast<int32>(RequiredBytes());
-	ParticleSize = AlignParticleDataSize(ParticleSize, 16);
+	ParticleSize = AlignParticleDataSize(ParticleSize, 16); //why doing this?
 	ParticleStride = static_cast<int32>(CalculateParticleStride(static_cast<uint32>(ParticleSize)));
 	ActiveParticles = 0;
 	ParticleCounter = 0;

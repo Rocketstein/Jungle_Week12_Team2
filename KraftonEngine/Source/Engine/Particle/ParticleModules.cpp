@@ -3,6 +3,7 @@
 #include "Component/ParticleSystemComponent.h"
 #include "GameFramework/World.h"
 #include "Math/MathUtils.h"
+#include "Math/Quat.h"
 #include "Particle/ParticleEmitterInstances.h"
 #include "Particle/ParticleLODLevel.h"
 #include "Particle/TypeData/ParticleModuleTypeDataRibbon.h"
@@ -30,6 +31,16 @@ namespace
 			RandomRange(MinValue.X, MaxValue.X),
 			RandomRange(MinValue.Y, MaxValue.Y),
 			RandomRange(MinValue.Z, MaxValue.Z));
+	}
+
+	FVector RotateOrbitOffset(const FVector& Offset, const FVector& RotationDegrees)
+	{
+		FQuat Rotation =
+			FQuat::FromAxisAngle(FVector::XAxisVector, RotationDegrees.X * FMath::DegToRad) *
+			FQuat::FromAxisAngle(FVector::YAxisVector, RotationDegrees.Y * FMath::DegToRad) *
+			FQuat::FromAxisAngle(FVector::ZAxisVector, RotationDegrees.Z * FMath::DegToRad);
+		Rotation.Normalize();
+		return Rotation.RotateVector(Offset);
 	}
 }
 
@@ -612,6 +623,104 @@ UParticleModule* UParticleModuleCollision::CloneForLOD(UParticleLODLevel* NewOut
 	Copy->DampingFactor = DampingFactor;
 	Copy->CollisionOffset = CollisionOffset;
 	Copy->MaxCollisions = MaxCollisions;
+	return Copy;
+}
+
+UParticleModuleOrbit::UParticleModuleOrbit()
+{
+	bSpawnModule = true;
+	bFinalUpdateModule = true;
+	OffsetDistribution.SetConstant(Offset);
+	RotationDistribution.SetConstant(RotationDegrees);
+	RotationRateDistribution.SetConstant(RotationRateDegrees);
+}
+
+uint32 UParticleModuleOrbit::RequiredBytes(UParticleModuleTypeDataBase* TypeData)
+{
+	(void)TypeData;
+	return sizeof(FParticleOrbitPayload);
+}
+
+void UParticleModuleOrbit::Spawn(const FSpawnContext& Context)
+{
+	if (!Context.ParticleBase)
+	{
+		return;
+	}
+
+	FParticleOrbitPayload* Payload = reinterpret_cast<FParticleOrbitPayload*>(
+		reinterpret_cast<uint8*>(Context.ParticleBase) + Context.Offset);
+	if (!Payload)
+	{
+		return;
+	}
+
+	Payload->InitialOffset = OffsetDistribution.EvaluateRandom(Context.SpawnTime);
+	Payload->CurrentRotationDegrees = RotationDistribution.EvaluateRandom(Context.SpawnTime);
+	Payload->RotationRateDegrees = RotationRateDistribution.EvaluateRandom(Context.SpawnTime);
+	Payload->RotationRateAccumulatedDegrees = FVector::ZeroVector;
+	Payload->LastOffset = RotateOrbitOffset(Payload->InitialOffset, Payload->CurrentRotationDegrees);
+
+	Context.ParticleBase->Location = Context.ParticleBase->Location + Payload->LastOffset;
+	Context.ParticleBase->OldLocation = Context.ParticleBase->OldLocation + Payload->LastOffset;
+}
+
+void UParticleModuleOrbit::FinalUpdate(const FUpdateContext& Context)
+{
+	FParticleEmitterInstance& Owner = Context.Owner;
+	if (!Owner.ParticleData || !Owner.ParticleIndices)
+	{
+		return;
+	}
+
+	for (int32 ParticleIndex = 0; ParticleIndex < Owner.ActiveParticles; ++ParticleIndex)
+	{
+		FBaseParticle* Particle = Owner.GetParticleDirect(Owner.ParticleIndices[ParticleIndex]);
+		if (!Particle)
+		{
+			continue;
+		}
+
+		FParticleOrbitPayload* Payload = reinterpret_cast<FParticleOrbitPayload*>(
+			reinterpret_cast<uint8*>(Particle) + Context.Offset);
+		if (!Payload)
+		{
+			continue;
+		}
+
+		const FVector BaseLocation = Particle->Location - Payload->LastOffset;
+		const float T = std::clamp(Particle->RelativeTime, 0.0f, 1.0f);
+		const FVector OrbitOffset = OffsetDistribution.UsesCurve()
+			? OffsetDistribution.Evaluate(T)
+			: Payload->InitialOffset;
+
+		if ((Particle->Flags & STATE_Particle_JustSpawned) == 0)
+		{
+			const FVector RotationRate = RotationRateDistribution.UsesCurve()
+				? RotationRateDistribution.Evaluate(T)
+				: Payload->RotationRateDegrees;
+			Payload->RotationRateAccumulatedDegrees = Payload->RotationRateAccumulatedDegrees + RotationRate * Context.DeltaTime;
+		}
+
+		const FVector RotationDegrees = (RotationDistribution.UsesCurve()
+			? RotationDistribution.Evaluate(T)
+			: Payload->CurrentRotationDegrees) + Payload->RotationRateAccumulatedDegrees;
+		Payload->LastOffset = RotateOrbitOffset(OrbitOffset, RotationDegrees);
+		Particle->Location = BaseLocation + Payload->LastOffset;
+		Particle->Velocity = Particle->BaseVelocity;
+	}
+}
+
+UParticleModule* UParticleModuleOrbit::CloneForLOD(UParticleLODLevel* NewOuter) const
+{
+	UParticleModuleOrbit* Copy = GUObjectArray.CreateObject<UParticleModuleOrbit>(NewOuter);
+	CopyModuleBaseTo(Copy);
+	Copy->Offset = Offset;
+	Copy->OffsetDistribution = OffsetDistribution;
+	Copy->RotationDegrees = RotationDegrees;
+	Copy->RotationDistribution = RotationDistribution;
+	Copy->RotationRateDegrees = RotationRateDegrees;
+	Copy->RotationRateDistribution = RotationRateDistribution;
 	return Copy;
 }
 

@@ -429,6 +429,41 @@ public:
 	int32 MaxCollisions = 1;
 };
 
+struct FParticleOrbitPayload
+{
+	FVector InitialOffset = FVector::ZeroVector;
+	FVector CurrentRotationDegrees = FVector::ZeroVector;
+	FVector RotationRateDegrees = FVector::ZeroVector;
+	FVector RotationRateAccumulatedDegrees = FVector::ZeroVector;
+	FVector LastOffset = FVector::ZeroVector;
+};
+
+UCLASS()
+class UParticleModuleOrbit : public UParticleModule
+{
+public:
+	GENERATED_BODY(UParticleModuleOrbit)
+
+	UParticleModuleOrbit();
+
+	uint32 RequiredBytes(UParticleModuleTypeDataBase* TypeData = nullptr) override;
+	void Spawn(const FSpawnContext& Context) override;
+	void FinalUpdate(const FUpdateContext& Context) override;
+	UParticleModule* CloneForLOD(UParticleLODLevel* NewOuter) const override;
+
+	UPROPERTY(Edit, Category="Orbit", DisplayName="Offset")
+	FVector Offset = FVector(50.0f, 0.0f, 0.0f);
+	FParticleDistributionVector OffsetDistribution;
+
+	UPROPERTY(Edit, Category="Orbit", DisplayName="Rotation")
+	FVector RotationDegrees = FVector::ZeroVector;
+	FParticleDistributionVector RotationDistribution;
+
+	UPROPERTY(Edit, Category="Orbit", DisplayName="Rotation Rate")
+	FVector RotationRateDegrees = FVector(0.0f, 0.0f, 90.0f);
+	FParticleDistributionVector RotationRateDistribution;
+};
+
 UCLASS()
 class UParticleModuleColorBase : public UParticleModule
 {
