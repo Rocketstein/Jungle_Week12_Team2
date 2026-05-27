@@ -129,9 +129,17 @@ namespace ParticleKeys
 	static constexpr const char* Z = "Z";
 	static constexpr const char* Collision = "Collision";
 	static constexpr const char* EventGenerator = "EventGenerator";
+	static constexpr const char* EventReceiverSpawn = "EventReceiverSpawn";
 	static constexpr const char* Events = "Events";
 	static constexpr const char* EventType = "EventType";
+	static constexpr const char* EventGeneratorType = "EventGeneratorType";
 	static constexpr const char* CustomName = "CustomName";
+	static constexpr const char* EventName = "EventName";
+	static constexpr const char* SpawnCount = "SpawnCount";
+	static constexpr const char* bSpawnOnlyOnEvent = "bSpawnOnlyOnEvent";
+	static constexpr const char* SpawnLocationOffset = "SpawnLocationOffset";
+	static constexpr const char* bInheritEventVelocity = "bInheritEventVelocity";
+	static constexpr const char* EventVelocityScale = "EventVelocityScale";
 	static constexpr const char* ParticleFrequency = "ParticleFrequency";
 	static constexpr const char* FirstTimeOnly = "FirstTimeOnly";
 	static constexpr const char* LastTimeOnly = "LastTimeOnly";
@@ -635,6 +643,7 @@ const char* GetSerializableModuleType(UParticleModule* Module)
 	if (Module->IsA<UParticleModuleBeamNoise>()) return "BeamNoise";
 	if (Module->IsA<UParticleModuleCollision>()) return ParticleKeys::Collision;
 	if (Module->IsA<UParticleModuleEventGenerator>()) return ParticleKeys::EventGenerator;
+	if (Module->IsA<UParticleModuleEventReceiverSpawn>()) return ParticleKeys::EventReceiverSpawn;
 	return nullptr;
 }
 
@@ -798,6 +807,16 @@ json::JSON SerializeModule(UParticleModule* Module)
 			Events.append(EventObject);
 		}
 		Object[ParticleKeys::Events] = Events;
+	}
+	else if (UParticleModuleEventReceiverSpawn* EventReceiver = Cast<UParticleModuleEventReceiverSpawn>(Module))
+	{
+		Object[ParticleKeys::EventGeneratorType] = static_cast<int32>(EventReceiver->EventGeneratorType);
+		Object[ParticleKeys::EventName] = EventReceiver->EventName.ToString();
+		Object[ParticleKeys::SpawnCount] = EventReceiver->SpawnCount;
+		Object[ParticleKeys::bSpawnOnlyOnEvent] = EventReceiver->bSpawnOnlyOnEvent;
+		Object[ParticleKeys::SpawnLocationOffset] = MakeVectorJSON(EventReceiver->SpawnLocationOffset);
+		Object[ParticleKeys::bInheritEventVelocity] = EventReceiver->bInheritEventVelocity;
+		Object[ParticleKeys::EventVelocityScale] = EventReceiver->EventVelocityScale;
 	}
 
 	return Object;
@@ -1383,6 +1402,22 @@ UParticleModule* DeserializeModule(json::JSON& Object, UParticleLODLevel* Outer)
 			}
 		}
 		Module = EventGenerator;
+	}
+	else if (Type == ParticleKeys::EventReceiverSpawn)
+	{
+		UParticleModuleEventReceiverSpawn* EventReceiver = GUObjectArray.CreateObject<UParticleModuleEventReceiverSpawn>(Outer);
+		if (Object.hasKey(ParticleKeys::EventGeneratorType))
+		{
+			const int32 Value = static_cast<int32>(Object[ParticleKeys::EventGeneratorType].ToInt());
+			EventReceiver->EventGeneratorType = static_cast<EParticleEventType>(std::clamp(Value, 0, static_cast<int32>(EPET_MAX) - 1));
+		}
+		if (Object.hasKey(ParticleKeys::EventName)) EventReceiver->EventName = FName(Object[ParticleKeys::EventName].ToString());
+		if (Object.hasKey(ParticleKeys::SpawnCount)) EventReceiver->SpawnCount = std::clamp(static_cast<int32>(Object[ParticleKeys::SpawnCount].ToInt()), 0, 1024);
+		if (Object.hasKey(ParticleKeys::bSpawnOnlyOnEvent)) EventReceiver->bSpawnOnlyOnEvent = Object[ParticleKeys::bSpawnOnlyOnEvent].ToBool();
+		EventReceiver->SpawnLocationOffset = ReadVectorJSON(Object, ParticleKeys::SpawnLocationOffset, EventReceiver->SpawnLocationOffset);
+		if (Object.hasKey(ParticleKeys::bInheritEventVelocity)) EventReceiver->bInheritEventVelocity = Object[ParticleKeys::bInheritEventVelocity].ToBool();
+		if (Object.hasKey(ParticleKeys::EventVelocityScale)) EventReceiver->EventVelocityScale = std::max(0.0f, static_cast<float>(Object[ParticleKeys::EventVelocityScale].ToFloat()));
+		Module = EventReceiver;
 	}
 
 	if (Module && Object.hasKey(ParticleKeys::bEnabled))

@@ -50,6 +50,7 @@ private:
 		BeamTarget,
 		BeamNoise,
 		EventGenerator,
+		EventReceiverSpawn,
 		Collision
 	};
 

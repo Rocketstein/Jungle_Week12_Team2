@@ -2,6 +2,7 @@
 
 #include "Particle/ParticleEmitter.h"
 #include "Particle/ParticleEmitterInstances.h"
+#include "Particle/ParticleModule.h"
 #include "Particle/ParticleSystem.h"
 #include "Particle/ParticleEventManager.h"
 #include "Particle/ParticleLODLevel.h"
@@ -319,6 +320,7 @@ void UParticleSystemComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 		}
 	}
 
+	ProcessParticleEventReceivers(DeltaTime);
 	DispatchParticleEvents();
 	FParticleStats::Get().RecordComponent(*this);
 
@@ -555,6 +557,50 @@ void UParticleSystemComponent::DispatchParticleCollisionEvents()
 void UParticleSystemComponent::ClearParticleCollisionEvents()
 {
 	CollisionEvents.clear();
+}
+
+void UParticleSystemComponent::ProcessParticleEventReceivers(float DeltaTime)
+{
+	const TArray<FParticleEventSpawnData> SpawnSnapshot = SpawnEvents;
+	const TArray<FParticleEventDeathData> DeathSnapshot = DeathEvents;
+	const TArray<FParticleEventCollideData> CollisionSnapshot = CollisionEvents;
+	const TArray<FParticleEventBurstData> BurstSnapshot = BurstEvents;
+
+	auto ProcessEvent = [this, DeltaTime](FParticleEventData& EventData)
+	{
+		for (FParticleEmitterInstance* EmitterInstance : EmitterInstances)
+		{
+			if (!EmitterInstance || !EmitterInstance->CurrentLODLevel)
+			{
+				continue;
+			}
+
+			for (UParticleModuleEventReceiverBase* Receiver : EmitterInstance->CurrentLODLevel->EventReceiverModules)
+			{
+				if (Receiver && Receiver->bEnabled && Receiver->WillProcessParticleEvent(EventData.Type))
+				{
+					Receiver->ProcessParticleEvent(EmitterInstance, EventData, DeltaTime);
+				}
+			}
+		}
+	};
+
+	for (FParticleEventSpawnData EventData : SpawnSnapshot)
+	{
+		ProcessEvent(EventData);
+	}
+	for (FParticleEventDeathData EventData : DeathSnapshot)
+	{
+		ProcessEvent(EventData);
+	}
+	for (FParticleEventCollideData EventData : CollisionSnapshot)
+	{
+		ProcessEvent(EventData);
+	}
+	for (FParticleEventBurstData EventData : BurstSnapshot)
+	{
+		ProcessEvent(EventData);
+	}
 }
 
 void UParticleSystemComponent::DispatchParticleEvents()

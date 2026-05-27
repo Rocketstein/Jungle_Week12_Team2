@@ -10,6 +10,7 @@
 FSubUVSceneProxy::FSubUVSceneProxy(USubUVComponent* InComponent)
 	: FBillboardSceneProxy(static_cast<UBillboardComponent*>(InComponent))
 {
+	ProxyFlags |= EPrimitiveProxyFlags::Particle;
 	ProxyFlags &= ~EPrimitiveProxyFlags::ShowAABB;
 }
 

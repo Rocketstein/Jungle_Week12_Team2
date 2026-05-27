@@ -65,6 +65,7 @@ public:
 	void ReportEventBurst(FName InEventName, float InEmitterTime, int32 InParticleCount, const FVector& InLocation);
 	void DispatchParticleCollisionEvents();
 	void ClearParticleCollisionEvents();
+	void ProcessParticleEventReceivers(float DeltaTime);
 	void DispatchParticleEvents();
 	void ClearParticleEvents();
 	

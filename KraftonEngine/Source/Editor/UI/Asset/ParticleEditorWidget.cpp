@@ -1257,6 +1257,16 @@ UParticleModule* FParticleEditorWidget::CreateModule(EAddableModuleType ModuleTy
 		EventGenerator->Events.push_back(CollisionEvent);
 		return EventGenerator;
 	}
+	case EAddableModuleType::EventReceiverSpawn:
+	{
+		UParticleModuleEventReceiverSpawn* EventReceiver = GUObjectArray.CreateObject<UParticleModuleEventReceiverSpawn>(Outer);
+		EventReceiver->bEnabled = true;
+		EventReceiver->EventGeneratorType = EPET_Collision;
+		EventReceiver->EventName = FName("Collision");
+		EventReceiver->SpawnCount = 1;
+		EventReceiver->bSpawnOnlyOnEvent = true;
+		return EventReceiver;
+	}
 	}
 
 	return nullptr;
@@ -2215,6 +2225,10 @@ FString FParticleEditorWidget::GetModuleDisplayName(UParticleModule* Module) con
 	{
 		return "Event Generator";
 	}
+	if (Module->IsA<UParticleModuleEventReceiverSpawn>())
+	{
+		return "Event Receiver Spawn";
+	}
 	if (Module->IsA<UParticleModuleTypeDataRibbon>())
 	{
 		return "Ribbon";
@@ -2721,6 +2735,10 @@ void FParticleEditorWidget::RenderEmitterList()
 			if (ImGui::MenuItem("Event Generator"))
 			{
 				QueueAddModule(EmitterIndex, EAddableModuleType::EventGenerator);
+			}
+			if (ImGui::MenuItem("Event Receiver Spawn"))
+			{
+				QueueAddModule(EmitterIndex, EAddableModuleType::EventReceiverSpawn);
 			}
 			ImGui::EndMenu();
 		}
@@ -4357,6 +4375,55 @@ bool FParticleEditorWidget::RenderModuleDetails(UParticleModule* Module)
 				ImGui::TreePop();
 			}
 			ImGui::PopID();
+		}
+	}
+	else if (UParticleModuleEventReceiverSpawn* EventReceiver = Cast<UParticleModuleEventReceiverSpawn>(Module))
+	{
+		int EventType = static_cast<int>(EventReceiver->EventGeneratorType);
+		if (ImGui::Combo("Event Type", &EventType, GParticleEventTypeNames, IM_ARRAYSIZE(GParticleEventTypeNames)))
+		{
+			EventReceiver->EventGeneratorType = static_cast<EParticleEventType>(std::clamp(EventType, 0, static_cast<int>(EPET_Blueprint)));
+			bChanged = true;
+		}
+
+		char NameBuffer[128] = {};
+		const FString CurrentName = EventReceiver->EventName.ToString();
+		std::snprintf(NameBuffer, sizeof(NameBuffer), "%s", CurrentName.c_str());
+		if (ImGui::InputText("Event Name", NameBuffer, sizeof(NameBuffer)))
+		{
+			EventReceiver->EventName = FName(NameBuffer);
+			bChanged = true;
+		}
+
+		int SpawnCount = EventReceiver->SpawnCount;
+		if (ImGui::DragInt("Spawn Count", &SpawnCount, 1.0f, 0, 1024))
+		{
+			EventReceiver->SpawnCount = std::clamp(SpawnCount, 0, 1024);
+			bChanged = true;
+		}
+
+		if (ImGui::Checkbox("Spawn Only On Event", &EventReceiver->bSpawnOnlyOnEvent))
+		{
+			bChanged = true;
+		}
+
+		FVector SpawnLocationOffset = EventReceiver->SpawnLocationOffset;
+		if (ImGui::DragFloat3("Location Offset", &SpawnLocationOffset.X, 0.25f, -100000.0f, 100000.0f))
+		{
+			EventReceiver->SpawnLocationOffset = SpawnLocationOffset;
+			bChanged = true;
+		}
+
+		if (ImGui::Checkbox("Inherit Event Velocity", &EventReceiver->bInheritEventVelocity))
+		{
+			bChanged = true;
+		}
+
+		float EventVelocityScale = EventReceiver->EventVelocityScale;
+		if (ImGui::DragFloat("Event Velocity Scale", &EventVelocityScale, 0.01f, 0.0f, 100.0f))
+		{
+			EventReceiver->EventVelocityScale = (std::max)(0.0f, EventVelocityScale);
+			bChanged = true;
 		}
 	}
 	else if (UParticleModuleCollision* Collision = Cast<UParticleModuleCollision>(Module))

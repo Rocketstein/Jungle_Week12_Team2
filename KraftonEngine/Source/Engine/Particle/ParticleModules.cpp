@@ -434,6 +434,55 @@ bool UParticleModuleEventGenerator::HandleParticleBurst(FParticleEmitterInstance
 	return bProcessed;
 }
 
+UParticleModuleEventReceiverSpawn::UParticleModuleEventReceiverSpawn()
+{
+	EventGeneratorType = EPET_Collision;
+}
+
+bool UParticleModuleEventReceiverSpawn::ProcessParticleEvent(FParticleEmitterInstance* Owner, FParticleEventData& InEvent, float DeltaTime)
+{
+	if (!Owner || !WillProcessParticleEvent(InEvent.Type) || SpawnCount <= 0)
+	{
+		return false;
+	}
+
+	const bool bHasNameFilter = EventName.IsValid() && EventName != FName::None;
+	if (bHasNameFilter && EventName != InEvent.EventName)
+	{
+		return false;
+	}
+
+	FParticleEventInstancePayload* EventPayload = nullptr;
+	if (Owner->CurrentLODLevel && Owner->CurrentLODLevel->EventGenerator)
+	{
+		EventPayload = reinterpret_cast<FParticleEventInstancePayload*>(
+			Owner->GetModuleInstanceData(Owner->CurrentLODLevel->EventGenerator));
+	}
+
+	const int32 Count = std::clamp(SpawnCount, 0, 1024);
+	const FVector SpawnLocation = InEvent.Location + SpawnLocationOffset;
+	const FVector SpawnVelocity = bInheritEventVelocity
+		? InEvent.Velocity * std::max(0.0f, EventVelocityScale)
+		: FVector::ZeroVector;
+	const float Increment = Count > 0 ? std::max(0.0f, DeltaTime) / static_cast<float>(Count) : 0.0f;
+	Owner->SpawnParticles(Count, 0.0f, Increment, SpawnLocation, SpawnVelocity, EventPayload);
+	return true;
+}
+
+UParticleModule* UParticleModuleEventReceiverSpawn::CloneForLOD(UParticleLODLevel* NewOuter) const
+{
+	UParticleModuleEventReceiverSpawn* Copy = GUObjectArray.CreateObject<UParticleModuleEventReceiverSpawn>(NewOuter);
+	CopyModuleBaseTo(Copy);
+	Copy->EventGeneratorType = EventGeneratorType;
+	Copy->EventName = EventName;
+	Copy->SpawnCount = SpawnCount;
+	Copy->bSpawnOnlyOnEvent = bSpawnOnlyOnEvent;
+	Copy->SpawnLocationOffset = SpawnLocationOffset;
+	Copy->bInheritEventVelocity = bInheritEventVelocity;
+	Copy->EventVelocityScale = EventVelocityScale;
+	return Copy;
+}
+
 UParticleModule* UParticleModuleRequired::CloneForLOD(UParticleLODLevel* NewOuter) const
 {
 	UParticleModuleRequired* Copy = GUObjectArray.CreateObject<UParticleModuleRequired>(NewOuter);
