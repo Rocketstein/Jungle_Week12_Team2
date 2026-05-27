@@ -61,7 +61,7 @@ public:
 	// ---- state / metadata (forward to FObjectPtr) ----
 	bool       IsValid()    const { return ObjectPtr.IsValid(); }
 	bool       IsResolved() const { return ObjectPtr.IsResolved(); }
-	UClass* GetClass()   const { return ObjectPtr.GetClass(); }
+	UClass*    GetClass()   const { return ObjectPtr.GetClass(); }
 	FName      GetFName()   const { return ObjectPtr.GetFName(); }
 	FString    GetName()    const { return ObjectPtr.GetName(); }
 	FString    GetPathName()const { return ObjectPtr.GetPathName(); }

@@ -53,13 +53,7 @@ FString FObjectPtr::GetName() const
 
 FString FObjectPtr::GetPathName() const
 {
-	if (!Handle) return FString();
-	FString Path = Handle->GetName();
-	for (UObject* O = Handle->GetOuter(); ::IsValid(O); O = O->GetOuter())
-	{
-		Path = O->GetName() + "." + Path;
-	}
-	return Path;
+	return Handle ? Handle->GetPathName() : FString("None");
 }
 
 FObjectPtr FObjectPtr::GetOuter() const

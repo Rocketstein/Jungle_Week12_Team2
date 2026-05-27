@@ -16,11 +16,12 @@ namespace
 		{
 			UObject* Obj = Item.Object;
 			if (!Obj) continue;
-			if (FObjectPtr(Obj).GetPathName() == PathKey) return Obj;
+			if (Obj->GetPathName() == PathKey) return Obj;
 		}
 		return nullptr;
 	}
 } // anonymous namespace
+
 
 UObject* FObjectProperty::GetObjectPropertyValue(void* Addr) const
 {
@@ -41,7 +42,7 @@ void FObjectProperty::SetObjectPropertyValue(void* Addr, UObject* Value) const
 json::JSON FObjectProperty::Serialize(const void* Instance) const
 {
 	UObject* Obj = static_cast<const FObjectPtr*>(ContainerPtrToValuePtr(Instance))->Get();
-	return json::JSON(Obj ? FObjectPtr(Obj).GetPathName() : FString("None"));
+	return json::JSON(Obj ? Obj->GetPathName() : FString("None"));
 }
 
 void FObjectProperty::Deserialize(void* Instance, const json::JSON& Value) const
