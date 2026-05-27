@@ -102,6 +102,10 @@ private:
 	void ApplyEmitterEdit();
 	void SyncAssetNameBuffer();
 	void CommitAssetNameEdit();
+	void SyncEmitterNameBuffer();
+	bool CommitEmitterNameEdit();
+	bool IsEmitterNameAvailable(const FString& Name, int32 IgnoreEmitterIndex) const;
+	void UpdateEmitterNameReferences(const FName& OldName, const FName& NewName);
 
 private:
 	SWindow ParticleViewportWindow;
@@ -120,4 +124,7 @@ private:
 	FName PreviewWorldHandle = FName::None;
 	FString WindowIdSuffix;
 	char AssetNameBuffer[128] = {};
+	char EmitterNameBuffer[128] = {};
+	int32 EmitterNameBufferIndex = -1;
+	UParticleEmitter* EmitterNameBufferEmitter = nullptr;
 };

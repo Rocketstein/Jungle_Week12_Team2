@@ -34,6 +34,32 @@ namespace {
 		return (LenSq > 1e-6f) ? Value * (1.0f / std::sqrt(LenSq)) : Fallback;
 	}
 
+	FVector BuildStableRibbonSideAxis(const FVector& Candidate, const FVector& Tangent, const FVector& Fallback)
+	{
+		const FVector UnitTangent = SafeNormalizeBeam(Tangent, FVector::ForwardVector);
+		auto ProjectPerpendicularToTangent = [&](const FVector& Axis)
+		{
+			return Axis - UnitTangent * Axis.Dot(UnitTangent);
+		};
+
+		FVector SideAxis = SafeNormalizeBeam(ProjectPerpendicularToTangent(Candidate), FVector::ZeroVector);
+		if (SideAxis.Dot(SideAxis) > 1e-6f)
+		{
+			return SideAxis;
+		}
+
+		SideAxis = SafeNormalizeBeam(ProjectPerpendicularToTangent(Fallback), FVector::ZeroVector);
+		if (SideAxis.Dot(SideAxis) > 1e-6f)
+		{
+			return SideAxis;
+		}
+
+		const FVector ReferenceAxis = std::abs(UnitTangent.Dot(FVector::UpVector)) < 0.95f
+			? FVector::UpVector
+			: FVector::RightVector;
+		return SafeNormalizeBeam(UnitTangent.Cross(ReferenceAxis), FVector::RightVector);
+	}
+
 	FVector RotateAroundAxis(const FVector& Value, const FVector& UnitAxis, float Radians)
 	{
 		const float S = std::sin(Radians);
@@ -48,17 +74,17 @@ namespace {
 	{
 		if (RenderAxis == Trails_SourceUp)
 		{
-			return SafeNormalizeBeam(SourceUpVector, Fallback);
+			return BuildStableRibbonSideAxis(SourceUpVector, Tangent, Fallback);
 		}
 
 		if (RenderAxis == Trails_WorldUp)
 		{
-			return SafeNormalizeBeam(FVector::UpVector, Fallback);
+			return BuildStableRibbonSideAxis(FVector::UpVector, Tangent, Fallback);
 		}
 
 		const FVector ToCamera = SafeNormalizeBeam(Frame.CameraPosition - Position, Frame.CameraForward * -1.0f);
 		const FVector CameraUp = SafeNormalizeBeam(Frame.CameraUp, FVector::UpVector);
-		return SafeNormalizeBeam(ToCamera.Cross(Tangent), CameraUp);
+		return BuildStableRibbonSideAxis(ToCamera.Cross(Tangent), Tangent, CameraUp);
 	}
 
 	float ApplyBeamTaper(EBeamTaperMethod TaperMethod, float TaperFactor, float TaperScale, float Alpha)
@@ -673,6 +699,7 @@ bool FParticleSystemSceneProxy::PrepareDrawCommandBindings(ID3D11Device* InDevic
 	{
 		// TODO: Remove once material domain compatibility is enforced by the editor/material system.
 		Cmd.Shader = FShaderManager::Get().GetOrCreate(EShaderPath::ParticleRibbon);
+		Cmd.RenderState.Rasterizer = ERasterizerState::SolidNoCull;
 
 		Cmd.Buffer.VB         = RibbonPacker.GetVertexBuffer();
 		Cmd.Buffer.VBStride   = sizeof(FRibbonParticleInstanceVertex);

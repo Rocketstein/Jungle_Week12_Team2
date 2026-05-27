@@ -209,6 +209,12 @@ namespace ParticleKeys
 	static constexpr const char* DistanceTessellationStepSize = "DistanceTessellationStepSize";
 	static constexpr const char* bEnableTangentDiffInterpScale = "bEnableTangentDiffInterpScale";
 	static constexpr const char* TangentTessellationScalar = "TangentTessellationScalar";
+	static constexpr const char* bUseSourceEmitter = "bUseSourceEmitter";
+	static constexpr const char* SourceEmitterName = "SourceEmitterName";
+	static constexpr const char* SourceTrailLifetime = "SourceTrailLifetime";
+	static constexpr const char* SourceSampleInterval = "SourceSampleInterval";
+	static constexpr const char* SourceMinSampleDistance = "SourceMinSampleDistance";
+	static constexpr const char* SourceWidthScale = "SourceWidthScale";
 }
 
 json::JSON MakeVectorJSON(const FVector& Value)
@@ -591,6 +597,12 @@ json::JSON SerializeTypeDataModule(UParticleModuleTypeDataBase* TypeData)
 		Object[ParticleKeys::Width] = Ribbon->Width;
 		Object[ParticleKeys::Color] = MakeVectorJSON(Ribbon->Color);
 		Object[ParticleKeys::Alpha] = Ribbon->Alpha;
+		Object[ParticleKeys::bUseSourceEmitter] = Ribbon->bUseSourceEmitter;
+		Object[ParticleKeys::SourceEmitterName] = Ribbon->SourceEmitterName.ToString();
+		Object[ParticleKeys::SourceTrailLifetime] = Ribbon->SourceTrailLifetime;
+		Object[ParticleKeys::SourceSampleInterval] = Ribbon->SourceSampleInterval;
+		Object[ParticleKeys::SourceMinSampleDistance] = Ribbon->SourceMinSampleDistance;
+		Object[ParticleKeys::SourceWidthScale] = Ribbon->SourceWidthScale;
 	}
 
 	return Object;
@@ -1007,7 +1019,7 @@ UParticleModuleTypeDataBase* DeserializeTypeDataModule(json::JSON& Object, UPart
 		UParticleModuleTypeDataRibbon* Ribbon = GUObjectArray.CreateObject<UParticleModuleTypeDataRibbon>(Outer);
 		if (Object.hasKey(ParticleKeys::MaxTessellationBetweenParticles)) Ribbon->MaxTessellationBetweenParticles = std::clamp(static_cast<int32>(Object[ParticleKeys::MaxTessellationBetweenParticles].ToInt()), 0, 32);
 		if (Object.hasKey(ParticleKeys::SheetsPerTrail)) Ribbon->SheetsPerTrail = std::clamp(static_cast<int32>(Object[ParticleKeys::SheetsPerTrail].ToInt()), 1, 16);
-		if (Object.hasKey(ParticleKeys::MaxTrailCount)) Ribbon->MaxTrailCount = std::clamp(static_cast<int32>(Object[ParticleKeys::MaxTrailCount].ToInt()), 1, 64);
+		if (Object.hasKey(ParticleKeys::MaxTrailCount)) Ribbon->MaxTrailCount = std::clamp(static_cast<int32>(Object[ParticleKeys::MaxTrailCount].ToInt()), 1, 512);
 		if (Object.hasKey(ParticleKeys::MaxParticleInTrailCount)) Ribbon->MaxParticleInTrailCount = std::clamp(static_cast<int32>(Object[ParticleKeys::MaxParticleInTrailCount].ToInt()), 2, 1024);
 		if (Object.hasKey(ParticleKeys::bDeadTrailsOnDeactivate)) Ribbon->bDeadTrailsOnDeactivate = Object[ParticleKeys::bDeadTrailsOnDeactivate].ToBool();
 		if (Object.hasKey(ParticleKeys::bDeadTrailsOnSourceLoss)) Ribbon->bDeadTrailsOnSourceLoss = Object[ParticleKeys::bDeadTrailsOnSourceLoss].ToBool();
@@ -1032,6 +1044,12 @@ UParticleModuleTypeDataBase* DeserializeTypeDataModule(json::JSON& Object, UPart
 		if (Object.hasKey(ParticleKeys::Width)) Ribbon->Width = std::max(0.0f, static_cast<float>(Object[ParticleKeys::Width].ToFloat()));
 		Ribbon->Color = ReadVectorJSON(Object, ParticleKeys::Color, Ribbon->Color);
 		if (Object.hasKey(ParticleKeys::Alpha)) Ribbon->Alpha = std::clamp(static_cast<float>(Object[ParticleKeys::Alpha].ToFloat()), 0.0f, 1.0f);
+		if (Object.hasKey(ParticleKeys::bUseSourceEmitter)) Ribbon->bUseSourceEmitter = Object[ParticleKeys::bUseSourceEmitter].ToBool();
+		if (Object.hasKey(ParticleKeys::SourceEmitterName)) Ribbon->SourceEmitterName = FName(Object[ParticleKeys::SourceEmitterName].ToString());
+		if (Object.hasKey(ParticleKeys::SourceTrailLifetime)) Ribbon->SourceTrailLifetime = std::max(0.001f, static_cast<float>(Object[ParticleKeys::SourceTrailLifetime].ToFloat()));
+		if (Object.hasKey(ParticleKeys::SourceSampleInterval)) Ribbon->SourceSampleInterval = std::max(0.0f, static_cast<float>(Object[ParticleKeys::SourceSampleInterval].ToFloat()));
+		if (Object.hasKey(ParticleKeys::SourceMinSampleDistance)) Ribbon->SourceMinSampleDistance = std::max(0.0f, static_cast<float>(Object[ParticleKeys::SourceMinSampleDistance].ToFloat()));
+		if (Object.hasKey(ParticleKeys::SourceWidthScale)) Ribbon->SourceWidthScale = std::max(0.0f, static_cast<float>(Object[ParticleKeys::SourceWidthScale].ToFloat()));
 		return Ribbon;
 	}
 

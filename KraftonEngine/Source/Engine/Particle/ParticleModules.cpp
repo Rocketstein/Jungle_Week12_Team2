@@ -1000,5 +1000,11 @@ UParticleModule* UParticleModuleTypeDataRibbon::CloneForLOD(UParticleLODLevel* N
 	Copy->Width = Width;
 	Copy->Color = Color;
 	Copy->Alpha = Alpha;
+	Copy->bUseSourceEmitter = bUseSourceEmitter;
+	Copy->SourceEmitterName = SourceEmitterName;
+	Copy->SourceTrailLifetime = SourceTrailLifetime;
+	Copy->SourceSampleInterval = SourceSampleInterval;
+	Copy->SourceMinSampleDistance = SourceMinSampleDistance;
+	Copy->SourceWidthScale = SourceWidthScale;
 	return Copy;
 }
