@@ -503,13 +503,7 @@
               "Generate Overlap Events" : false,
               "Is Visible" : false,
               "Mass (Kg)" : 1.000000,
-              "Materials" : [{
-                  "Path" : "Asset/Mesh/Manny/Meshes/SKM_Manny_Simple_MI_Manny_01_New.mat",
-                  "SlotName" : ""
-                }, {
-                  "Path" : "Asset/Mesh/Manny/Meshes/SKM_Manny_Simple_MI_Manny_02_New.mat",
-                  "SlotName" : ""
-                }],
+              "Materials" : [],
               "Object Type" : 0,
               "RelativeTransform" : {
                 "Location" : [0.000000, 0.000000, -3.000000],
@@ -525,7 +519,7 @@
               },
               "Rotation" : [0.000000, -90.000000, 0.000000],
               "Simulate Physics" : false,
-              "Skeletal Mesh" : "Asset/Mesh/Manny/Meshes/SKM_Manny_Simple_SkeletalMesh.uasset",
+              "Skeletal Mesh" : "None",
               "Two Bone IK Chains" : [{
                   "Enabled" : true,
                   "End Bone Index" : 76,
@@ -4538,7 +4532,7 @@
             "WorldDynamic" : 2,
             "WorldStatic" : 2
           },
-          "Rotation" : [-0.000000, 125.498924, 0.000000],
+          "Rotation" : [0.000000, 125.498932, 0.000000],
           "Show Particles" : true,
           "Simulate Physics" : false,
           "Template" : "Asset/Particle/P_Beam.uasset",
@@ -4556,9 +4550,9 @@
   "PerspectiveCamera" : {
     "FOV" : 1.047198,
     "FarClip" : 1000.000000,
-    "Location" : [-19.411201, 41.629440, 18.958136],
+    "Location" : [-10.278612, -13.304089, 36.913399],
     "NearClip" : 0.100000,
-    "Rotation" : [0.000000, 18.350039, 741.600281]
+    "Rotation" : [0.000000, 34.400032, 756.600281]
   },
   "Version" : 2,
   "WorldSettings" : {
